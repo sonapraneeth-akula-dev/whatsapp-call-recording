@@ -10,7 +10,11 @@ It records a few seconds with every Android audio source, logs every WhatsApp ca
 
 1. Copy `dist\spike-debug.apk` to the phone (Quick Share, Phone Link, Google Drive, or a WhatsApp "message yourself" chat).
 2. Open it in **My Files** and install. If asked, allow installing from that app.
-3. Play Protect may warn about an unknown app. Choose **More details › Install anyway**.
+3. **"App blocked to protect your device"**: Play Protect in India blocks sideloaded apps that request Accessibility or Notification access, and gives no override. Use one of these:
+   - **Turn Play Protect off for the install:** Play Store › profile picture › **Play Protect** › ⚙ › turn off **Scan apps with Play Protect**. Install, then turn scanning back on. If it later flags the app, choose Keep.
+   - **Install over Wi-Fi with adb** (Play Protect doesn't block this):
+     1. On the phone, enable Developer options (tap **Build number** 7 times), then **Wireless debugging** › **Pair device with pairing code**.
+     2. On the PC, run `adb pair <ip:port> <code>`, then `adb connect <ip:port>`, then `adb install -r dist\spike-debug.apk`.
 4. Open **WACR Spike** and make every row in **1. Setup** green:
    - **Microphone** and **Notifications**: tap *Allow*. **Contacts** is optional; it only helps hide names in shared logs.
    - **Allow restricted settings**: tap *App info*, then the **⋮** menu (top right), then **Allow restricted settings**. *Do this before the next two steps*, otherwise Android greys them out for sideloaded apps.
