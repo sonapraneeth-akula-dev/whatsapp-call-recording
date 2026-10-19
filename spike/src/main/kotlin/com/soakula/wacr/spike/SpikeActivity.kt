@@ -140,7 +140,7 @@ class SpikeActivity : ComponentActivity() {
                     SetupRow("Contacts (optional: hides names in shared logs)", granted(Manifest.permission.READ_CONTACTS), "Allow") {
                         permissions.launch(arrayOf(Manifest.permission.READ_CONTACTS))
                     }
-                    SetupRow("Allow restricted settings (App info › ⋮ menu) — do this first", null, "App info") {
+                    SetupRow("Allow restricted settings (App info › ⋮) — can't be checked; only needed if Accessibility/Notification access is greyed out", null, "App info") {
                         open(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkgUri = true)
                     }
                     SetupRow("Accessibility: WACR Spike call detector", Access.a11yEnabled(this@SpikeActivity), "Open") {

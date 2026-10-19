@@ -56,9 +56,10 @@ object Host {
 
 object Access {
     fun a11yEnabled(ctx: Context): Boolean {
-        val me = ComponentName(ctx, SpikeAccessibilityService::class.java).flattenToString()
+        if (SpikeAccessibilityService.instance != null) return true
+        val me = ComponentName(ctx, SpikeAccessibilityService::class.java)
         val on = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-        return on.split(':').any { it.equals(me, ignoreCase = true) }
+        return on.split(':').any { ComponentName.unflattenFromString(it.trim()) == me }
     }
 
     fun notificationAccess(ctx: Context) = ctx.packageName in NotificationManagerCompat.getEnabledListenerPackages(ctx)
