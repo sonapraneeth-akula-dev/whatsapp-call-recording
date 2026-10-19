@@ -1,16 +1,16 @@
 # Azure Task List: WhatsApp Call Recorder (personal, on-device)
-**Date**: 2026-10-19 | **Status**: Draft | **PRD**: [PRD (Approved)](../prds/2026-10-18_whatsapp-call-recorder_prd.md) · **Design**: [Technical Design (Approved)](2026-10-18_whatsapp-call-recorder_technical-design.md) · **Discovery**: [Discovery (Approved)](2026-10-17_whatsapp-call-recording_discovery.md)
+**Date**: 2026-10-19 | **Status**: Final — Approved (2026-10-19) | **PRD**: [PRD (Approved)](../prds/2026-10-18_whatsapp-call-recorder_prd.md) · **Design**: [Technical Design (Approved)](2026-10-18_whatsapp-call-recorder_technical-design.md) · **Discovery**: [Discovery (Approved)](2026-10-17_whatsapp-call-recording_discovery.md)
 
 ## Overview
 - **Goal**: Sideloaded Android app (Galaxy A73 / Android 16, Galaxy F42 / Android 13) that auto-detects WhatsApp calls and records audio (video optional) to encrypted, app-private storage, with an allowlist, polished UI and offline Hi/Te/En transcription; Windows and Web later.
-- **Total Est. Manual**: 263:15 | **Total Est. AI**: 51:35 | **Savings**: ~80% | **PRD baseline AI**: 46:00 (Δ +05:35, mostly the spike debug-logging toolkit)
-- **Size**: 19 requirements · 35 milestones · 48 features · 68 user stories · 148 tasks/debug items
+- **Total Est. Manual**: 264:45 | **Total Est. AI**: 51:50 | **Savings**: ~80% | **PRD baseline AI**: 46:00 (Δ +05:50, mostly the spike debug-logging toolkit)
+- **Size**: 19 requirements · 35 milestones · 48 features · 68 user stories · 149 tasks/debug items
 - **Starts with the test app (spike)**: REQ-001 builds `:spike`, which records every audio source and logs every WhatsApp signal. **No v1 code is written until the spike decision gate passes.**
 - **Estimates**: Task `Est. AI` = AI agent execution + prompting; `Est. Manual` = solo developer. Milestone = Σ features + exit verification (AI = PRD test-run time; Manual = 2× that). Real-call tests need both phones (they can call each other).
 - **Path legend**: `app/…/` = `app/src/main/kotlin/com/soakula/wacr/`; `spike/…/` = `spike/src/main/kotlin/com/soakula/wacr/spike/`; `asr/…/` likewise; tests mirror under `src/test/` (JVM) and `src/androidTest/` (device).
 
 ## Debug Logging & Log Sharing (spike first, then app)
-Goal: any test run on either phone can reach Copilot in one command, without the app needing `INTERNET`.
+Goal: any test run on either phone reaches Copilot with one tap — **no USB cable, no developer mode** — and the app never needs `INTERNET`.
 
 | Piece | What it captures | Where | Built in |
 |-------|------------------|-------|----------|
@@ -18,17 +18,20 @@ Goal: any test run on either phone can reach Copilot in one command, without the
 | `device.json` | Model, Android/One UI build, patch level, WhatsApp versions, permission & battery state | each run folder | US-001 |
 | Audio clips + `matrix.md` | Per-source/route recordings, RMS/dBFS, ✓/✗ matrix | each run folder | US-001, US-002 |
 | Tree dumps / screenshots | Call-screen node tree ~1/s; optional ≤ 3/s screenshots | `tree/`, `shots/` in run folder | US-005 |
-| **Pull script** | `tools/pull-spike-logs.ps1 [-Serial <id>]` → `spike-logs/<device>/<runId>/` + `logcat`, `dumpsys audio`, `dumpsys media.audio_policy`, `getprop` | PC (git-ignored) | US-001 |
-| **Share bundle** | In-app zip → Android share sheet (Quick Share / USB / any app you choose); names redacted to `name#hash` by default; audio opt-in | phone | US-001 |
-| **Summarizer** | `tools/summarize_spike.py <run>` → compact `summary.md` (timeline, RMS table, errors) | PC | US-001, US-004 |
+| **Save logs** button | Zip → `Download/WACR-logs/` (visible in My Files); names redacted to `name#hash` by default; audio/screenshots opt-in | phone | US-001 |
+| **Share logs** button | Same zip → share sheet: Quick Share to PC, Phone Link, Drive, WhatsApp "Message yourself" | phone | US-001 |
+| **Summarizer** | `tools/summarize_spike.py <zip or folder>` → compact `summary.md` (timeline, RMS table, errors) | PC | US-001, US-004 |
+| Pull script (optional) | `tools/pull-spike-logs.ps1` over USB debugging — only for system dumps (`dumpsys audio`, full logcat) the app cannot read itself | PC (git-ignored `spike-logs/`) | US-001 |
 | App diagnostics | Ring log (1 MB, redacted), detection trace, crash files → "Export diagnostics" via SAF | v1 app | US-022, US-031 |
 
-**Loop**: run labelled test call → `tools\pull-spike-logs.ps1` → `python tools\summarize_spike.py spike-logs\<device>\<runId>` → ask Copilot to read `summary.md` (and raw files only if needed). Logs stay on your phone/PC; you decide what to share. PRD US-004 "log stays in app-private storage" holds — export happens only on an explicit owner action.
+**Loop**: labelled test call → tap **Share logs** → Quick Share/Phone Link to PC → drop the zip in the repo's `spike-logs/` → `python tools\summarize_spike.py spike-logs\<zip>` → ask Copilot to read `summary.md` (raw files only if needed). Logs stay on your phone/PC; you decide what to share. PRD US-004 "log stays in app-private storage" holds — export happens only on an explicit owner tap.
+
+**APK delivery**: Copilot builds `spike-debug.apk` on this PC (Android SDK + Studio JBR present) into `dist/`; you move it to each phone with Quick Share/Phone Link and install. Install on **both** phones: each is a device under test, and whichever phone is not testing is just the other end of the call (WhatsApp only, the spike is not needed there for that call).
 
 ## Summary Rollup
 | Requirement | Milestone | Release | Est. Manual | Est. AI | PRD AI | Savings (%) |
 |-------------|-----------|---------|-------------|---------|--------|-------------|
-| REQ-001 (Must) | M-001.1 Audio capture matrix known | Spike | 27:55 | 04:55 | 01:45 | ~82% |
+| REQ-001 (Must) | M-001.1 Audio capture matrix known | Spike | 29:25 | 05:10 | 01:45 | ~82% |
 | REQ-001 (Must) | M-001.2 WhatsApp call signals known | Spike | 13:30 | 02:30 | 01:05 | ~81% |
 | REQ-002 (Must) | M-002.1 Voice calls detected automatically | v1.0 | 13:40 | 02:05 | 02:05 | ~85% |
 | REQ-002 (Must) | M-002.2 Video and group calls distinguished | v1.0 | 06:30 | 01:15 | 01:15 | ~81% |
@@ -63,12 +66,12 @@ Goal: any test run on either phone can reach Copilot in one command, without the
 | REQ-017 (Could) | M-017.1 Remote side capturable on demand | If gate requires | 01:50 | 00:40 | 00:40 | ~64% |
 | REQ-018 (Should) | M-018.1 WhatsApp Desktop calls recorded | v2 | 13:15 | 02:45 | 02:45 | ~79% |
 | REQ-019 (Could) | M-019.1 WhatsApp Web calls recorded | v3 | 06:10 | 01:25 | 01:25 | ~77% |
-| **Total** | | | **263:15** | **51:35** | **46:00** | **~80%** |
+| **Total** | | | **264:45** | **51:50** | **46:00** | **~80%** |
 
 ### By release
 | Release | Milestones | Est. Manual | Est. AI |
 |---------|------------|-------------|---------|
-| Spike | M-001.1, M-001.2 | 41:25 | 07:25 |
+| Spike | M-001.1, M-001.2 | 42:55 | 07:40 |
 | v1.0 | M-008.1, M-005.1, M-007.1, M-002.1, M-003.1, M-005.2, M-004.1, M-004.2, M-006.1, M-002.2, M-003.2, M-003.3, M-007.2, M-008.2, M-012.1, M-011.1, M-011.2, M-011.3 | 135:30 | 24:55 |
 | v1.1 | M-009.1, M-010.1, M-010.2 | 13:50 | 03:05 |
 | v1.2 | M-013.1, M-013.2, M-013.3, M-013.4, M-016.1 | 35:55 | 07:25 |
@@ -79,32 +82,33 @@ Goal: any test run on either phone can reach Copilot in one command, without the
 
 ## Requirement 1 (REQ-001): Capture feasibility proven — Must Have
 - **Outcome**: For each phone, source and audio route, we know which sides are capturable and which WhatsApp signals the app can read; the owner has chosen a capture strategy.
-- **Est. Manual**: 41:25 | **Est. AI**: 07:25
+- **Est. Manual**: 42:55 | **Est. AI**: 07:40
 
 ### Milestone 1.1 (M-001.1): Audio capture matrix known
 - **Problem solved**: Nobody knows whether the remote side is audible on the A73/F42 without root or speakerphone.
 - **Release**: Spike | **Depends on**: —
-- **Est. Manual**: 27:55 | **Est. AI**: 04:55 (incl. exit verification 00:40 / 00:20)
+- **Est. Manual**: 29:25 | **Est. AI**: 05:10 (incl. exit verification 00:40 / 00:20)
 
 #### Feature 1.1.1 (FEAT-001.1.1): Spike recorder app
-- **Est. Manual**: 26:30 | **Est. AI**: 04:25
+- **Est. Manual**: 28:00 | **Est. AI**: 04:40
 
 ##### User Story 1.1.1.1 (US-001): A test app that records each audio source during a WhatsApp call
 - **So that**: I can learn which source captures both sides
-- **Est. Manual**: 20:00 | **Est. AI**: 03:20 (PRD: 00:45)
+- **Est. Manual**: 21:30 | **Est. AI**: 03:35 (PRD: 00:45)
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 1.1.1.1.1 | Task | Scaffold Gradle build: `settings.gradle.kts`, `gradle/libs.versions.toml`, `:spike` app (minSdk 33, target/compile 36, `arm64-v8a`, id `com.soakula.wacr.spike`); `.gitignore` adds `spike-logs/` | 02:00 | 00:20 | `.\gradlew :spike:assembleDebug` passes; APK installs on A73 and F42 | Foundation for all spike work |
+| 1.1.1.1.1 | Task | Scaffold Gradle build: `settings.gradle.kts`, `gradle/libs.versions.toml`, `:spike` app (minSdk 33, target/compile 36, `arm64-v8a`, id `com.soakula.wacr.spike`); `.gitignore` adds `spike-logs/`, `dist/` | 02:00 | 00:20 | `.\gradlew :spike:assembleDebug` passes; APK installs on A73 and F42 | Foundation for all spike work |
 | 1.1.1.1.2 | Task | `SpikeLog` structured logger: JSONL (`ts`, `uptimeMs`, `tag`, `event`, `data`) per run in `files/runs/<runId>/events.jsonl`, mirrored to logcat tag `WACR`; uncaught-exception handler writes `crash.txt` — `spike/…/log/SpikeLog.kt` | 02:00 | 00:20 | JVM test writes/reads 1,000 events; forced crash leaves `crash.txt` | Owner ask: every log easy to acquire |
 | 1.1.1.1.3 | Task | `device.json` per run: model, Android + One UI build, patch level, WhatsApp / WA Business versionName+versionCode, granted permissions, battery-optimisation state, available audio devices — `spike/…/log/DeviceInfo.kt` | 01:30 | 00:15 | Every run folder has `device.json` with no empty fields | Lets A73 vs F42 results be compared |
-| 1.1.1.1.4 | Task | "Share debug bundle": zip selected run(s) → share sheet via `FileProvider`; names redacted to `name#<hash>` by default; audio + screenshots opt-in — `spike/…/log/DebugBundle.kt`, `res/xml/file_paths.xml` | 02:30 | 00:25 | Bundle shares via Quick Share/Files; unzipped contents match run folder; redaction on by default | No `INTERNET` permission needed |
-| 1.1.1.1.5 | Task | PC pull script `tools/pull-spike-logs.ps1 [-Serial]`: `adb exec-out run-as com.soakula.wacr.spike tar c files/runs` → `spike-logs/<device>/<runId>/`, plus `logcat -d -s WACR:*`, `dumpsys audio`, `dumpsys media.audio_policy`, `getprop ro.build.*` | 01:30 | 00:15 | With each phone on USB the script creates a complete folder; `-Serial` picks between two phones | Main way to hand logs to Copilot |
+| 1.1.1.1.4 | Task | In-app log export (no USB, no developer mode): **"Save logs"** writes a zip of selected run(s) to `Download/WACR-logs/` via MediaStore; **"Share logs"** opens the share sheet via `FileProvider` (Quick Share to PC, Phone Link, Drive, "Message yourself" on WhatsApp); names redacted to `name#<hash>` by default; audio + screenshots opt-in — `spike/…/log/DebugBundle.kt`, `res/xml/file_paths.xml` | 03:00 | 00:30 | Zip appears in My Files › Download/WACR-logs and reaches the PC over Quick Share/Phone Link; contents match run folder; redaction on by default | Primary log path; app itself has no `INTERNET` |
+| 1.1.1.1.5 | Task | (Optional, power users) PC pull script `tools/pull-spike-logs.ps1 [-Serial]`: `adb exec-out run-as com.soakula.wacr.spike tar c files/runs` → `spike-logs/<device>/<runId>/`, plus `logcat -d -s WACR:*`, `dumpsys audio`, `dumpsys media.audio_policy`, `getprop ro.build.*` | 01:30 | 00:15 | With USB debugging on, script creates a complete folder; `-Serial` picks between two phones | Only needed for system dumps the app cannot read |
 | 1.1.1.1.6 | Task | Summarizer `tools/summarize_spike.py <runDir>` → `summary.md`: signal timeline, per-source RMS table, errors/crash excerpt | 02:00 | 00:20 | Sample run → `summary.md` < 300 lines, readable | Keeps shared context small |
 | 1.1.1.1.7 | Task | Source sweep: for each route, `AudioRecord` 16 kHz on `VOICE_COMMUNICATION`, `VOICE_RECOGNITION`, `MIC`, `CAMCORDER`, `VOICE_CALL`, `VOICE_DOWNLINK`, 30 s each → `<device>_<source>_<route>.m4a` (+ `.wav` for analysis); refusals/silence logged, never crash — `spike/…/capture/SourceSweep.kt` | 03:00 | 00:30 | Live call: 6 attempts per route, files or logged errors for each | PRD US-001 ACs |
 | 1.1.1.1.8 | Task | FGS start probe: accessibility service starts a `microphone` foreground service when the WhatsApp call screen appears while the spike is in background; log success or `ForegroundServiceStartNotAllowedException` — `spike/…/SpikeAccessibilityService.kt`, `spike/…/capture/CaptureService.kt` | 02:30 | 00:25 | Outcome logged on A73 (Android 16) and F42 (Android 13) | Resolves design R-2 / AD-012 |
 | 1.1.1.1.9 | Task | Concurrent-capture probe: every 1 s log `getActiveRecordingConfigurations()` and `AudioRecordingConfiguration.isClientSilenced` during the sweep — `SourceSweep.kt` | 01:00 | 00:10 | Silenced flag per source visible in `summary.md` | Resolves design R-5 |
-| 1.1.1.1.10 | Task | Spike UI (single unstyled Compose screen): route picker, Start sweep, labelled run, last 200 events, Share bundle — `spike/…/SpikeActivity.kt` | 02:00 | 00:20 | All buttons work on both phones | Throwaway |
+| 1.1.1.1.10 | Task | Spike UI (single unstyled Compose screen): route picker, Start sweep, labelled run, last 200 events, Save logs / Share logs — `spike/…/SpikeActivity.kt` | 02:00 | 00:20 | All buttons work on both phones | Throwaway |
+| 1.1.1.1.11 | Task | Ready-to-install APK: Copilot builds `spike-debug.apk` locally and copies it to `dist/` (git-ignored); install via Quick Share/Phone Link → "Install unknown apps" → App info › "Allow restricted settings" → enable accessibility — steps in `spike/README.md` | 01:00 | 00:10 | Fresh install on A73 and F42 without USB; accessibility enabled | Install on both phones — each is a test device and the other end of the call |
 
 ##### User Story 1.1.1.2 (US-002): A capability matrix generated from the test files
 - **So that**: I can decide the capture strategy from facts
@@ -1250,8 +1254,8 @@ Order follows PRD §9. One developer + AI agent, so lanes mean *can be interleav
 | D · v1.1+ | M-009.1 → M-010.2; M-010.1 · M-013.1 → M-013.2 → M-013.3 → M-013.4 / M-016.1 / M-014.x · M-015.x · M-017.1 (gate) |
 | E · Later platforms | M-018.1 (v2), M-019.1 (v3) — independent of Android code |
 
-**Critical path to v1.0 (AI time)**: M-001.1 → M-003.1 → M-006.1 → M-008.2 = **10:30**.  
-**Critical path, all Android releases**: M-001.1 → M-003.1 → M-013.1 → M-013.2 → M-013.3 → M-014.1 → M-014.2 = **15:25**.
+**Critical path to v1.0 (AI time)**: M-001.1 → M-003.1 → M-006.1 → M-008.2 = **10:45**.  
+**Critical path, all Android releases**: M-001.1 → M-003.1 → M-013.1 → M-013.2 → M-013.3 → M-014.1 → M-014.2 = **15:40**.
 
 ## Dependency Graph
 ```mermaid
@@ -1339,11 +1343,11 @@ graph TD
 ## Risks & Mitigations
 - **R-1 Remote side not capturable** (spike gate): `matrix.md` from both phones decides; fallback M-017.1 speakerphone or Windows-first (REQ-018).
 - **R-2 Background mic FGS blocked on Android 14+/16**: probed in task 1.1.1.1.8; fallback persistent "Ready" FGS (AD-012).
-- **R-3 WhatsApp UI/notification changes**: `DetectionRules` asset + golden fixtures from the spike; pull script makes re-capturing signals a 5-minute job.
+- **R-3 WhatsApp UI/notification changes**: `DetectionRules` asset + golden fixtures from the spike; one-tap Share logs makes re-capturing signals a 5-minute job.
 - **R-4 Samsung background killing**: onboarding exemptions (US-029), `HealthMonitor` (US-031), `BootReceiver` (US-032).
 - **R-5 Concurrent capture silencing**: `isClientSilenced` logged per source in the spike (task 1.1.1.1.9).
 - **R-6 Transcription too slow on F42**: bake-off (M-013.1) measures RTF; charge-only auto-transcribe; smaller model on F42.
 - **R-7 Sideload restricted settings** blocks enabling accessibility: documented unlock step in spike README and onboarding.
-- **R-8 Debug logs contain personal data**: redaction on by default, audio/screenshots opt-in, `spike-logs/` git-ignored, nothing leaves without an explicit share/pull.
+- **R-8 Debug logs contain personal data**: redaction on by default, audio/screenshots opt-in, `spike-logs/` and `dist/` git-ignored, nothing leaves without an explicit Save/Share tap.
 - **R-9 Estimates drift**: re-baseline after the spike. Spike adds ~4.5 h AI over the PRD for the debug-logging toolkit and app scaffold/logging adds ~1 h — deliberate, it pays back in every later debug loop.
 
