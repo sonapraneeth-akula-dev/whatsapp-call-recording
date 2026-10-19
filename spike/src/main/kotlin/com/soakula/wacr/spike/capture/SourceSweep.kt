@@ -18,6 +18,7 @@ import com.soakula.wacr.spike.analysis.SourceResult
 import com.soakula.wacr.spike.log.Names
 import com.soakula.wacr.spike.log.SpikeLog
 import com.soakula.wacr.spike.signals.AudioStateLogger
+import com.soakula.wacr.spike.signals.CallGate
 
 /**
  * Records each audio source in turn for 2 × sideSeconds:
@@ -28,12 +29,14 @@ import com.soakula.wacr.spike.signals.AudioStateLogger
 class SourceSweep(private val ctx: Context, private val host: String, private val reason: String) {
     @Volatile var cancelled = false
     private val am = ctx.getSystemService(AudioManager::class.java)
+    /** Per-sweep prefix so later sweeps in the same run never overwrite earlier WAVs. */
+    private val stamp = java.text.SimpleDateFormat("HHmmss", java.util.Locale.US).format(java.util.Date())
 
     fun run() {
         val side = Prefs.sideSeconds
         SpikeLog.log("sweep", "start", mapOf(
             "host" to host, "reason" to reason, "sideSeconds" to side, "route" to AudioStateLogger.route(am),
-            "sources" to SOURCES.map(Names::source), "process" to processState()
+            "sources" to SOURCES.map(Names::source), "process" to processState(), "sweep" to stamp, "inCall" to CallGate.inCall
         ))
         for ((i, src) in SOURCES.withIndex()) {
             if (cancelled) break
@@ -41,7 +44,8 @@ class SourceSweep(private val ctx: Context, private val host: String, private va
             MatrixReport.add(r)
             SpikeLog.log("sweep", "source_result", mapOf(
                 "source" to r.source, "route" to r.route, "host" to r.host, "status" to r.status, "ownP95" to r.ownP95,
-                "remoteP95" to r.remoteP95, "zeroPct" to r.zeroPct, "silenced" to r.silenced, "own" to r.own, "remote" to r.remote, "file" to r.file
+                "remoteP95" to r.remoteP95, "zeroPct" to r.zeroPct, "silenced" to r.silenced, "own" to r.own, "remote" to r.remote,
+                "file" to r.file, "sweep" to stamp, "reason" to reason, "inCall" to CallGate.inCall
             ))
         }
         MatrixReport.write()
@@ -68,7 +72,7 @@ class SourceSweep(private val ctx: Context, private val host: String, private va
         try { rec.startRecording() } catch (e: Exception) { rec.release(); return fail("start:${e.javaClass.simpleName}", e) }
         if (rec.recordingState != AudioRecord.RECORDSTATE_RECORDING) { rec.release(); return fail("not_recording") }
 
-        val rel = "audio/${Build.MODEL}_${index}_${name}_$route.wav"
+        val rel = "audio/${stamp}_${index}_${name}_$route.wav"
         val meter = FrameMeter(RATE)
         val buf = ShortArray(RATE / 10)
         val total = RATE * side * 2

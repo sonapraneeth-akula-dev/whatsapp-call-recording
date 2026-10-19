@@ -88,8 +88,8 @@ def sweep_table(events):
     for e in events:
         if e.get("tag") == "sweep" and e.get("event") == "source_result":
             d = e["data"]
-            rows.append("| {source} | {route} | {host} | {status} | {own} | {remote} | {ownP95} | {remoteP95} | {zeroPct} | {silenced} |".format(
-                **{k: d.get(k, "") for k in ("source", "route", "host", "status", "own", "remote", "ownP95", "remoteP95", "zeroPct", "silenced")}))
+            rows.append("| {sweep} | {inCall} | {source} | {route} | {host} | {status} | {own} | {remote} | {ownP95} | {remoteP95} | {zeroPct} | {silenced} |".format(
+                **{k: d.get(k, "?") for k in ("sweep", "inCall", "source", "route", "host", "status", "own", "remote", "ownP95", "remoteP95", "zeroPct", "silenced")}))
     return rows
 
 
@@ -140,8 +140,8 @@ def summarize(b: Bundle) -> str:
         out += fgs_verdict(events)
         st = sweep_table(events)
         if st:
-            out += ["", "### Source sweep", "", "| source | route | host | status | own | remote | own p95 | remote p95 | zero% | silenced |",
-                    "|---|---|---|---|---|---|---|---|---|---|", *st]
+            out += ["", "### Source sweep", "", "| sweep | in call | source | route | host | status | own | remote | own p95 | remote p95 | zero% | silenced |",
+                    "|---|---|---|---|---|---|---|---|---|---|---|---|", *st]
         if f"runs/{run}/matrix.md" in b.names:
             out += ["", "### matrix.md", "", b.read(f"runs/{run}/matrix.md").strip()]
         tl = timeline(events)

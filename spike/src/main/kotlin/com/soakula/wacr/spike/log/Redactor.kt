@@ -7,7 +7,7 @@ import java.security.MessageDigest
  * with stable hashes like name#3fa2c1, so the same person maps to the same token across files.
  */
 class Redactor(names: Collection<String>) {
-    private val names: Set<String> = names.map(::norm).filter { it.length >= 3 }.toHashSet()
+    private val names: Set<String> = names.map(::norm).filter { it.length >= 3 && it !in COMMON }.toHashSet()
 
     fun apply(text: String): String {
         val s = PHONE.replace(text) { tag("phone", it.value.filter(Char::isDigit)) }
@@ -35,8 +35,16 @@ class Redactor(names: Collection<String>) {
     companion object {
         private const val MAX_WORDS = 5
         private val PHONE = Regex("\\+\\d[\\d ()-]{7,}\\d")
-        private val WORD = Regex("[\\p{L}\\p{M}\\p{N}][\\p{L}\\p{M}\\p{N}.'-]*")
+        // '_' is part of a word so identifiers like VOICE_CALL / status_bar_* are never partially replaced.
+        private val WORD = Regex("[\\p{L}\\p{M}\\p{N}_][\\p{L}\\p{M}\\p{N}_.'-]*")
         private val SPACES = Regex("\\s+")
+        /** Contact first names that are also WhatsApp/Android UI words (e.g. a contact saved as "Voice mail"). */
+        private val COMMON = setOf(
+            "voice", "video", "call", "calls", "phone", "mobile", "home", "work", "office", "mail", "speaker", "audio",
+            "camera", "microphone", "mute", "end", "more", "share", "add", "people", "ringing", "calling", "missed",
+            "incoming", "outgoing", "whatsapp", "status", "notification", "message", "messages", "group", "android",
+            "samsung", "settings", "system", "the", "and", "you", "turn", "select", "device", "screen", "chat", "chats",
+        )
 
         fun norm(s: String) = s.trim().lowercase().replace(SPACES, " ")
 

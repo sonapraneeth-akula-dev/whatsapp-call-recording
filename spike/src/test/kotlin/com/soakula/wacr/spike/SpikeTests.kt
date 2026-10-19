@@ -82,4 +82,11 @@ class RedactorTest {
         assertFalse(out.contains("राम"))
         assertTrue(out.startsWith("Calling phone#"))
     }
+
+    @Test fun leavesIdentifiersAndUiWordsAlone() {
+        val r2 = Redactor(Redactor.expand(listOf("Voice Mail", "Phone Support", "Ravi Kumar")))
+        val line = "{\"source\":\"VOICE_CALL\",\"cd\":\"Turn speaker phone on\",\"text\":\"Voice call\",\"id\":\"status_bar_voice\"}"
+        assertEquals(line, r2.apply(line))
+        assertTrue(r2.apply("Voice Mail").startsWith("name#"))
+    }
 }

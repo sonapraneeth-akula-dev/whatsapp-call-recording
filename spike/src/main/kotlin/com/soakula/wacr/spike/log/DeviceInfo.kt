@@ -23,7 +23,12 @@ object Names {
 
     fun deviceType(t: Int) = deviceTypes[t] ?: "TYPE_$t"
     fun mode(m: Int) = modes[m] ?: "MODE_$m"
-    fun source(s: Int) = sources[s] ?: "SOURCE_$s"
+    fun source(s: Int) = STD_SOURCES.getOrNull(s) ?: sources[s] ?: "SOURCE_$s"
+    /** Samsung adds hidden AudioSource constants that alias standard values (e.g. SEM_FM_RX == MIC). */
+    private val STD_SOURCES = listOf(
+        "DEFAULT", "MIC", "VOICE_UPLINK", "VOICE_DOWNLINK", "VOICE_CALL", "CAMCORDER",
+        "VOICE_RECOGNITION", "VOICE_COMMUNICATION", "REMOTE_SUBMIX", "UNPROCESSED", "VOICE_PERFORMANCE"
+    )
     fun usage(u: Int) = usages[u] ?: "USAGE_$u"
     fun device(d: AudioDeviceInfo): Map<String, Any?> =
         linkedMapOf("type" to deviceType(d.type), "id" to d.id, "product" to d.productName?.toString(), "sink" to d.isSink)
