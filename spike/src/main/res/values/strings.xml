@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_description">Test build. Watches WhatsApp windows only, to learn when a call starts and ends and to start the test recorder. Nothing leaves the phone unless you tap Save logs or Share logs.</string>
+</resources>
