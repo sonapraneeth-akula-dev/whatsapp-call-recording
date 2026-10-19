@@ -1,6 +1,7 @@
 package com.soakula.wacr.spike
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -8,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -92,9 +94,26 @@ class SpikeActivity : ComponentActivity() {
     }
 
     private fun granted(p: String) = checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
-    private fun open(action: String, pkgUri: Boolean = false) = runCatching {
-        startActivity(Intent(action).apply { if (pkgUri) data = Uri.parse("package:$packageName") })
-    }.onFailure { SpikeLog.error("ui", "open_settings_failed", it, mapOf("action" to action)) }
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+    private fun open(action: String, pkgUri: Boolean = false, extras: Intent.() -> Unit = {}): Boolean = runCatching {
+        startActivity(Intent(action).apply { if (pkgUri) data = Uri.parse("package:$packageName"); extras() })
+        SpikeLog.log("ui", "open_settings", mapOf("action" to action))
+    }.onFailure {
+        SpikeLog.error("ui", "open_settings_failed", it, mapOf("action" to action))
+        toast("Couldn't open settings: ${it.javaClass.simpleName}")
+    }.isSuccess
+
+    /** Our own service's detail page (API 33+), falling back to the accessibility list. */
+    private fun openA11y() {
+        val detail = runCatching {
+            startActivity(Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").putExtra(
+                Intent.EXTRA_COMPONENT_NAME,
+                ComponentName(this, SpikeAccessibilityService::class.java).flattenToString()
+            ))
+        }.isSuccess
+        SpikeLog.log("ui", "open_a11y", mapOf("detailPage" to detail))
+        if (!detail && open(Settings.ACTION_ACCESSIBILITY_SETTINGS)) toast("Installed apps › WACR Spike call detector › On")
+    }
 
     @Composable
     private fun Screen(resumes: Int) {
@@ -143,9 +162,7 @@ class SpikeActivity : ComponentActivity() {
                     SetupRow("Allow restricted settings (App info › ⋮) — can't be checked; only needed if Accessibility/Notification access is greyed out", null, "App info") {
                         open(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkgUri = true)
                     }
-                    SetupRow("Accessibility: WACR Spike call detector", Access.a11yEnabled(this@SpikeActivity), "Open") {
-                        open(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    }
+                    SetupRow("Accessibility: WACR Spike call detector", Access.a11yEnabled(this@SpikeActivity),                     "Open") { openA11y() }
                     SetupRow("Notification access: WACR Spike", Access.notificationAccess(this@SpikeActivity), "Open") {
                         open(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                     }
@@ -163,7 +180,9 @@ class SpikeActivity : ComponentActivity() {
                     Button(onClick = {
                         SpikeLog.newRun("$callType-$direction")
                         MatrixReport.reset()
+                        toast("New run \"$callType-$direction\" started. Now make the WhatsApp call.")
                     }) { Text("Start new run: $callType-$direction") }
+                    Text("Current run: $runId", fontSize = 12.sp)
                 }
             }
             item {
@@ -176,9 +195,11 @@ class SpikeActivity : ComponentActivity() {
                     if (host == Host.READY) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(enabled = !ready, onClick = {
-                                startForegroundService(Intent(this@SpikeActivity, CaptureService::class.java).setAction(CaptureService.ACTION_READY))
+                                runCatching { startForegroundService(Intent(this@SpikeActivity, CaptureService::class.java).setAction(CaptureService.ACTION_READY)) }
+                                    .onSuccess { toast("Ready service starting — check the notification") }
+                                    .onFailure { SpikeLog.error("fgs", "ready_start_failed", it); toast("Ready service failed: ${it.javaClass.simpleName}") }
                             }) { Text("Start Ready service") }
-                            OutlinedButton(enabled = ready, onClick = { CaptureService.stop(this@SpikeActivity) }) { Text("Stop") }
+                            OutlinedButton(enabled = ready, onClick = { CaptureService.stop(this@SpikeActivity); toast("Ready service stopped") }) { Text("Stop") }
                         }
                     }
                     Text("Seconds per side (you, then the other person):")
@@ -186,8 +207,11 @@ class SpikeActivity : ComponentActivity() {
                     Toggle("Dump call-screen view tree each second", tree) { tree = it; Prefs.treeDump = it }
                     Toggle("Screenshots of call screen (1/s, stays on phone unless shared)", shots) { shots = it; Prefs.screenshots = it }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(enabled = !sweeping, onClick = { SweepController.begin("manual") }) { Text("Sweep now") }
-                        OutlinedButton(enabled = sweeping, onClick = { SweepController.stop("manual") }) { Text("Stop sweep") }
+                        Button(enabled = !sweeping, onClick = {
+                            SweepController.begin("manual")
+                            toast(if (CallGate.inCall) "Sweep starting — follow the buzzes" else "Sweep starting (no WhatsApp call detected — test only)")
+                        }) { Text("Sweep now") }
+                        OutlinedButton(enabled = sweeping, onClick = { SweepController.stop("manual"); toast("Sweep stopped") }) { Text("Stop sweep") }
                     }
                 }
             }
