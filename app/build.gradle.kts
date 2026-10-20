@@ -32,6 +32,7 @@ android {
     }
     buildTypes {
         debug {
+            enableUnitTestCoverage = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "WACR Debug")

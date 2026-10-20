@@ -1,0 +1,33 @@
+{
+  "provenance": {
+    "kind": "captured_redacted_spike",
+    "capturedOn": "2026-10-19",
+    "deviceModel": "SM-A736B",
+    "sdkInt": 36,
+    "packageName": "com.whatsapp",
+    "versionName": "2.26.40.76",
+    "scenario": "outgoing_voice",
+    "timeBasis": "relative_wall_clock_ms",
+    "identityFieldsRemoved": true,
+    "videoExtraPresenceKnown": false,
+    "groupClassificationKnown": false
+  },
+  "events": [
+    {"atMs":18092,"kind":"audio","communication":true},
+    {"atMs":18294,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":17687},
+    {"atMs":18712,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":17687},
+    {"atMs":18713,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":17687},
+    {"atMs":20263,"kind":"posted","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":false,"instance":19955},
+    {"atMs":36871,"kind":"posted","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":true,"instance":36538},
+    {"atMs":79831,"kind":"removed","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":true,"instance":36538},
+    {"atMs":80154,"kind":"audio","communication":false},
+    {"atMs":170844,"kind":"audio","communication":true},
+    {"atMs":171287,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":170622},
+    {"atMs":171288,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":170622},
+    {"atMs":171288,"kind":"posted","ongoing":true,"template":"BigTextStyle","styleCallType":-1,"chronometer":false,"instance":170747},
+    {"atMs":172946,"kind":"posted","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":false,"instance":172664},
+    {"atMs":184577,"kind":"posted","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":true,"instance":184286},
+    {"atMs":229698,"kind":"removed","ongoing":true,"template":"CallStyle","styleCallType":2,"chronometer":true,"instance":184286},
+    {"atMs":230174,"kind":"audio","communication":false}
+  ]
+}
