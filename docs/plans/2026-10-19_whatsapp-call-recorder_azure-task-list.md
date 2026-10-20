@@ -502,6 +502,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 **2026-10-20 remediation update (5.2.1.2.2)**: compatible Robolectric 4.17 update selects Bouncy Castle 1.85, with no advisory matches for that selected version in a fresh OSV scan. All 95 app and 10 retained-spike unit tests pass. No runtime application dependencies changed; unresolved build-tool findings still prevent declaring the whole scan gate clean.
 
+**2026-10-20 build maintenance (5.2.1.2.2)**: AGP 8.13.2 patch update builds both applications and app variants with local tests/lint on the existing Gradle/Kotlin/JDK baseline. Checksums updated, no forced transitive versions or major migration. Tooling scan acceptance remains open; independent application work continues.
+
 ## Requirement 6 (REQ-006): Dashboard and library — Must Have
 - **Outcome**: Owner sees recorder status and can play any recording within 2 taps.
 - **Est. Manual**: 08:40 | **Est. AI**: 01:40

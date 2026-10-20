@@ -557,6 +557,8 @@ OSV-Scanner 2.7.0 (official Windows binary verified against its release SHA-256)
 
 **Compatible test-tool remediation (2026-10-20)**: update Robolectric 4.16.1 → 4.17 without changing the Android application runtime or source behavior. The selected debug unit-test runtime now resolves Bouncy Castle 1.85 instead of 1.81; a fresh coordinate-only OSV scan reports no advisories for that selected version. Both local unit suites, including native Compose rendering and service lifecycle checks, pass. Verification metadata gains checksums for the new artifacts; historical/candidate versions in that file are not a shipping SBOM. Build-tool findings remain open and are not waived by this maintenance update.
 
+**Compatible build-tool maintenance (2026-10-20)**: update AGP 8.13.0 → 8.13.2 within the existing Gradle 8.14.3/Kotlin 2.2.20/JDK 17 stack. Both app variants and the retained spike build, both unit suites and app debug/release lint pass. New build/lint artifacts receive explicit SHA-256 entries; strict verification remains enabled. No major plugin/Kotlin migration, blanket dependency forcing or clean-scan claim. Remaining tooling remediation stays tracked separately and does not prevent independent application implementation.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|
