@@ -666,7 +666,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 8.2.2.1.1 | Task | Empty / loading / error states for every screen | 02:00 | 00:15 | Screenshot tests per state |  |
+| 8.2.2.1.1 | Task | Empty / loading / error states for every screen | 02:00 | 00:15 | Screenshot tests per state | **2026-10-20: implemented and verified locally.** Native rendering now covers 39 actual production states across Home, Library, Allowlist, Setup, Settings, Player, Diagnostics and Capability, with exact status/error/empty-text or indeterminate-progress assertions and nonblank top/end PNGs plus HTML review galleries. Includes filtered-empty lists, unavailable/capture-blocked playback, explicit unreviewed capability, save/review/capture failures and every diagnostic export state; no fake ASR/lock screens. Existing retry/action tests retained. Found and wired a real Home setup/storage Retry through AppScaffold to HomeViewModel.refresh without enabling capture before successful reload. Review `dist\ui-states\index.html`; regenerates with `:app:testDebugUnitTest --tests '*UiStateRenderingTest'`. Uses already-installed native Robolectric graphics, not a new screenshot dependency. Images are review artifacts, not approved golden-pixel baselines, full-page captures or phone acceptance; light/dark/large-font matrix and a11y/performance remain their own tasks. Debug/release/androidTest builds and lint pass. |
 | 8.2.2.1.2 | Task | Motion (status pill, list animations) + Baseline Profile | 01:30 | 00:15 | Janky frames ≤ 5% on F42 |  |
 
 ##### User Story 8.2.2.2 (US-036): The app usable with TalkBack and large text

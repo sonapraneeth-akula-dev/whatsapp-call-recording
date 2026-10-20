@@ -36,6 +36,7 @@ fun HomeScreen(
     onFix: (HealthIssue) -> Unit,
     library: LibraryUiState? = null,
     onRetryLibrary: () -> Unit = {},
+    onRetryHealth: () -> Unit = {},
     onOpen: (UUID) -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) }) { padding ->
@@ -107,7 +108,10 @@ fun HomeScreen(
             Text(stringResource(R.string.home_storage_title), style = MaterialTheme.typography.titleMedium)
             Text(state.availableBytes?.let { Formatter.formatShortFileSize(LocalContext.current, it) }
                 ?: stringResource(R.string.home_storage_unavailable))
-            state.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+            state.error?.let {
+                Text(stringResource(it), color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = onRetryHealth) { Text(stringResource(R.string.library_retry)) }
+            }
             Text(stringResource(R.string.home_setup_title), style = MaterialTheme.typography.titleLarge)
             if (!state.loaded) CircularProgressIndicator()
             for (issue in state.issues) {

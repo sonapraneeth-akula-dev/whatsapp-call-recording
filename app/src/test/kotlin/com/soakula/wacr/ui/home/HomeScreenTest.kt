@@ -16,6 +16,8 @@ import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.recording.RecorderFailure
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.ui.AppScaffold
+import com.soakula.wacr.ui.library.LibraryUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -58,13 +60,20 @@ class HomeScreenTest {
 
     @Test fun noRecordActionUntilStorageAndHealthAreLoadedSuccessfully() {
         val state = mutableStateOf(HomeUiState())
+        var retried = 0
         compose.setContent {
-            MaterialTheme { HomeScreen(state.value, RecorderState.Idle, {}, {}, {}) }
+            MaterialTheme {
+                AppScaffold(state.value, RecorderState.Idle, LibraryUiState.Ready(emptyList()),
+                    {}, {}, {}, {}, onRetryHome = { retried++ }) { _, _ -> }
+            }
         }
         compose.onNodeWithText(text(R.string.home_record)).assertIsNotEnabled()
         compose.runOnIdle { state.value = HomeUiState(loaded = true, error = R.string.home_health_error) }
         compose.onNodeWithText(text(R.string.home_record)).assertIsNotEnabled()
         compose.onNodeWithText(text(R.string.home_health_error)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_retry)).performScrollTo().performClick()
+        assertEquals(1, retried)
+        compose.onNodeWithText(text(R.string.home_record)).performScrollTo().assertIsNotEnabled()
     }
 
     @Test fun consentDisclosureAndRealSettingsRemedyRemainReachable() {

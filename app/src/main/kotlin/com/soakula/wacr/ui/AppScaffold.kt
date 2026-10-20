@@ -58,6 +58,7 @@ fun AppScaffold(
     startupLoading: Boolean = false,
     appearanceError: Boolean = false,
     onRetryAppearance: () -> Unit = {},
+    onRetryHome: () -> Unit = {},
     playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
@@ -161,7 +162,7 @@ fun AppScaffold(
                 destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(
                     library, onRetryLibrary, contactRoute, { libraryRoute = it.encode() }
                 ) { selectedId = it.toString() }
-                else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
+                else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary, onRetryHome) {
                     selectedId = it.toString()
                 }
             }

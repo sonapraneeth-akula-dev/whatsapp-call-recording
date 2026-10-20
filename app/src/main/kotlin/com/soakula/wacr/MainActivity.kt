@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
                     }, setupRequest = setupRequest, settingsRequest = capabilityRequest, playbackRequest = playbackRequest,
                     forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
                     appearanceError = appearanceState is SettingsUiState.Failed,
-                    onRetryAppearance = settings::retry) { entry, back ->
+                    onRetryAppearance = settings::retry, onRetryHome = home::refresh) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
                         onBack = back,
