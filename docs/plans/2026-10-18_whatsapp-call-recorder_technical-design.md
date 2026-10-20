@@ -453,7 +453,7 @@ No servers. "Environments" = build variants.
 
 | Aspect | `debug` | `release` |
 |--------|---------|-----------|
-| App id | `…recorder.debug` (side-by-side) | `…recorder` |
+| App id | `com.soakula.wacr.debug` (side-by-side) | `com.soakula.wacr` |
 | Minify | off | [R8](https://developer.android.com/build/shrink-code) full mode |
 | Logging | verbose, diagnostics screen open | redacted, ring log only |
 | Signing | debug key | personal release key (never in repo) |
@@ -489,7 +489,7 @@ whatsapp-call-recording/
 ├─ build-logic/                      # convention plugins (android-app, android-lib, verifyNoInternet)
 ├─ app/
 │  ├─ schemas/                       # Room exported schema JSON
-│  └─ src/main/kotlin/…/recorder/
+│  └─ src/main/kotlin/com/soakula/wacr/
 │     ├─ AppContainer.kt             # manual DI
 │     ├─ detection/                  # a11y service, NLS, AudioModeWatcher, CallDetector, DetectionRules
 │     ├─ recording/                  # RecorderService, CaptureEngine, AacEncoder, SegmentWriter, Finalizer, Recovery
@@ -501,11 +501,13 @@ whatsapp-call-recording/
 │     ├─ ui/{theme,components,onboarding,home,library,player,search,allowlist,settings}/
 │     └─ util/
 ├─ asr/                              # Android library: sherpa-onnx wrapper, ModelManager, VAD, diarization
-├─ spike/                            # throwaway capture/detection test app (M-001.1/2)
+├─ spike/                            # retained independent capture/detection test app (M-001.1/2)
 ├─ desktop/                          # phase 2: .NET 8 WinUI 3 solution
 └─ web-extension/                    # phase 3: MV3 extension
 ```
 **Conventions**: package-by-feature; `XxxScreen`/`XxxRoute`/`XxxViewModel`/`XxxUiState`; repositories expose `Flow`, never Room entities to UI (map to UI models); Kotlin official style via [ktlint](https://pinterest.github.io/ktlint/) + Android Lint `warningsAsErrors` in CI; commit messages reference IDs (`REQ-003 / FEAT-…`).
+
+**Foundation implementation (2026-10-20, task 5.1.1.1.1)**: `:app` and `:spike` are separate applications sharing only the root Gradle setup and version catalog; neither depends on the other. The app starts with a Material 3 placeholder, no capture services, no network permission and backup/transfer exclusions. Navigation, Room/SQLCipher, DataStore and `AppContainer` are deferred until their first consuming feature; convention plugins are deferred until shared build behavior warrants extraction. No unused persistence/DI scaffolding or spike-debug code is copied into production. Product screens still require M-008.1 approval; the capture decision in discovery §11 remains provisional.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
@@ -545,7 +547,7 @@ whatsapp-call-recording/
 - [ ] **R-8 Video consent prompt timing** — MediaProjection dialog needs foreground UI during an active call; heads-up/full-screen intent may be blocked. Fallback: audio-only + `fallback_reason`.
 - [ ] **R-9 Group volume imbalance** — mixed remote stream; per-participant levels not controllable. Accepted; normalize at finalize (optional).
 - [ ] **Q-1** Mockup tool: Figma vs Compose `@Preview` gallery (owner choice at M-008.1).
-- [ ] **Q-2** Keep the `:spike` module after v1 as a capability-test regression app, or delete?
+- [x] **Q-2** Keep `:spike` as an independent, side-by-side capability-test/debug app (owner decision, 2026-10-20); production lives in `:app`.
 
 ## 14. Glossary
 | Term | Meaning |

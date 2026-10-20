@@ -449,7 +449,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 5.1.1.1.1 | Task | Scaffold `:app` (Compose, Material 3, Navigation, Room, DataStore, manual `AppContainer`) + `build-logic/` convention plugins; ids `com.soakula.wacr` / `.debug` — `app/build.gradle.kts`, `build-logic/` | 02:30 | 00:25 | `.\gradlew :app:assembleDebug` installs; blank Home shows | First v1 code |
+| 5.1.1.1.1 | Task | Scaffold independent `:app` (Compose, Material 3); ids `com.soakula.wacr` / `.debug`; retain `:spike` unchanged — `app/build.gradle.kts` | 02:30 | 00:25 | Build both app variants + spike; `tools\test-app-shell.ps1` checks APK identities/privacy; app placeholder launches | First v1 code. **2026-10-20: foundation implemented.** Ponytail scope: defer Navigation, Room/SQLCipher, DataStore and `AppContainer` to first consumers; convention plugins to shared build behavior. No product UI or capture-gate completion claimed. |
 | 5.1.1.1.2 | Task | `AppLog`: 1 MB ring file in `files/logs/`, logcat tag `WACR`, release redaction of names/numbers, crash handler `crash-*.txt` — `app/…/util/AppLog.kt` | 02:00 | 00:20 | Redaction tests; forced crash writes file | Same tooling style as spike |
 | 5.1.1.1.3 | Task | Manifest hardening: `allowBackup=false`, `dataExtractionRules` exclude all, `INTERNET` `tools:node="remove"`; `verifyNoInternet` Gradle task | 01:30 | 00:20 | `aapt2 dump permissions` has no INTERNET; task fails if added |  |
 | 5.1.1.1.4 | Task | GitHub Actions: lint, test, `verifyNoInternet`, `assembleDebug` — `.github/workflows/ci.yml` | 01:00 | 00:10 | Workflow green | No artifact upload |
@@ -1350,4 +1350,3 @@ graph TD
 - **R-7 Sideload restricted settings** blocks enabling accessibility: documented unlock step in spike README and onboarding.
 - **R-8 Debug logs contain personal data**: redaction on by default, audio/screenshots opt-in, `spike-logs/` and `dist/` git-ignored, nothing leaves without an explicit Save/Share tap.
 - **R-9 Estimates drift**: re-baseline after the spike. Spike adds ~4.5 h AI over the PRD for the debug-logging toolkit and app scaffold/logging adds ~1 h — deliberate, it pays back in every later debug loop.
-

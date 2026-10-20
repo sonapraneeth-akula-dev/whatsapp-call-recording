@@ -1,6 +1,6 @@
 # WACR Spike: capture feasibility test app (REQ-001)
 
-This is a throwaway test app. It answers one question on **your** phones (A73 on Android 16, F42 on Android 13): *can a non-root, sideloaded app record both sides of a WhatsApp call, and can it detect the call automatically?*
+This is the retained capture/detection test app, separate from the production `:app` module. It answers one question on **your** phones (A73 on Android 16, F42 on Android 13): *can a non-root, sideloaded app record both sides of a WhatsApp call, and can it detect the call automatically?*
 
 It records a few seconds with every Android audio source, logs every WhatsApp call signal it can see, and lets you share the logs back without USB or developer mode.
 
@@ -92,6 +92,8 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
 ## Where it lives
 
+- Production shell: `app\src\main\kotlin\com\soakula\wacr\`; no recording behavior yet. The spike's code, settings and saved runs are unchanged.
+- Separate install identities: **WACR Spike** = `com.soakula.wacr.spike`, **WACR Debug** = `com.soakula.wacr.debug`, release **WACR** = `com.soakula.wacr`. Installing the app does not replace the spike.
 - Source code: `spike/src/main/kotlin/com/soakula/wacr/spike/`
 - Logs on the phone: app-private `files/runs/<time>_<label>/` containing `events.jsonl`, `device.json`, `matrix.md`, `audio/*.wav`, `tree/*.json`, `shots/*.jpg` and `crash.txt`.
 - Build:
@@ -99,6 +101,16 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
   ```powershell
   $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; .\gradlew :spike:assembleDebug :spike:testDebugUnitTest
   ```
+
+- Build both apps and check their packaged identities/privacy defaults:
+
+  ```powershell
+  $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+  .\gradlew :app:assembleDebug :app:assembleRelease :app:lintDebug :spike:assembleDebug :spike:testDebugUnitTest
+  .\tools\test-app-shell.ps1 -SdkPath "$env:LOCALAPPDATA\Android\Sdk"
+  ```
+
+  Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. The shell requests no recording permissions and cannot record calls.
 
 ### Deviations from the task list
 
