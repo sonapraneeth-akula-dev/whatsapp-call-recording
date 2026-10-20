@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import com.soakula.wacr.R
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,5 +74,14 @@ class RecorderNotificationTest {
         assertNull(channel.sound)
         assertFalse(channel.shouldVibrate())
         assertFalse(channel.canShowBadge())
+    }
+
+    @Test fun failureNoticeCanBeDismissedAndHasNoTimerOrStopAction() {
+        val notice = RecorderNotification(context).notice(R.string.recording_error_io)
+        assertEquals(Notification.VISIBILITY_PRIVATE, notice.visibility)
+        assertEquals(0, notice.flags and Notification.FLAG_ONGOING_EVENT)
+        assertFalse(notice.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+        assertNull(notice.actions)
+        assertEquals("Recorder status", notice.publicVersion.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
     }
 }

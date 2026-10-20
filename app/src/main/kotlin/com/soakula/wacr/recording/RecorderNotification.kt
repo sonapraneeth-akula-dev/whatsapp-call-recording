@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.StringRes
 import com.soakula.wacr.MainActivity
 import com.soakula.wacr.R
 
@@ -36,16 +37,21 @@ class RecorderNotification(private val context: Context) {
 
     fun saving(): Notification = build(R.string.recording_saving, R.string.recording_saving_detail)
 
-    private fun build(title: Int, detail: Int, stop: PendingIntent? = null, startedAt: Long? = null): Notification {
+    fun notice(@StringRes detail: Int): Notification = build(R.string.recording_notice_title, detail, ongoing = false)
+
+    private fun build(
+        @StringRes title: Int, @StringRes detail: Int, stop: PendingIntent? = null,
+        startedAt: Long? = null, ongoing: Boolean = true
+    ): Notification {
         if (stop != null) {
             require(stop.isImmutable && stop.creatorPackage == context.packageName) { "Stop action must be immutable and app-owned" }
         }
         val public = Notification.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle(context.getString(R.string.recording_public_title))
+            .setContentTitle(context.getString(if (ongoing) R.string.recording_public_title else R.string.recording_notice_title))
             .setContentText(context.getString(R.string.recording_public_detail))
             .setLocalOnly(true)
-            .setOngoing(true).build()
+            .setOngoing(ongoing).build()
         val content = context.getString(detail)
         return Notification.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
@@ -54,7 +60,7 @@ class RecorderNotification(private val context: Context) {
             .setStyle(Notification.BigTextStyle().bigText(content))
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
-            .setOngoing(true)
+            .setOngoing(ongoing)
             .setLocalOnly(true)
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
@@ -73,6 +79,7 @@ class RecorderNotification(private val context: Context) {
 
     companion object {
         const val ID = 2001
+        const val NOTICE_ID = 2002
         const val CHANNEL = "recording"
     }
 }

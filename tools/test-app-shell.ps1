@@ -42,6 +42,20 @@ foreach ($case in @(
         }
     }
     if ($case.Id -ne 'com.soakula.wacr.spike') {
+        $recorder = @($manifest.manifest.application.service) | Where-Object {
+            $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.recording.RecorderService'
+        }
+        if (-not $recorder -or $recorder.GetAttribute('exported', $android) -ne 'false' -or
+            $recorder.GetAttribute('foregroundServiceType', $android) -ne '0x80') {
+            throw "Private microphone foreground service missing or incorrectly typed in $apk"
+        }
+        foreach ($permission in @('RECORD_AUDIO', 'POST_NOTIFICATIONS', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_MICROPHONE')) {
+            if (-not (@($manifest.manifest.'uses-permission') | Where-Object {
+                $_.GetAttribute('name', $android) -eq "android.permission.$permission"
+            })) {
+                throw "Recorder permission $permission missing in $apk"
+            }
+        }
         $recovery = @($manifest.manifest.application.service) | Where-Object {
             $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.recording.RecoveryJobService'
         }

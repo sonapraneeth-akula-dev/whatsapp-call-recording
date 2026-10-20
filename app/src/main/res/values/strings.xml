@@ -1,5 +1,5 @@
 <resources>
-    <string name="foundation_message">Recording is not implemented yet. Use WACR Spike for capture tests.</string>
+    <string name="foundation_message">Production controls are not connected yet. Use WACR Spike for capture tests.</string>
     <string name="recording_channel">Recording status</string>
     <string name="recording_channel_description">Status and Stop control while recording call audio.</string>
     <string name="recording_preparing">Preparing recording</string>
@@ -12,4 +12,19 @@
     <string name="recording_public_title">Recording</string>
     <string name="recording_public_detail">WACR recording activity</string>
     <string name="recording_stop">Stop</string>
+    <string name="recording_notice_title">Recorder status</string>
+    <string name="recording_error_mic">Recording could not start or continue. Allow microphone access in Android settings.</string>
+    <string name="recording_error_notifications">Recording could not start or continue. Enable WACR notifications and its recording status channel.</string>
+    <string name="recording_error_foreground">Android blocked recording from the background. Open WACR and try again.</string>
+    <string name="recording_error_capture">Microphone capture is unavailable or silenced on this device.</string>
+    <string name="recording_error_storage">Recording could not start. Less than 100 MB of storage is available.</string>
+    <string name="recording_error_empty">No audio was captured. No playable recording was saved.</string>
+    <string name="recording_error_io">Recording failed while reading or encrypting private audio. Recoverable files were retained.</string>
+    <string name="recording_error_database">The private recording database could not be used. Existing files were retained.</string>
+    <string name="recording_error_encoder">The audio encoder failed. Recoverable files were retained.</string>
+    <string name="recording_error_recovery">Unfinished recordings could not be safely recovered. Existing files were retained.</string>
+    <string name="recording_error_native">Native encryption or audio support is unavailable on this device.</string>
+    <string name="recording_error_interrupted">Recording was interrupted. Encrypted audio will be checked for recovery.</string>
+    <string name="recording_error_state">The recorder could not continue. Recoverable files were retained.</string>
+    <string name="recording_low_storage_saved">Recording saved. Stopped because storage fell below 100 MB.</string>
 </resources>

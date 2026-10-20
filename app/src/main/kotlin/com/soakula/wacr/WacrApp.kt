@@ -10,6 +10,7 @@ import com.soakula.wacr.util.AppLog
 import com.soakula.wacr.recording.Recovery
 import com.soakula.wacr.recording.RecoveryJobService
 import com.soakula.wacr.recording.RecoveryReport
+import com.soakula.wacr.recording.RecorderController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -25,6 +26,9 @@ class WacrApp : Application() {
     private var openDatabase: AppDatabase? = null
     private val recoveryLock = Mutex()
     private var recovered: RecoveryReport? = null
+    val recorder by lazy { RecorderController(this, log) }
+
+    internal suspend fun requireRecovery() = recoveryLock.withLock { recovered = null }
 
     suspend fun database(): AppDatabase = databaseLock.withLock {
         openDatabase ?: AppDatabase.open(this, keys.aead).also { openDatabase = it }

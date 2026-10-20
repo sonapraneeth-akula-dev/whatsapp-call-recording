@@ -92,7 +92,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
 ## Where it lives
 
-- Production shell/backend: `app\src\main\kotlin\com\soakula\wacr\`; capture, encryption, metadata and recovery components exist, but no recording service/product UI is wired yet. Both apps reuse JSON/redaction helpers from `:logging` and unchanged RMS utilities from `:audio`; spike capture behavior, settings and saved runs are preserved.
+- Production shell/backend: `app\src\main\kotlin\com\soakula\wacr\`; capture, encryption, metadata, recovery and a private microphone foreground service are connected through a single-recording controller. The service awaits recovery, posts its timer/Stop indicator and preserves interrupted ciphertext. No detector, permission flow, manual entry point or product screens are connected yet; the launcher still cannot start recording. Both apps reuse JSON/redaction helpers from `:logging` and unchanged RMS utilities from `:audio`; spike capture behavior, settings and saved runs are preserved.
 - Separate install identities: **WACR Spike** = `com.soakula.wacr.spike`, **WACR Debug** = `com.soakula.wacr.debug`, release **WACR** = `com.soakula.wacr`. Installing the app does not replace the spike.
 - Review-only UI proposals: open `app\src\debug\kotlin\com\soakula\wacr\ui\preview\MockupGallery.kt` in Android Studio's Compose preview with the debug variant. Sample data only; not connected to the launcher or recorder. Owner approval is still required before product UI implementation.
 - Rendered review gallery: open `dist\mockups\light\index.html`, then switch to dark, 200% text or landscape using its links. Seven screens, top/end snapshots; not full-page captures or a functional recorder. Regenerate with `:app:testDebugUnitTest --tests '*MockupRenderingTest'`; source output is `app\build\mockups\`.
@@ -113,7 +113,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
   .\tools\test-app-shell.ps1 -SdkPath "$env:LOCALAPPDATA\Android\Sdk"
   ```
 
-  Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. The microphone permission is declared for the capture backend but no permission flow/service starts capture; the shell still cannot record calls.
+  Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. Microphone, notification and microphone-foreground-service permissions are declared. The private backend can record only through its in-process controller after permissions are granted; the placeholder launcher has no start/permission controls. Continue using the separate spike for current phone capture tests.
 
   Every production APK build runs the merged-manifest network guard automatically. The scripts also check backup/transfer exclusions in the packaged resources; CI is intentionally deferred.
 
