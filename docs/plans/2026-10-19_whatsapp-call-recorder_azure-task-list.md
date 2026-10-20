@@ -216,7 +216,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 2.1.2.1.1 | Task | Reconnect window (30 s) and call-waiting/hold handling in `CallDetector` | 02:00 | 00:20 | Tests: reconnect merges; second call → new session |  |
+| 2.1.2.1.1 | Task | Reconnect window (30 s) and call-waiting/hold handling in `CallDetector` | 02:00 | 00:20 | Tests: reconnect merges; second call → new session | **2026-10-20: local state-machine implementation complete.** Immediate Suspended/Resumed effects; two-second provisional end with an original-loss-anchored, half-open thirty-second same-instance reconnect ticket. Resumed retains the existing session sequence rather than emitting a second Started. Distinct markers or conflicting known callers cannot merge. Positive holds survive minutes, delayed hold evidence and notification-key reuse during another call's dialing/connection; second calls get separate sessions and held calls resume their original sessions. Cellular interruption requires fresh WhatsApp evidence before resume. Source loss closes all current/held sessions and clears tickets. Bounded state, exact expiry, caller-conflict and malformed-mode checks covered by synthetic tests; captured two-call fixture still passes. Native pause/persistence/recording wiring and actual phone hold/reconnect evidence remain separate. |
 | 2.1.2.1.2 | Task | Detection trace: every signal + state transition + rules version via `AppLog` | 01:00 | 00:10 | `adb logcat -s WACR` shows trace; included in diagnostics export | Debuggability |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):

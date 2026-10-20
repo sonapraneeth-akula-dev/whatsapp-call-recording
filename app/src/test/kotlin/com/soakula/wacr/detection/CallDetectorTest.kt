@@ -7,7 +7,7 @@ import org.junit.Test
 
 class CallDetectorTest {
     private fun detector(debounce: Long = 2000) = CallDetector(
-        setOf("com.whatsapp", "com.whatsapp.w4b"), ConnectionRules("call", "CallStyle", 2), debounce
+        setOf("com.whatsapp", "com.whatsapp.w4b"), ConnectionRules("call", "CallStyle", 2), debounce, 0
     )
     private fun notification(
         timer: Boolean = true,
@@ -99,7 +99,8 @@ class CallDetectorTest {
         detector.accept(CallSignal.Posted(notification()), 100)
         assertTrue(detector.accept(CallSignal.Removed("com.whatsapp", "other"), 150).isEmpty())
         assertTrue(detector.accept(CallSignal.Removed("other.app", "call"), 160).isEmpty())
-        assertTrue(detector.accept(CallSignal.Removed("com.whatsapp", "call"), 200).isEmpty())
+        assertEquals(CallSuspension.RECONNECTING, detector.accept(CallSignal.Removed("com.whatsapp", "call"), 200)
+            .filterIsInstance<CallEvent.Suspended>().single().reason)
         assertEquals(2200L, detector.nextDeadlineMs)
         assertTrue(detector.accept(CallSignal.Tick, 2199).isEmpty())
         val end = detector.accept(CallSignal.Tick, 2200).filterIsInstance<CallEvent.Ended>().single()
@@ -116,7 +117,7 @@ class CallDetectorTest {
         val call = detector.accept(CallSignal.Posted(notification()), 1).filterIsInstance<CallEvent.Started>().single().call
         detector.accept(CallSignal.AudioMode(false), 100)
         assertEquals(2100L, detector.nextDeadlineMs)
-        assertTrue(detector.accept(CallSignal.AudioMode(true), 2099).isEmpty())
+        assertEquals(call, detector.accept(CallSignal.AudioMode(true), 2099).filterIsInstance<CallEvent.Resumed>().single().call)
         assertNull(detector.nextDeadlineMs)
         assertEquals(call, detector.activeCall)
         detector.accept(CallSignal.AudioMode(false), 2200)
@@ -207,10 +208,10 @@ class CallDetectorTest {
         assertThrows(IllegalArgumentException::class.java) { detector.accept(CallSignal.Tick, Long.MAX_VALUE) }
         assertThrows(IllegalArgumentException::class.java) { detector(-1) }
         assertThrows(IllegalArgumentException::class.java) {
-            CallDetector(setOf("other.app"), ConnectionRules("call", "CallStyle", 2), 2000)
+            CallDetector(setOf("other.app"), ConnectionRules("call", "CallStyle", 2), 2000, 0)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            CallDetector(setOf("com.whatsapp"), ConnectionRules("msg", "CallStyle", 2), 2000)
+            CallDetector(setOf("com.whatsapp"), ConnectionRules("msg", "CallStyle", 2), 2000, 0)
         }
         repeat(8) { detector.accept(CallSignal.Posted(notification(false, key = "$it")), 20L + it) }
         assertThrows(IllegalArgumentException::class.java) {

@@ -18,14 +18,16 @@ class CallDetectorFixtureTest {
         val rules = RuntimeEnvironment.getApplication().assets.open("detection_rules.json").use(DetectionRules::load)
         val metadata = fixture.getJSONObject("provenance")
         val pkg = metadata.getString("packageName")
-        val detector = CallDetector(rules.packages, rules.connection, rules.endDebounceMs)
+        val detector = CallDetector(rules.packages, rules.connection, rules.endDebounceMs, rules.reconnectWindowMs)
         val events = mutableListOf<CallEvent>()
         val captured = fixture.getJSONArray("events")
         for (index in 0 until captured.length()) {
             val entry = captured.getJSONObject(index)
             val atMs = entry.getLong("atMs")
             while (detector.nextDeadlineMs?.let { it <= atMs } == true) {
-                events += detector.accept(CallSignal.Tick, requireNotNull(detector.nextDeadlineMs))
+                while (detector.nextDeadlineMs != null) {
+                    events += detector.accept(CallSignal.Tick, requireNotNull(detector.nextDeadlineMs))
+                }
             }
             val signal = when (entry.getString("kind")) {
                 "audio" -> CallSignal.AudioMode(entry.getBoolean("communication"))
