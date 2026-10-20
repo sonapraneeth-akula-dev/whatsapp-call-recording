@@ -32,6 +32,10 @@
     <string name="health_notifications">Enable notifications</string>
     <string name="health_channel">Enable the recording status channel</string>
     <string name="health_request_channel">Enable call recording requests</string>
+    <string name="health_alert_channel">Recording setup health</string>
+    <string name="health_alert_title">Recording setup needs attention</string>
+    <string name="health_alert_public">Open WACR to review setup.</string>
+    <string name="health_alert_detail">%1$s. Open WACR for fixes.</string>
     <string name="health_detector">Automatic detection unavailable</string>
     <string name="health_accessibility">Enable call accessibility</string>
     <string name="health_listener">Enable notification access</string>

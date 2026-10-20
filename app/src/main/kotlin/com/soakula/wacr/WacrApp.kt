@@ -15,6 +15,8 @@ import com.soakula.wacr.recording.RecoveryReport
 import com.soakula.wacr.recording.RecorderController
 import com.soakula.wacr.recording.DeletionJobService
 import com.soakula.wacr.health.HealthMonitor
+import com.soakula.wacr.health.HealthNotification
+import com.soakula.wacr.health.HealthJobService
 import com.soakula.wacr.detection.CallDetection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,7 +36,18 @@ class WacrApp : Application() {
     val recorder by lazy { RecorderController(this, log) }
     val detection by lazy { CallDetection(this) }
     val health by lazy { HealthMonitor(this) { detection.state.value.ready } }
+    private val healthNotification by lazy { HealthNotification(this, log) }
+    private val healthLock = Mutex()
     val preferences by lazy { AppPreferences.open(this) }
+
+    internal suspend fun refreshHealth() = withContext(Dispatchers.IO) {
+        healthLock.withLock {
+            health.check().also { issues ->
+                healthNotification.publish(issues)
+                log.log("health", "checked", mapOf("issues" to issues.map { it.problem.name }))
+            }
+        }
+    }
 
     internal suspend fun requireRecovery() = recoveryLock.withLock { recovered = null }
 
@@ -70,5 +83,6 @@ class WacrApp : Application() {
         log.log("app", "created")
         if (!RecoveryJobService.enqueue(this)) log.log("recovery", "schedule_failed")
         if (!DeletionJobService.enqueue(this)) log.log("deletion", "schedule_failed")
+        if (!HealthJobService.schedule(this)) log.log("health", "schedule_failed")
     }
 }

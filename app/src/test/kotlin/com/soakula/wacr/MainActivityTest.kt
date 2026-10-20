@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
+import com.soakula.wacr.health.HealthNotification
 import android.view.WindowManager
 import androidx.lifecycle.ViewModelProvider
 import com.soakula.wacr.ui.home.HomeViewModel
@@ -53,6 +54,23 @@ class MainActivityTest {
         try {
             assertTrue(activity.get().window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
             assertEquals(RecorderState.Idle, app.recorder.state.value)
+            assertNull(shadowOf(app).nextStartedService)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
+
+    @Test fun healthNotificationOpensSetupOnceWithoutArmingRecording() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java,
+            Intent(app, MainActivity::class.java).setAction(HealthNotification.ACTION_SETUP)).setup()
+        try {
+            assertEquals(1, ReflectionHelpers.callInstanceMethod<Int>(activity.get(), "getSetupRequest"))
+            assertNull(activity.get().intent.action)
+            assertEquals(RecorderState.Idle, app.recorder.state.value)
+            assertFalse(ReflectionHelpers.getField(activity.get(), "recordAfterPermission"))
+            assertNull(shadowOf(app).nextStartedService)
+            activity.newIntent(Intent(app, MainActivity::class.java).setAction(HealthNotification.ACTION_SETUP))
+            assertEquals(2, ReflectionHelpers.callInstanceMethod<Int>(activity.get(), "getSetupRequest"))
             assertNull(shadowOf(app).nextStartedService)
         } finally {
             activity.pause().stop().destroy()

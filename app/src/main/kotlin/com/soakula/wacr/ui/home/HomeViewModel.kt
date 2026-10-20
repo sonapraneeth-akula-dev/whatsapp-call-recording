@@ -44,7 +44,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 mutableState.value = withContext(Dispatchers.IO) {
                     val available = StatFs(app.filesDir.absolutePath).availableBytes
                     check(available >= 0) { "Invalid available storage" }
-                    HomeUiState(loaded = true, issues = app.health.check(), availableBytes = available)
+                    HomeUiState(loaded = true, issues = app.refreshHealth(), availableBytes = available)
                 }
             } catch (error: CancellationException) {
                 throw error

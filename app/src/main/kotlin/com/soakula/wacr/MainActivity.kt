@@ -30,6 +30,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
+import com.soakula.wacr.health.HealthNotification
 import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.recording.RecordingEntry
 import com.soakula.wacr.recording.CallRecordingResult
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
     private var startJob: Job? = null
     private var requestedSession: Long? = null
     private var requestedDecision = RecordingDecision.MANUAL
+    private var setupRequest by mutableStateOf(0)
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
             recordAfterPermission = false
@@ -98,7 +100,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        if (savedInstanceState == null) consumeRecordingEntry(intent)
+        if (savedInstanceState == null) {
+            consumeSetupEntry(intent)
+            consumeRecordingEntry(intent)
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 app.recorder.state.collect { state ->
@@ -159,7 +164,7 @@ class MainActivity : ComponentActivity() {
                                 Uri.fromParts("package", packageName, null))) },
                             { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
                             { if (firstRun) settings.completeOnboarding() else closeSetup() })
-                    }, forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
+                    }, setupRequest = setupRequest, forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
                     appearanceError = appearanceState is SettingsUiState.Failed,
                     onRetryAppearance = settings::retry) { entry, back ->
                     PlayerRoute(entry,
@@ -194,7 +199,15 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumeSetupEntry(intent)
         consumeRecordingEntry(intent)
+    }
+
+    private fun consumeSetupEntry(intent: Intent) {
+        if (intent.action == HealthNotification.ACTION_SETUP) {
+            intent.action = null
+            setupRequest++
+        }
     }
 
     private fun consumeRecordingEntry(intent: Intent) {

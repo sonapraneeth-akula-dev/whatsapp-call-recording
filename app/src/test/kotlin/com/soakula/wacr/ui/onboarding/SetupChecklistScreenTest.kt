@@ -112,6 +112,29 @@ class SetupChecklistScreenTest {
         }
     }
 
+    @Test fun externalSetupRequestsOpenTheActualChecklistAndRetainThePreviousDestination() {
+        val request = mutableStateOf(0)
+        var records = 0
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(HomeUiState(loaded = true), RecorderState.Idle, LibraryUiState.Ready(emptyList()),
+                    { records++ }, {}, {}, {}, setupRequest = request.value, settingsContent = { openSetup ->
+                        SettingsScreen(SettingsUiState.Ready(Appearance()), SettingsActionsState(), {}, {}, {}, {}, openSetup)
+                    }, setupContent = { close ->
+                        SetupChecklistScreen(HomeUiState(loaded = true), false, false, {}, {}, {}, {}, {}, close)
+                    }) { _, _ -> }
+            }
+        }
+        compose.onNodeWithText(text(R.string.nav_settings)).performClick()
+        repeat(2) {
+            compose.runOnIdle { request.value++ }
+            compose.onNodeWithText(text(R.string.setup_intro)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.setup_continue)).performClick()
+            compose.onNodeWithText(text(R.string.settings_appearance)).performScrollTo().assertIsDisplayed()
+        }
+        assertEquals(0, records)
+    }
+
     private fun text(resource: Int) = compose.activity.getString(resource)
 
     private fun scrollTo(resource: Int): androidx.compose.ui.test.SemanticsNodeInteraction {

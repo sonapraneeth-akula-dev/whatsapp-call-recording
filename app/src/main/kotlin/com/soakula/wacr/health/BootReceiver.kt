@@ -16,6 +16,9 @@ class BootReceiver : BroadcastReceiver() {
             if (!DeletionJobService.enqueue(context)) {
                 (context.applicationContext as WacrApp).log.log("deletion", "schedule_failed")
             }
+            if (!HealthJobService.schedule(context)) {
+                (context.applicationContext as WacrApp).log.log("health", "schedule_failed")
+            }
         }
     }
 }

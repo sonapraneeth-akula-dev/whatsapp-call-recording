@@ -5,6 +5,7 @@ import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.Intent
 import com.soakula.wacr.health.BootReceiver
+import com.soakula.wacr.health.HealthJobService
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,7 +26,8 @@ class RecoverySchedulingTest {
         receiver.onReceive(application, Intent(Intent.ACTION_BOOT_COMPLETED))
         receiver.onReceive(application, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
         assertTrue(RecoveryJobService.enqueue(application))
-        assertEquals(setOf(RecoveryJobService.JOB_ID, DeletionJobService.JOB_ID), scheduler.allPendingJobs.map { it.id }.toSet())
+        assertEquals(setOf(RecoveryJobService.JOB_ID, DeletionJobService.JOB_ID,
+            HealthJobService.PERIODIC_ID, HealthJobService.CHECK_ID), scheduler.allPendingJobs.map { it.id }.toSet())
         val job = checkNotNull(scheduler.getPendingJob(RecoveryJobService.JOB_ID))
         assertEquals(RecoveryJobService.JOB_ID, job.id)
         assertEquals(RecoveryJobService::class.java.name, job.service.className)
@@ -37,5 +39,14 @@ class RecoverySchedulingTest {
         assertTrue(deletion.isPersisted)
         assertNull(deletion.requiredNetwork)
         assertEquals(10_000L, deletion.initialBackoffMillis)
+        val health = checkNotNull(scheduler.getPendingJob(HealthJobService.PERIODIC_ID))
+        assertEquals(HealthJobService::class.java.name, health.service.className)
+        assertTrue(health.isPeriodic)
+        assertTrue(health.isPersisted)
+        assertEquals(HealthJobService.INTERVAL_MS, health.intervalMillis)
+        assertNull(health.requiredNetwork)
+        val check = checkNotNull(scheduler.getPendingJob(HealthJobService.CHECK_ID))
+        assertFalse(check.isPeriodic)
+        assertNull(check.requiredNetwork)
     }
 }

@@ -67,6 +67,10 @@
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
+            android:name=".health.HealthJobService"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
             android:name=".recording.DeletionJobService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />

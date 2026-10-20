@@ -49,6 +49,7 @@ fun AppScaffold(
     allowlistContent: @Composable () -> Unit = {},
     settingsContent: @Composable (() -> Unit) -> Unit = {},
     setupContent: @Composable (() -> Unit) -> Unit = {},
+    setupRequest: Int = 0,
     forceSetup: Boolean = false,
     startupLoading: Boolean = false,
     appearanceError: Boolean = false,
@@ -70,6 +71,12 @@ fun AppScaffold(
     }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = (library as? LibraryUiState.Ready)?.entries?.firstOrNull { it.recording.id.toString() == selectedId }
+    LaunchedEffect(setupRequest) {
+        if (setupRequest != 0) {
+            selectedId = null
+            showSetup = true
+        }
+    }
     LaunchedEffect(selectedId, library) {
         if (selectedId != null && library is LibraryUiState.Ready && selected == null) selectedId = null
     }

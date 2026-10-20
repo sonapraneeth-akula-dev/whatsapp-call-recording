@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import com.soakula.wacr.WacrApp
+import com.soakula.wacr.health.HealthJobService
 import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.recording.AskNotification
 import com.soakula.wacr.recording.CallRecordingResult
@@ -260,7 +261,9 @@ class CallDetection internal constructor(private val app: WacrApp) {
 
     private fun stopWatching() {
         operational = false
+        val wasReady = mutableState.value.ready
         mutableState.update { it.copy(ready = false) }
+        if (wasReady) refreshHealth()
         val old = watcher
         watcher = null
         old?.close()
@@ -304,12 +307,26 @@ class CallDetection internal constructor(private val app: WacrApp) {
 
     private fun publish() {
         val updated = snapshotState()
+        val wasReady = mutableState.value.ready
         mutableState.update { if (it.failed) it else updated }
+        if (wasReady != mutableState.value.ready) refreshHealth()
     }
 
     private fun fail(error: Exception) {
         app.log.log("detection", "failed", mapOf("error_type" to error.javaClass.simpleName))
+        val wasFailed = mutableState.value.failed
         mutableState.update { CallDetectionState(failed = true, rulesVersion = it.rulesVersion) }
+        if (!wasFailed) refreshHealth()
+    }
+
+    private fun refreshHealth() {
+        try {
+            if (!HealthJobService.enqueue(app)) app.log.log("health", "schedule_failed")
+        } catch (error: SecurityException) {
+            app.log.log("health", "schedule_permission_error")
+        } catch (error: IllegalStateException) {
+            app.log.log("health", "schedule_state_error")
+        }
     }
 
     companion object {
