@@ -98,7 +98,7 @@ class CallDetector(
         if (signal is CallSignal.Posted && signal.notification.packageName in packages) {
             val notification = signal.notification
             require(notification.key.isNotBlank() && notification.key.length <= 512) { "Invalid notification identity" }
-            if (notification.category == connection.category && notification.ongoing) {
+            if (relevant(notification)) {
                 require(Key(notification.packageName, notification.key) in notifications || notifications.size < 8) {
                     "Too many call notifications"
                 }
@@ -152,7 +152,7 @@ class CallDetector(
     private fun update(notification: CallNotification, nowMs: Long) {
         if (notification.packageName !in packages) return
         val key = Key(notification.packageName, notification.key)
-        if (notification.category != connection.category || !notification.ongoing) {
+        if (!relevant(notification)) {
             notifications.remove(key)
             return
         }
@@ -178,6 +178,10 @@ class CallDetector(
         notification.category == connection.category && notification.ongoing &&
             notification.template == connection.template && notification.styleCallType == connection.ongoingCallType &&
             notification.chronometer && notification.instance != null && notification.instance > 0
+
+    private fun relevant(notification: CallNotification): Boolean =
+        notification.category == connection.category && (notification.ongoing ||
+            (notification.template == connection.template && notification.styleCallType == 1))
 
     private fun reconcile(nowMs: Long, events: MutableList<CallEvent>) {
         val abandoned = held.filterValues { call ->

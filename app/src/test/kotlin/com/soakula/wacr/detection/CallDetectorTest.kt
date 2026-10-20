@@ -77,6 +77,20 @@ class CallDetectorTest {
         assertNull(started.callType)
     }
 
+    @Test fun incomingCallStyleDoesNotNeedOngoingFlagToRetainRingingDirection() {
+        val detector = detector()
+        val events = detector.accept(CallSignal.Posted(notification(false).copy(
+            ongoing = false, styleCallType = 1, direction = CallDirection.INCOMING
+        )), 1)
+        assertEquals(CallState.RINGING, detector.state)
+        assertTrue(events.none { it is CallEvent.Started })
+        detector.accept(CallSignal.AudioMode(true), 2)
+        val started = detector.accept(CallSignal.Posted(notification()), 3)
+            .filterIsInstance<CallEvent.Started>().single().call
+        assertEquals(1L, started.ringingAtMs)
+        assertEquals(CallDirection.INCOMING, started.direction)
+    }
+
     @Test fun unrelatedPackagesChatNotificationsAudioAndWindowsCannotCreateSession() {
         val detector = detector()
         val events = mutableListOf<CallEvent>()
