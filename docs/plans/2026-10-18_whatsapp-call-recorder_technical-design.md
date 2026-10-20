@@ -514,6 +514,8 @@ whatsapp-call-recording/
 
 **Key management implementation (2026-10-20, task 5.2.1.1.1)**: Tink 1.19.0, `AES256_GCM_HKDF_4KB` for recordings and `AES256_GCM` for small secrets. Use Tink's `AndroidKeystore` API directly, not `AndroidKeysetManager` (which permits plaintext fallback). Wrapped keysets live in `noBackupFilesDir/keys`, authenticated by keyset kind; writes are fsynced and atomically renamed under a process-wide lock. Keystore/keyset failures propagate and existing keys are never silently replaced. JVM tests use an in-memory Tink wrapping key to test persistence/corruption/races; actual Android Keystore behavior needs owner phone UAT.
 
+**Encrypted files implementation (2026-10-20, tasks 5.1.2.1.1 / 5.2.1.1.2)**: `RecordingFiles` permits only UUID directories and encrypted audio/video/segment artifact names under canonical `filesDir/rec/`, rejecting traversal and symlinks. `CryptoStore` creates files exclusively, synchronously writes ciphertext and binds AD to `v1|recordingId|artifactName` (including a segment's index). Readers authenticate the first block before exposing size/seek; Tink 1.19's empty seek streams are rejected when they stop making progress rather than spinning. No plaintext temp files. Full-stream reads authenticate the tail; opening/size alone does not authenticate every block.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|
