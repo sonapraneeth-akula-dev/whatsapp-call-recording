@@ -6,6 +6,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = Application::class)
@@ -27,5 +28,19 @@ class LibraryRouteTest {
             assertThrows(IllegalArgumentException::class.java) { LibraryRoute.parse(value) }
         }
         assertThrows(IllegalArgumentException::class.java) { LibraryRoute(" ") }
+    }
+
+    @Test fun completeFilterArgumentsRoundTripAndRejectInvalidDateRanges() {
+        val date = LocalDate.of(2026, 10, 19)
+        val route = LibraryRoute("CONTACT:demo", date, date.plusDays(1), " caf\u00E9 + & ")
+        assertEquals(route, LibraryRoute.parse(route.encode()))
+        for (value in listOf(
+            "library?from=2026-10-19", "library?to=2026-10-19",
+            "library?from=2026-02-30&to=2026-03-01",
+            "library?from=2026-10-20&to=2026-10-19",
+            "library?from=0000-01-01&to=2026-10-19",
+            "library?query=one&query=two", "library?query=",
+            "library?from=2026-10-19&from=2026-10-20&to=2026-10-20"
+        )) assertThrows(IllegalArgumentException::class.java) { LibraryRoute.parse(value) }
     }
 }

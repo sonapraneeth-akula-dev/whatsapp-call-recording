@@ -800,11 +800,11 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 11.1.1.2.1 | Task | `FilterBar` (contact, date range) + name search in route args | 02:00 | 00:20 | UI filter tests |  |
+| 11.1.1.2.1 | Task | `FilterBar` (contact, date range) + name search in route args | 02:00 | 00:20 | UI filter tests | **2026-10-20: implemented; 278 app tests pass, both builds and lint pass.** Lazy contact chooser retains classification boundaries; Unicode-normalized case-insensitive contact/recording-name search and inclusive local-calendar date ranges combine by intersection. Material range input supports Apply, Cancel and All dates; All contacts/All dates retain other filters, Clear filters resets all. Canonical contact/from/to/query route state survives playback/tab/restoration; malformed, duplicate, incomplete and reversed ranges rejected. Filtered groups/counts reorder by their newest matching recording, explicit no-match state never falls back to unrelated calls. DST-short/long-day boundaries and real range-input/selector/search/restore UI covered. F42 latency measurement remains task 11.1.1.2.2 and owner phone acceptance. |
 | 11.1.1.2.2 | Task | Seed 1,000 recordings; measure filter latency on F42 | 01:00 | 00:10 | ≤ 200 ms |  |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
-- [ ] **UI tests**: grouping and filter tests pass (US-042, US-043)
+- [x] **UI tests**: grouping and filter tests pass (US-042, US-043); local native Compose regression, 2026-10-20
 - [ ] **Performance**: filter ≤ 200 ms with 1,000 seeded recordings on F42
 
 ### Milestone 11.2 (M-011.2): Comfortable playback

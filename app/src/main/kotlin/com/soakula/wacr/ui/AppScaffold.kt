@@ -86,7 +86,7 @@ fun AppScaffold(
     BackHandler(!forceSetup && (showSetup || selectedId != null || destination != Destination.HOME)) {
         if (showSetup) showSetup = false
         else if (selectedId != null) selectedId = null
-        else if (destination == Destination.LIBRARY && contactRoute.contact != null) libraryRoute = LibraryRoute().encode()
+        else if (destination == Destination.LIBRARY && contactRoute != LibraryRoute()) libraryRoute = LibraryRoute().encode()
         else destination = Destination.HOME
     }
     Scaffold(

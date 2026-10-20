@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import com.soakula.wacr.R
 import com.soakula.wacr.data.CallSessionEntity
 import com.soakula.wacr.data.CallDirection
@@ -148,25 +150,28 @@ class LibraryScreenTest {
             }
         }
         compose.onNodeWithText(text(R.string.nav_library)).performClick()
+        compose.onNodeWithText(text(R.string.library_search_name)).performTextInput("demo")
         compose.onNodeWithContentDescription(compose.activity.getString(
             R.string.library_view_contact_description, "Demo Contact"
         )).performScrollTo().performClick()
-        compose.onNodeWithText(text(R.string.library_all_contacts)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_clear_filters)).assertIsDisplayed()
         compose.onNodeWithText("Other clip").assertDoesNotExist()
         compose.onNodeWithText(text(R.string.library_open)).performScrollTo().performClick()
         compose.onNodeWithText("Playing Demo clip").assertIsDisplayed()
         restore.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("Playing Demo clip").assertIsDisplayed()
         compose.onNodeWithText("Back to calls").performClick()
-        compose.onNodeWithText(text(R.string.library_all_contacts)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_clear_filters)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_search_name)).assertTextContains("demo")
         compose.onNodeWithText(text(R.string.nav_home)).performClick()
         compose.onNodeWithText(text(R.string.nav_library)).performClick()
         restore.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText(text(R.string.library_all_contacts)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_clear_filters)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_search_name)).assertTextContains("demo")
         compose.onNodeWithText("Demo clip").assertIsDisplayed()
         compose.onNodeWithText("Other clip").assertDoesNotExist()
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.onNodeWithText(text(R.string.library_all_contacts)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.library_clear_filters)).assertDoesNotExist()
         compose.onNodeWithText("Demo Contact").assertIsDisplayed()
     }
 
@@ -179,7 +184,7 @@ class LibraryScreenTest {
         }
         compose.onNodeWithText(text(R.string.library_contact_empty)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.library_empty)).assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.library_all_contacts)).performClick()
+        compose.onNodeWithText(text(R.string.library_clear_filters)).performClick()
         compose.onNodeWithText(text(R.string.library_empty)).assertIsDisplayed()
     }
 

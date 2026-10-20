@@ -29,6 +29,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
 import java.util.Locale
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,25 +40,28 @@ fun LibraryScreen(
 ) {
     val entries = (state as? LibraryUiState.Ready)?.entries.orEmpty()
     val groups = remember(entries) { groupRecordings(entries) }
-    val visible = remember(groups, route.contact) { groups.filter { route.contact == null || it.key == route.contact } }
+    val zone = ZoneId.systemDefault()
+    val visible = remember(groups, route, zone) { filterRecordingGroups(groups, route, zone) }
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.library_title)) }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (route.contact != null) item {
-                TextButton(onClick = { onRoute(LibraryRoute()) }) { Text(stringResource(R.string.library_all_contacts)) }
-            }
+            item(key = "filters") { FilterBar(groups, route, onRoute) }
             when (state) {
                 LibraryUiState.Loading -> item { CircularProgressIndicator() }
                 LibraryUiState.Failed -> item { LibraryFailure(onRetry) }
                 is LibraryUiState.Ready -> {
                     if (visible.isEmpty()) item { Text(stringResource(
-                        if (route.contact == null) R.string.library_empty else R.string.library_contact_empty
+                        when {
+                            route == LibraryRoute() -> R.string.library_empty
+                            route.contact != null && route.query.isEmpty() && route.from == null -> R.string.library_contact_empty
+                            else -> R.string.library_filter_empty
+                        }
                     )) }
                     visible.forEach { group ->
                         item(key = "contact:${group.key}") {
-                            ContactHeader(group, if (route.contact == null) { { onRoute(LibraryRoute(group.key)) } } else null)
+                            ContactHeader(group, if (route.contact == null) { { onRoute(route.copy(contact = group.key)) } } else null)
                         }
                         items(group.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
                     }
@@ -69,11 +73,7 @@ fun LibraryScreen(
 
 @Composable
 private fun ContactHeader(group: RecordingGroup, onContact: (() -> Unit)? = null) {
-    val name = when (group.kind) {
-        LibraryContactKind.MANUAL -> stringResource(R.string.library_manual_calls)
-        LibraryContactKind.UNKNOWN -> stringResource(R.string.library_unknown_calls)
-        else -> checkNotNull(group.name)
-    }
+    val name = contactGroupName(group)
     val initials = remember(name) { contactInitials(name) }
     val actionLabel = stringResource(R.string.library_view_contact_description, name)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -100,6 +100,13 @@ private fun ContactHeader(group: RecordingGroup, onContact: (() -> Unit)? = null
     }
 }
 
+@Composable
+internal fun contactGroupName(group: RecordingGroup): String =
+    when (group.kind) {
+        LibraryContactKind.MANUAL -> stringResource(R.string.library_manual_calls)
+        LibraryContactKind.UNKNOWN -> stringResource(R.string.library_unknown_calls)
+        else -> checkNotNull(group.name)
+    }
 internal fun contactInitials(name: String): String {
     val words = name.trim().split(Regex("[\\p{Z}\\s]+")).filter { it.isNotEmpty() }
     val selected = if (words.size < 2) words else listOf(words.first(), words.last())

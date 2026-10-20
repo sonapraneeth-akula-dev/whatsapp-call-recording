@@ -7,6 +7,16 @@
     <string name="library_view_contact_description">View recordings for %1$s</string>
     <string name="library_all_contacts">All contacts</string>
     <string name="library_contact_empty">No recordings for this contact.</string>
+    <string name="library_search_name">Search contact or recording name</string>
+    <string name="library_choose_contact">Filter by contact</string>
+    <string name="library_selected_contact">Contact: %1$s</string>
+    <string name="library_missing_contact">Unavailable contact</string>
+    <string name="library_choose_dates">Date range</string>
+    <string name="library_selected_dates">%1$s to %2$s</string>
+    <string name="library_apply_dates">Apply dates</string>
+    <string name="library_all_dates">All dates</string>
+    <string name="library_clear_filters">Clear filters</string>
+    <string name="library_filter_empty">No recordings match these filters.</string>
     <plurals name="library_group_count">
         <item quantity="one">%d recording</item>
         <item quantity="other">%d recordings</item>

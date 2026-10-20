@@ -512,12 +512,12 @@ Foreground service, started by the accessibility service, using the source chose
 - **Est. AI**: 01:00
 
 - **US-042** — **As the** owner **I want** recordings grouped by contact with avatar/initials, type, direction, duration and date **So that** I scan quickly (`Est. AI: 00:30`)
-  - [ ] Group headers show contact and count
+  - [x] Group headers show contact and count (local native Compose tests, 2026-10-20)
 - **US-043** — **As the** owner **I want** to filter by contact and date range and search by name **So that** I find a call fast (`Est. AI: 00:30`)
   - [ ] Results update ≤ 200 ms for 1,000 recordings
 
 **Exit Criteria** (test run `00:15`) — milestone is done only when all boxes are checked:
-- [ ] **UI tests**: grouping and filter tests pass (US-042, US-043)
+- [x] **UI tests**: grouping and filter tests pass (US-042, US-043; local native Compose tests, 2026-10-20)
 - [ ] **Performance**: filter ≤ 200 ms with 1,000 seeded recordings on F42
 
 #### Milestone M-011.2: Comfortable playback
@@ -895,4 +895,3 @@ Onboarding checklist · Home dashboard · Library (grouped by contact) · Player
 - [ ] **Uneven group volume** — acceptable that remote participants may be louder/quieter than the owner?
 - [ ] **WhatsApp UI changes** — accept ongoing maintenance of detection rules after WhatsApp updates?
 - [ ] **Live transcription (FR-051)** — revisit after REQ-013 ships (A73 only, 5–10 s lag).
-
