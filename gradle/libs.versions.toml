@@ -31,6 +31,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 sqlcipher = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
 media3-datasource = { module = "androidx.media3:media3-datasource", version.ref = "media3" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -535,7 +535,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 6.1.2.1.1 | Task | Library list newest-first + `LibraryViewModel` — `app/…/ui/library/` | 01:30 | 00:15 | VM + UI tests | **2026-10-20: live library data component implemented.** `RecordingRepository.observeAll()` keeps manual/sessionless, active, recovered and failed entries; no fabricated playable path or remote-audio claim. Recording/session snapshots are transactional, identical snapshots deduplicated. Local reactive/order/relationship tests and both app builds pass; product list/ViewModel remain pending M-008.1. |
-| 6.1.2.1.2 | Task | Basic player (play/pause/seek) on ExoPlayer — `app/…/ui/player/` | 01:30 | 00:15 | UI test play/seek | Uses US-025 |
+| 6.1.2.1.2 | Task | Basic player (play/pause/seek) on ExoPlayer — `app/…/ui/player/` | 01:30 | 00:15 | UI test play/seek | **2026-10-20: encrypted ExoPlayer engine component implemented.** Media3 1.11.1 progressive source uses only `DecryptingDataSource`; ADTS constant-bitrate seeking enabled, no plaintext/network cache. Native play/pause/seek/release API, actual player source rejection and real-Tink authentication-failure propagation tested locally. Creation does not autoplay; errors enter private redacted diagnostics. Product controls/VM/lifecycle wiring and audible phone seek remain pending; not a UI-test or decoder-audibility claim. |
 
 ##### User Story 6.1.2.2 (US-028): To rename and delete recordings
 - **So that**: I keep the library tidy

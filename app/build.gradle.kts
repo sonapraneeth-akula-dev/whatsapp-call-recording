@@ -115,6 +115,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.sqlcipher)
     implementation(libs.media3.datasource)
+    implementation(libs.media3.exoplayer)
     kapt(libs.room.compiler)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.tooling.preview)
