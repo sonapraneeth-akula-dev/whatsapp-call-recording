@@ -745,6 +745,7 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 - [ ] **R-7 Restricted settings for sideloaded accessibility** (Android 13+) — documented one-time unlock in onboarding.
 - [ ] **R-8 Video consent prompt timing** — MediaProjection dialog needs foreground UI during an active call; heads-up/full-screen intent may be blocked. Fallback: audio-only + `fallback_reason`.
 - [ ] **R-9 Group volume imbalance** — mixed remote stream; per-participant levels not controllable. Accepted; normalize at finalize (optional).
+  - **2026-10-20, task 3.2.2.1.2:** capture currently produces one mixed mono channel. Its RMS measures aggregate signal energy, not participant identity or relative participant gain. No positive native group capture is available, so imbalance remains unmeasured. Owner UAT needs three-party calls on both phones with separately cued speaking windows and listening confirmation; synthetic group tags and one-to-one source sweeps are not substitutes. Optional normalization remains unimplemented and cannot independently rebalance speakers within a mixture.
 - [ ] **Q-1** Mockup tool: Figma vs Compose `@Preview` gallery (owner choice at M-008.1).
 - [x] **Q-2** Keep `:spike` as an independent, side-by-side capability-test/debug app (owner decision, 2026-10-20); production lives in `:app`.
 
