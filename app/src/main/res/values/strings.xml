@@ -213,7 +213,7 @@
     <string name="setup_detector_checked_detail">Call adapters are declared and enabled. This check does not prove detection accuracy, remote audio or recording reliability.</string>
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_back">Back to Settings</string>
-    <string name="diagnostics_scope">Exports a bounded, redacted event log and technical app/device/setup status. Text values and arbitrary log keys are hashed even in debug builds. No recordings, contacts, transcripts, database, keys or raw crash files are included. Call traces and capability results are included only when implemented; unavailable results are reported as unavailable.</string>
+    <string name="diagnostics_scope">Exports a bounded, redacted event log, detection trace and technical app/device/setup status. Log text and arbitrary log keys are hashed even in debug builds. Includes up to 100 recent capability measurements with device/build/version, route/source, energy and explicit listening verdicts; these do not prove current-call audibility. Missing or unreadable results and truncation are explicit. No audio, contacts, transcripts, recording identifiers or paths, database, keys or raw crash files are included.</string>
     <string name="diagnostics_destination_warning">You choose the ZIP destination. Select an on-device folder for offline storage; another document provider may sync its own files. Nothing is shared automatically. If export is interrupted, an incomplete document may remain at the chosen destination.</string>
     <string name="diagnostics_export">Export diagnostics</string>
     <string name="diagnostics_idle">Choose a destination to create a redacted ZIP.</string>

@@ -71,6 +71,9 @@ interface CapabilityDao {
     @Query("SELECT * FROM capability_result ORDER BY tested_at DESC, id DESC LIMIT 100")
     fun observeRecent(): Flow<List<CapabilityResult>>
 
+    @Query("SELECT * FROM capability_result ORDER BY tested_at DESC, id DESC LIMIT 101")
+    suspend fun diagnostics(): List<CapabilityResult>
+
     @Query("SELECT * FROM capability_result WHERE run_id = :runId ORDER BY id")
     suspend fun run(runId: UUID): List<CapabilityResult>
 
