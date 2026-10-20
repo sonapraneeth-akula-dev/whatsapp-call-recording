@@ -65,6 +65,8 @@ class CallDetector(
     val nextDeadlineMs: Long? get() = listOfNotNull(disconnectDeadlineMs, closed.values.minOfOrNull { it.expiresAtMs }).minOrNull()
     val suspension: CallSuspension? get() = pauseReason
     val callWindowPackages: Set<String> get() = windows.toSet()
+    val retainedSequences: Set<Long> get() =
+        (held.values.map { it.sequence } + closed.values.map { it.call.sequence } + listOfNotNull(activeCall?.sequence)).toSet()
 
     private data class Key(val packageName: String, val key: String)
     private data class Observed(val notification: CallNotification, val ringingAtMs: Long?, val generation: Long)

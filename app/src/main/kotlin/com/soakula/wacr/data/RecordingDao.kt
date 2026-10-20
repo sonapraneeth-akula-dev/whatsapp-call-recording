@@ -38,6 +38,9 @@ interface RecordingDao {
     @Query("SELECT * FROM call_session WHERE id = :id")
     suspend fun session(id: Long): CallSessionEntity?
 
+    @Query("UPDATE call_session SET ended_at = :endedAt WHERE id = :id")
+    suspend fun setSessionEnd(id: Long, endedAt: Long?): Int
+
     @Query("""
         UPDATE recording SET title = :title WHERE id = :id AND NOT EXISTS
         (SELECT 1 FROM recording_deletion WHERE recording_id = recording.id)
