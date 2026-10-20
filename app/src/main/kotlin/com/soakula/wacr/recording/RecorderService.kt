@@ -10,9 +10,18 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.database.SQLException
 import android.media.MediaCodec
+import android.media.AudioManager
 import android.net.Uri
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.VibratorManager
+import com.soakula.wacr.R
 import com.soakula.wacr.WacrApp
+import com.soakula.wacr.capability.CapabilityDevice
+import com.soakula.wacr.capability.CapabilityPhase
+import com.soakula.wacr.capability.CapabilityProgress
+import com.soakula.wacr.capability.CapabilityProfiles
+import com.soakula.wacr.capability.CapabilityTest
 import com.soakula.wacr.playback.PlaybackReleaseException
 import kotlinx.coroutines.*
 import java.io.IOException
@@ -88,16 +97,53 @@ class RecorderService : Service() {
                         throw SecurityException("Microphone permission revoked")
                     }
                     RouteWatcher(this@RecorderService, app.log).use { routes ->
-                        RecordingJob(
-                            database, app.recordingFiles, app.crypto, app.log,
-                            StorageGuard.forDirectory(filesDir), routes = routes
-                        ).run(request.id, request.sessionId, request.stopRequested::get, { at, warning ->
-                            post(notifications.recording(at, stopAction(request.id), warning))
-                            controller.recording(request, at, warning)
-                        }, {
-                            post(notifications.saving())
-                            controller.saving(request)
-                        })
+                        val capability = request.capability
+                        if (capability != null) {
+                            val audio = getSystemService(AudioManager::class.java)
+                            if (audio.mode != AudioManager.MODE_IN_COMMUNICATION || routes.current.value != capability.route) {
+                                throw RecorderReadinessException(RecorderFailure.CAPABILITY_ROUTE)
+                            }
+                            var routeInvalidated = false
+                            var lastProgress: CapabilityProgress? = null
+                            CapabilityTest(database, app.recordingFiles, app.crypto, app.log,
+                                StorageGuard.forDirectory(filesDir), {
+                                    routeInvalidated = routeInvalidated || audio.mode != AudioManager.MODE_IN_COMMUNICATION ||
+                                        routes.changes().any { it.route != capability.route }
+                                    if (routeInvalidated) null else routes.current.value
+                                }, clipTitle = { getString(R.string.capability_clip_title, it.name) }
+                            ).run(CapabilityDevice.read(this@RecorderService, capability.waPackage),
+                                capability.route, listOf(capability.source), request.stopRequested::get, { progress ->
+                                    controller.capabilityProgress(request, progress)
+                                    val previous = lastProgress
+                                    if (previous == null || previous.phase != progress.phase || previous.elapsedMs / 1000 != progress.elapsedMs / 1000) {
+                                        post(notifications.capability(progress, stopAction(request.id)))
+                                        if (previous?.phase != progress.phase && progress.phase != CapabilityPhase.SAVING) {
+                                            cue(progress.phase)
+                                        }
+                                        lastProgress = progress
+                                    }
+                                }, { at, warning -> controller.recording(request, at, warning) },
+                                { controller.saving(request) }, runId = request.id)
+                            null
+                        } else {
+                            val detection = app.detection.state.value
+                            val pkg = detection.call?.packageName?.takeIf {
+                                request.sessionId != null && detection.sessionId == request.sessionId
+                            }
+                            val profile = if (pkg == null) CaptureProfile() else runBlocking {
+                                CapabilityProfiles(database, app.preferences).load(CapabilityDevice.read(this@RecorderService, pkg))
+                            }
+                            RecordingJob(
+                                database, app.recordingFiles, app.crypto, app.log,
+                                StorageGuard.forDirectory(filesDir), profile = profile, routes = routes
+                            ).run(request.id, request.sessionId, request.stopRequested::get, { at, warning ->
+                                post(notifications.recording(at, stopAction(request.id), warning))
+                                controller.recording(request, at, warning)
+                            }, {
+                                post(notifications.saving())
+                                controller.saving(request)
+                            })
+                        }
                     }
                 }
             }
@@ -109,6 +155,8 @@ class RecorderService : Service() {
             app.log.log("recorder", "playback_release_failed_restart_required")
         } catch (error: RecorderReadinessException) {
             failure = error.failure
+        } catch (error: PackageManager.NameNotFoundException) {
+            failure = RecorderFailure.CAPABILITY_APP_UNAVAILABLE
         } catch (error: CaptureUnavailableException) {
             failure = RecorderFailure.CAPTURE_UNAVAILABLE
         } catch (error: LowStorageException) {
@@ -160,10 +208,21 @@ class RecorderService : Service() {
             manager.getNotificationChannel(RecorderNotification.CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE) {
             throw RecorderReadinessException(RecorderFailure.NOTIFICATIONS_DISABLED)
         }
+
         try {
             manager.notify(RecorderNotification.ID, notification)
         } catch (error: SecurityException) {
             throw RecorderReadinessException(RecorderFailure.NOTIFICATIONS_DISABLED, error)
+        }
+    }
+
+    private fun cue(phase: CapabilityPhase) {
+        val pattern = if (phase == CapabilityPhase.YOU) longArrayOf(0, 300) else longArrayOf(0, 200, 150, 200)
+        try {
+            getSystemService(VibratorManager::class.java).defaultVibrator
+                .vibrate(VibrationEffect.createWaveform(pattern, -1))
+        } catch (error: SecurityException) {
+            throw RecorderReadinessException(RecorderFailure.CAPABILITY_CUE, error)
         }
     }
 

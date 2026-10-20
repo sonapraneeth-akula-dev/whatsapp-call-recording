@@ -3,6 +3,7 @@ package com.soakula.wacr
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
@@ -32,6 +33,7 @@ import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.health.HealthNotification
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.recording.RecorderNotification
 import com.soakula.wacr.recording.RecordingEntry
 import com.soakula.wacr.recording.CallRecordingResult
 import com.soakula.wacr.data.RecordingDecision
@@ -47,6 +49,10 @@ import com.soakula.wacr.ui.settings.SettingsUiState
 import com.soakula.wacr.ui.settings.SettingsViewModel
 import com.soakula.wacr.ui.settings.DiagnosticsViewModel
 import com.soakula.wacr.ui.settings.DiagnosticsScreen
+import com.soakula.wacr.ui.settings.CapabilityViewModel
+import com.soakula.wacr.ui.settings.CapabilityScreen
+import com.soakula.wacr.ui.library.LibraryUiState
+import com.soakula.wacr.data.RecordingStatus
 import com.soakula.wacr.ui.theme.WacrTheme
 import com.soakula.wacr.ui.theme.isDark
 import com.soakula.wacr.ui.onboarding.SetupChecklistScreen
@@ -70,6 +76,7 @@ class MainActivity : ComponentActivity() {
     private val allowlist: AllowlistViewModel by viewModels()
     private val settings: SettingsViewModel by viewModels()
     private val diagnostics: DiagnosticsViewModel by viewModels()
+    private val capability: CapabilityViewModel by viewModels()
     private val diagnosticDocument = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri == null) diagnostics.cancelSelection() else diagnostics.export(uri)
     }
@@ -85,6 +92,7 @@ class MainActivity : ComponentActivity() {
     private var requestedSession: Long? = null
     private var requestedDecision = RecordingDecision.MANUAL
     private var setupRequest by mutableStateOf(0)
+    private var capabilityRequest by mutableStateOf(0)
     private var playbackRequest by mutableStateOf<Pair<UUID, Int>?>(null)
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
@@ -107,6 +115,7 @@ class MainActivity : ComponentActivity() {
             consumeSetupEntry(intent)
             consumeRecordingEntry(intent)
             consumePlaybackEntry(intent)
+            consumeCapabilityEntry(intent)
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -145,6 +154,10 @@ class MainActivity : ComponentActivity() {
                 val contactRules by allowlist.state.collectAsStateWithLifecycle()
                 val contactActions by allowlist.actions.collectAsStateWithLifecycle()
                 val exportState by diagnostics.state.collectAsStateWithLifecycle()
+                var settingsPanel by rememberSaveable { mutableStateOf<String?>(null) }
+                LaunchedEffect(capabilityRequest) {
+                    if (capabilityRequest != 0) settingsPanel = "capability"
+                }
                 AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry,
                     actions = actions, onUndo = library::undo, onDismissUndo = library::dismissUndo,
                     onDismissError = library::dismissError,
@@ -152,14 +165,34 @@ class MainActivity : ComponentActivity() {
                         AllowlistScreen(contactRules, contactActions, ::pickContact, allowlist::retry,
                             allowlist::remove, allowlist::undo, allowlist::dismissUndo, allowlist::dismissError)
                     }, settingsContent = { openSetup ->
-                        var showDiagnostics by rememberSaveable { mutableStateOf(false) }
-                        if (showDiagnostics) {
-                            BackHandler { showDiagnostics = false }
-                            DiagnosticsScreen(exportState, ::chooseDiagnosticDocument) { showDiagnostics = false }
+                        if (settingsPanel == "capability") {
+                            val capabilityState by capability.state.collectAsStateWithLifecycle()
+                            val capabilityActions by capability.actions.collectAsStateWithLifecycle()
+                            val capabilityRun by capability.run.collectAsStateWithLifecycle()
+                            val busy = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving
+                            val playable = (recordings as? LibraryUiState.Ready)?.entries.orEmpty().mapNotNull {
+                                it.recording.takeIf { row ->
+                                    row.status in setOf(RecordingStatus.FINALIZED, RecordingStatus.RECOVERED) &&
+                                        (row.durationMs ?: 0) > 0 && row.audioPath == "${row.id}/audio.aac.enc"
+                                }?.id
+                            }.toSet()
+                            BackHandler { settingsPanel = null }
+                            CapabilityScreen(capabilityState, capabilityActions, capabilityRun, busy, playable,
+                                onStart = { request ->
+                                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) capability.start(request)
+                                    else Toast.makeText(this, R.string.capability_start_failed, Toast.LENGTH_LONG).show()
+                                }, onStop = capability::stop, onReview = capability::review,
+                                onPreview = { id -> playbackRequest = id to ((playbackRequest?.second ?: 0) + 1) },
+                                onRetry = capability::retry, onDismissError = capability::dismissError,
+                                onSetup = openSetup, onBack = { settingsPanel = null })
+                        } else if (settingsPanel == "diagnostics") {
+                            BackHandler { settingsPanel = null }
+                            DiagnosticsScreen(exportState, ::chooseDiagnosticDocument) { settingsPanel = null }
                         } else {
                             SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
                                 settings::retry, settings::dismissError, onSetup = openSetup,
-                                onDiagnostics = { showDiagnostics = true })
+                                onDiagnostics = { settingsPanel = "diagnostics" },
+                                onCapability = { settingsPanel = "capability" })
                         }
                     }, setupContent = { closeSetup ->
                         SetupChecklistScreen(state, appearanceActions.busy, appearanceActions.failed,
@@ -168,7 +201,7 @@ class MainActivity : ComponentActivity() {
                                 Uri.fromParts("package", packageName, null))) },
                             { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
                             { if (firstRun) settings.completeOnboarding() else closeSetup() })
-                    }, setupRequest = setupRequest, playbackRequest = playbackRequest,
+                    }, setupRequest = setupRequest, settingsRequest = capabilityRequest, playbackRequest = playbackRequest,
                     forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
                     appearanceError = appearanceState is SettingsUiState.Failed,
                     onRetryAppearance = settings::retry) { entry, back ->
@@ -216,6 +249,14 @@ class MainActivity : ComponentActivity() {
         consumeSetupEntry(intent)
         consumeRecordingEntry(intent)
         consumePlaybackEntry(intent)
+        consumeCapabilityEntry(intent)
+    }
+
+    private fun consumeCapabilityEntry(intent: Intent) {
+        if (intent.action != RecorderNotification.ACTION_CAPABILITY) return
+        intent.action = null
+        if (intent.component == ComponentName(this, MainActivity::class.java)) capabilityRequest++
+        else app.log.log("capability", "entry_rejected")
     }
 
     private fun consumePlaybackEntry(intent: Intent) {

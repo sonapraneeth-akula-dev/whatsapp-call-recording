@@ -37,6 +37,47 @@ class RecorderControllerTest {
         shadowOf(application).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
     }
 
+    @Test fun capabilityUsesTheSameExclusiveLeaseAndRejectsStaleProgressOrStop() {
+        val controller = controller()
+        val options = CapabilityRequest(com.soakula.wacr.data.AudioRoute.EARPIECE, CaptureSource.MIC, "com.whatsapp")
+        val id = checkNotNull(controller.startCapability(options))
+        val request = checkNotNull(controller.request(id))
+        assertEquals(options, request.capability)
+        assertNull(request.sessionId)
+        assertNull(controller.start())
+        assertNull(controller.startCapability(options))
+        assertEquals(1, launches.size)
+        assertEquals(setOf(RecorderService.EXTRA_ID), launches.single().extras!!.keySet())
+        val progress = com.soakula.wacr.capability.CapabilityProgress(
+            CaptureSource.MIC, 1, 1, com.soakula.wacr.capability.CapabilityPhase.YOU, 0)
+        controller.capabilityProgress(request, progress)
+        val first = controller.capability.value
+        controller.capabilityProgress(request, progress.copy(elapsedMs = 64))
+        assertSame(first, controller.capability.value)
+        controller.capabilityProgress(request, progress.copy(phase = com.soakula.wacr.capability.CapabilityPhase.OTHER, elapsedMs = 15_000))
+        assertEquals(com.soakula.wacr.capability.CapabilityPhase.OTHER, controller.capability.value?.progress?.phase)
+        controller.finished(request, null)
+        assertEquals(RecorderState.Idle, controller.state.value)
+        assertTrue(checkNotNull(controller.capability.value).complete)
+        val normal = checkNotNull(controller.start())
+        controller.stop(id)
+        controller.capabilityProgress(request, progress)
+        assertFalse(checkNotNull(controller.request(normal)).stopRequested.get())
+        assertTrue(checkNotNull(controller.capability.value).complete)
+        assertThrows(IllegalArgumentException::class.java) { options.copy(waPackage = "synthetic.other") }
+    }
+
+    @Test fun failedCapabilityRunEndsWithAnExplicitSharedRecorderFailure() {
+        val controller = controller()
+        val id = checkNotNull(controller.startCapability(CapabilityRequest(
+            com.soakula.wacr.data.AudioRoute.SPEAKER, CaptureSource.MIC, "com.whatsapp.w4b")))
+        val request = checkNotNull(controller.request(id))
+        controller.failed(request, RecorderFailure.CAPABILITY_ROUTE)
+        assertEquals(RecorderFailure.CAPABILITY_ROUTE, controller.capability.value?.failure)
+        assertTrue(checkNotNull(controller.capability.value).complete)
+        assertEquals(RecorderState.Failed(id, RecorderFailure.CAPABILITY_ROUTE), controller.state.value)
+    }
+
     @Test fun oneActiveRecordingSharesProgressAndRejectsStaleStopAndCompletion() {
         val controller = controller()
         val id = checkNotNull(controller.start(7))

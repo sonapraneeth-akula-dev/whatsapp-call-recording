@@ -76,6 +76,26 @@ class RecorderNotificationTest {
         assertFalse(channel.canShowBadge())
     }
 
+    @Test fun capabilityCuesStayPrivateAndOpenTheGuidedScreenWithoutStartingCapture() {
+        val notifications = RecorderNotification(context)
+        for (phase in com.soakula.wacr.capability.CapabilityPhase.entries) {
+            val value = notifications.capability(com.soakula.wacr.capability.CapabilityProgress(
+                CaptureSource.MIC, 1, 1, phase, 15_000), stop())
+            assertEquals(Notification.VISIBILITY_PRIVATE, value.visibility)
+            assertTrue(value.flags and Notification.FLAG_LOCAL_ONLY != 0)
+            assertTrue(value.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("MIC"))
+            val public = checkNotNull(value.publicVersion)
+            assertFalse(public.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("MIC"))
+            assertNull(public.actions)
+            assertNull(public.contentIntent)
+            assertTrue(value.contentIntent.isImmutable)
+            assertEquals(RecorderNotification.ACTION_CAPABILITY,
+                org.robolectric.Shadows.shadowOf(value.contentIntent).savedIntent.action)
+            if (phase == com.soakula.wacr.capability.CapabilityPhase.SAVING) assertNull(value.actions)
+            else assertEquals(1, value.actions.size)
+        }
+    }
+
     @Test fun failureNoticeCanBeDismissedAndHasNoTimerOrStopAction() {
         val notice = RecorderNotification(context).notice(R.string.recording_error_io)
         assertEquals(Notification.VISIBILITY_PRIVATE, notice.visibility)

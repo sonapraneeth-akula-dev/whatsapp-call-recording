@@ -68,7 +68,8 @@ class CapabilityTest(
     private val storage: StorageGuard,
     private val currentRoute: () -> AudioRoute?,
     private val now: () -> Long = System::currentTimeMillis,
-    private val elapsedMs: () -> Long = SystemClock::elapsedRealtime
+    private val elapsedMs: () -> Long = SystemClock::elapsedRealtime,
+    private val clipTitle: (CaptureSource) -> String? = { null }
 ) {
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun run(
@@ -78,13 +79,13 @@ class CapabilityTest(
         shouldStop: () -> Boolean,
         onProgress: (CapabilityProgress) -> Unit,
         onRecording: (Long, Boolean) -> Unit,
-        onSaving: () -> Unit
+        onSaving: () -> Unit,
+        runId: UUID = UUID.randomUUID()
     ): List<CapabilityResult> {
         require(sources.isNotEmpty() && sources.size == sources.distinct().size) { "Select unique capability sources" }
         if (shouldStop()) return emptyList()
         check(currentRoute() == route) { "Requested communication route is not active" }
         check(runBlocking { database.recordings().needsRecovery().isEmpty() }) { "Recovery must finish before capability capture" }
-        val runId = UUID.randomUUID()
         val results = mutableListOf<CapabilityResult>()
         for ((index, source) in sources.withIndex()) {
             if (shouldStop()) break
@@ -99,7 +100,7 @@ class CapabilityTest(
                 CapabilityProgress(source, index + 1, sources.size, phase, meter.sampleFrames * 1000 / AacFormat.SAMPLE_RATE)
             )
             val job = RecordingJob(
-                database, files, crypto, log, storage, profile = CaptureProfile(listOf(source)), now = now,
+                database, files, crypto, log, storage, profile = CaptureProfile(listOf(source)), now = now, title = clipTitle(source),
                 onPcm = { pcm, count, clientSilenced ->
                     meter.add(pcm, count, clientSilenced)
                     progress(meter.phase)

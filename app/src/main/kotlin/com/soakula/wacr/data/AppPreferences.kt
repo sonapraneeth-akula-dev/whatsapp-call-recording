@@ -23,15 +23,21 @@ class AppPreferences internal constructor(private val store: DataStore<Preferenc
         )
     }
     val appearance = values.map { it.appearance }
+    val captureProfileJson = store.data.map { it[CAPTURE_PROFILE] }
 
     suspend fun setTheme(theme: ThemeChoice) { store.edit { it[THEME] = theme.name } }
     suspend fun setDynamicColor(enabled: Boolean) { store.edit { it[DYNAMIC_COLOR] = enabled } }
     suspend fun completeOnboarding() { store.edit { it[ONBOARDING_DONE] = true } }
+    internal suspend fun cacheCaptureProfile(value: String) {
+        require(value.length <= 16_384) { "Capture profile cache is too large" }
+        store.edit { it[CAPTURE_PROFILE] = value }
+    }
 
     companion object {
         internal val THEME = stringPreferencesKey("theme")
         internal val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         internal val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        internal val CAPTURE_PROFILE = stringPreferencesKey("capture_profile_json")
         fun open(context: Context) = AppPreferences(context.applicationContext.settings)
     }
 }

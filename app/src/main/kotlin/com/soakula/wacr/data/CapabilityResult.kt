@@ -73,4 +73,30 @@ interface CapabilityDao {
 
     @Query("SELECT * FROM capability_result WHERE run_id = :runId ORDER BY id")
     suspend fun run(runId: UUID): List<CapabilityResult>
+
+    @Query("SELECT * FROM capability_result WHERE id = :id")
+    suspend fun result(id: Long): CapabilityResult?
+
+    @Query("""
+        SELECT r.* FROM capability_result r
+        WHERE device_model = :model AND os_build = :build AND wa_package = :pkg
+        AND wa_version = :version AND wa_version_code = :versionCode
+        AND NOT EXISTS (SELECT 1 FROM capability_result n WHERE n.id > r.id
+            AND n.device_model = r.device_model AND n.os_build = r.os_build
+            AND n.wa_package = r.wa_package AND n.wa_version = r.wa_version
+            AND n.wa_version_code = r.wa_version_code AND n.route = r.route AND n.source = r.source)
+        ORDER BY r.id
+    """)
+    suspend fun latest(model: String, build: String, pkg: String, version: String, versionCode: Long): List<CapabilityResult>
+
+    @Query("""
+        UPDATE capability_result SET own_ok = :own, remote_ok = :remote
+        WHERE id = :id AND status = 'COMPLETE' AND EXISTS (
+            SELECT 1 FROM recording r WHERE r.id = capability_result.recording_id
+            AND r.status IN ('FINALIZED', 'RECOVERED') AND r.duration_ms > 0
+            AND r.capture_source = capability_result.source
+            AND r.audio_path = CAST(r.id AS TEXT) || '/audio.aac.enc'
+            AND NOT EXISTS (SELECT 1 FROM recording_deletion d WHERE d.recording_id = r.id))
+    """)
+    suspend fun review(id: Long, own: Boolean, remote: Boolean): Int
 }

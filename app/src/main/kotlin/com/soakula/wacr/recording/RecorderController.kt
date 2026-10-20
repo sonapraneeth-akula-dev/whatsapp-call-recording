@@ -10,6 +10,9 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.StringRes
 import com.soakula.wacr.R
+import com.soakula.wacr.capability.CapabilityProgress
+import com.soakula.wacr.data.AudioRoute
+import com.soakula.wacr.detection.CallDetection
 import com.soakula.wacr.util.AppLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,10 +42,22 @@ enum class RecorderFailure(@param:StringRes val message: Int) {
     NATIVE_UNAVAILABLE(R.string.recording_error_native),
     INTERRUPTED(R.string.recording_error_interrupted),
     INVALID_STATE(R.string.recording_error_state),
-    PLAYBACK_RELEASE(R.string.recording_error_playback)
+    PLAYBACK_RELEASE(R.string.recording_error_playback),
+    CAPABILITY_APP_UNAVAILABLE(R.string.capability_app_unavailable),
+    CAPABILITY_CUE(R.string.capability_cue_failed),
+    CAPABILITY_ROUTE(R.string.capability_call_route_error)
 }
 
-internal class RecordingRequest(val id: UUID, val sessionId: Long?) {
+data class CapabilityRequest(val route: AudioRoute, val source: CaptureSource, val waPackage: String) {
+    init { require(waPackage in CallDetection.PACKAGES) { "Unsupported WhatsApp package" } }
+}
+
+data class CapabilityRunState(
+    val id: UUID, val progress: CapabilityProgress? = null,
+    val complete: Boolean = false, val failure: RecorderFailure? = null
+)
+
+internal class RecordingRequest(val id: UUID, val sessionId: Long?, val capability: CapabilityRequest? = null) {
     val stopRequested = AtomicBoolean(false)
 }
 
@@ -56,8 +71,14 @@ class RecorderController internal constructor(
     private var active: RecordingRequest? = null
     private val mutableState = MutableStateFlow<RecorderState>(RecorderState.Idle)
     val state = mutableState.asStateFlow()
+    private val mutableCapability = MutableStateFlow<CapabilityRunState?>(null)
+    val capability = mutableCapability.asStateFlow()
 
-    fun start(sessionId: Long? = null): UUID? = synchronized(lock) {
+    fun start(sessionId: Long? = null): UUID? = start(sessionId, null)
+
+    fun startCapability(request: CapabilityRequest): UUID? = start(null, request)
+
+    private fun start(sessionId: Long?, capability: CapabilityRequest?): UUID? = synchronized(lock) {
         require(sessionId == null || sessionId > 0) { "Session ID must be positive" }
         if (active != null) {
             log.log("recorder", "start_ignored_busy")
@@ -69,8 +90,9 @@ class RecorderController internal constructor(
             report(readiness)
             return null
         }
-        val request = RecordingRequest(UUID.randomUUID(), sessionId)
+        val request = RecordingRequest(UUID.randomUUID(), sessionId, capability)
         active = request
+        if (capability != null) mutableCapability.value = CapabilityRunState(request.id)
         mutableState.value = RecorderState.Preparing(request.id)
         context.getSystemService(NotificationManager::class.java).cancel(RecorderNotification.NOTICE_ID)
         try {
@@ -118,9 +140,22 @@ class RecorderController internal constructor(
         if (active === request) mutableState.value = RecorderState.Saving(request.id)
     }
 
+    internal fun capabilityProgress(request: RecordingRequest, progress: CapabilityProgress) = synchronized(lock) {
+        if (active === request && request.capability != null) {
+            val previous = mutableCapability.value?.progress
+            if (previous == null || previous.source != progress.source || previous.phase != progress.phase ||
+                previous.elapsedMs / 1000 != progress.elapsedMs / 1000) {
+                mutableCapability.value = CapabilityRunState(request.id, progress)
+            }
+        }
+    }
+
     internal fun finished(request: RecordingRequest, result: RecordingResult?) = synchronized(lock) {
         if (active !== request) return
         active = null
+        if (request.capability != null) {
+            mutableCapability.value = mutableCapability.value?.copy(complete = true)
+        }
         mutableState.value = if (result == null) RecorderState.Idle else RecorderState.Finished(
             request.id, result.audio.durationUs / 1000, result.reason
         )
@@ -130,6 +165,9 @@ class RecorderController internal constructor(
     internal fun failed(request: RecordingRequest, failure: RecorderFailure) = synchronized(lock) {
         if (active !== request) return
         active = null
+        if (request.capability != null) {
+            mutableCapability.value = mutableCapability.value?.copy(complete = true, failure = failure)
+        }
         mutableState.value = RecorderState.Failed(request.id, failure)
         report(failure)
     }

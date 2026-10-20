@@ -9,6 +9,8 @@ import android.content.Intent
 import androidx.annotation.StringRes
 import com.soakula.wacr.MainActivity
 import com.soakula.wacr.R
+import com.soakula.wacr.capability.CapabilityProgress
+import com.soakula.wacr.capability.CapabilityPhase
 
 class RecorderNotification(private val context: Context) {
     init {
@@ -37,11 +39,23 @@ class RecorderNotification(private val context: Context) {
 
     fun saving(): Notification = build(R.string.recording_saving, R.string.recording_saving_detail)
 
+    fun capability(progress: CapabilityProgress, stop: PendingIntent): Notification {
+        val detail = context.getString(when (progress.phase) {
+            CapabilityPhase.YOU -> R.string.capability_you_cue
+            CapabilityPhase.OTHER -> R.string.capability_other_cue
+            CapabilityPhase.SAVING -> R.string.recording_saving_detail
+        })
+        return build(R.string.capability_title, R.string.capability_instructions,
+            stop.takeUnless { progress.phase == CapabilityPhase.SAVING },
+            detailText = context.getString(R.string.capability_notification_detail,
+                progress.source.name, detail, progress.elapsedMs / 1000), capabilityEntry = true)
+    }
+
     fun notice(@StringRes detail: Int): Notification = build(R.string.recording_notice_title, detail, ongoing = false)
 
     private fun build(
         @StringRes title: Int, @StringRes detail: Int, stop: PendingIntent? = null,
-        startedAt: Long? = null, ongoing: Boolean = true
+        startedAt: Long? = null, ongoing: Boolean = true, detailText: String? = null, capabilityEntry: Boolean = false
     ): Notification {
         if (stop != null) {
             require(stop.isImmutable && stop.creatorPackage == context.packageName) { "Stop action must be immutable and app-owned" }
@@ -52,7 +66,7 @@ class RecorderNotification(private val context: Context) {
             .setContentText(context.getString(R.string.recording_public_detail))
             .setLocalOnly(true)
             .setOngoing(ongoing).build()
-        val content = context.getString(detail)
+        val content = detailText ?: context.getString(detail)
         return Notification.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentTitle(context.getString(title))
@@ -68,7 +82,9 @@ class RecorderNotification(private val context: Context) {
             .setUsesChronometer(startedAt != null)
             .setWhen(startedAt ?: 0)
             .setContentIntent(PendingIntent.getActivity(
-                context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+                context, if (capabilityEntry) 44 else 0, Intent(context, MainActivity::class.java).apply {
+                    if (capabilityEntry) action = ACTION_CAPABILITY
+                }, PendingIntent.FLAG_IMMUTABLE
             ))
             .apply {
                 if (stop != null) addAction(Notification.Action.Builder(
@@ -84,5 +100,6 @@ class RecorderNotification(private val context: Context) {
         const val ID = 2001
         const val NOTICE_ID = 2002
         const val CHANNEL = "recording"
+        const val ACTION_CAPABILITY = "com.soakula.wacr.action.OPEN_CAPABILITY"
     }
 }

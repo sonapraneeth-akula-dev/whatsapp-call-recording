@@ -52,6 +52,7 @@ fun AppScaffold(
     settingsContent: @Composable (() -> Unit) -> Unit = {},
     setupContent: @Composable (() -> Unit) -> Unit = {},
     setupRequest: Int = 0,
+    settingsRequest: Int = 0,
     playbackRequest: Pair<UUID, Int>? = null,
     forceSetup: Boolean = false,
     startupLoading: Boolean = false,
@@ -80,6 +81,13 @@ fun AppScaffold(
         if (setupRequest != 0) {
             selectedId = null
             showSetup = true
+        }
+    }
+    LaunchedEffect(settingsRequest) {
+        if (settingsRequest != 0) {
+            selectedId = null
+            showSetup = false
+            destination = Destination.SETTINGS
         }
     }
     LaunchedEffect(playbackRequest) {

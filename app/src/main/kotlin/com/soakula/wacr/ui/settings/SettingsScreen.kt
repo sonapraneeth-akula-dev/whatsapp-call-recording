@@ -27,7 +27,8 @@ fun SettingsScreen(
     onRetry: () -> Unit,
     onDismissError: () -> Unit,
     onSetup: () -> Unit = {},
-    onDiagnostics: () -> Unit = {}
+    onDiagnostics: () -> Unit = {},
+    onCapability: () -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
@@ -39,6 +40,9 @@ fun SettingsScreen(
                 }
                 OutlinedButton(onClick = onDiagnostics, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.diagnostics_title))
+                }
+                OutlinedButton(onClick = onCapability, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.capability_title))
                 }
             }
             if (actions.failed) item {

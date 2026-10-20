@@ -11,6 +11,8 @@ import com.soakula.wacr.data.AudioRoute
 import com.soakula.wacr.util.AppLog
 import java.io.Closeable
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 data class RouteChange(val route: AudioRoute?, val elapsedMs: Long)
 
@@ -26,6 +28,8 @@ class RouteWatcher(
     @Volatile private var closed = false
     private var route: AudioRoute? = null
     private var initialized = false
+    private val mutableRoute = MutableStateFlow<AudioRoute?>(null)
+    val current = mutableRoute.asStateFlow()
     private val communication = AudioManager.OnCommunicationDeviceChangedListener { refresh() }
     private val devices = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) = refresh()
@@ -61,6 +65,7 @@ class RouteWatcher(
             val next = classify(manager.communicationDevice?.type)
             if (closed || (initialized && next == route)) return
             route = next
+            mutableRoute.value = next
             initialized = true
             val at = elapsedMs()
             check(at >= 0) { "Route clock must be nonnegative" }

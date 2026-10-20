@@ -29,7 +29,8 @@ class RecordingJob(
     private val routes: RouteWatcher? = null,
     private val now: () -> Long = System::currentTimeMillis,
     private val elapsedMs: () -> Long = SystemClock::elapsedRealtime,
-    private val onPcm: (ShortArray, Int, Boolean?) -> Unit = { _, _, _ -> }
+    private val onPcm: (ShortArray, Int, Boolean?) -> Unit = { _, _, _ -> },
+    private val title: String? = null
 ) {
     private val repository = RecordingRepository(database)
 
@@ -54,7 +55,7 @@ class RecordingJob(
             if (shouldStop()) return null
             val startedAt = now()
             val startedElapsed = elapsedMs()
-            runBlocking { repository.start(RecordingEntity(id, startedAt, 1, capture.source.name, sessionId = sessionId)) }
+            runBlocking { repository.start(RecordingEntity(id, startedAt, 1, capture.source.name, sessionId = sessionId, title = title)) }
             if (initialRoute != null) runBlocking { repository.recordRoute(id, initialRoute, 0) }
             SegmentWriter(id, crypto, capture.format) { segment ->
                 committedDurationUs += segment.durationUs
