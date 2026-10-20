@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -16,7 +17,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.StreamingAead
@@ -165,6 +168,88 @@ class PlayerRouteTest {
         compose.onNodeWithText(text(R.string.player_unavailable)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.player_play)).assertIsNotEnabled()
         compose.runOnIdle { assertFalse(opened) }
+    }
+
+    @Test fun endOfTrackShowsPlayAndRestartsAtZeroEvenWithNativePlayWhenReadyStillTrue() {
+        val engine = nativePlayer()
+        var phase = Player.STATE_ENDED
+        val ended = object : ForwardingPlayer(engine) {
+            override fun prepare() = Unit
+            override fun getPlaybackState() = phase
+            override fun getDuration() = 64_000L
+            override fun seekTo(positionMs: Long) { engine.seekTo(positionMs); phase = Player.STATE_READY }
+        }
+        val entry = entry()
+        engine.setMediaItem(androidx.media3.common.MediaItem.Builder().setMediaId(entry.recording.id.toString())
+            .setUri(DecryptingDataSource.uri(entry.recording.id)).build())
+        engine.seekTo(64_000)
+        engine.play()
+        compose.setContent { MaterialTheme { PlayerRoute(entry, false, {}, { ended }, { throw AssertionError(it) }) } }
+        compose.onNodeWithText(text(R.string.player_play)).assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(0L, engine.currentPosition); assertTrue(engine.playWhenReady) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithText(text(R.string.player_pause)).assertIsEnabled()
+    }
+
+    @Test fun retryReleasesFailedNativeEngineAndOpensFreshPausedPlayer() {
+        val first = nativePlayer()
+        val second = nativePlayer()
+        val entry = entry()
+        var opens = 0
+        compose.setContent {
+            MaterialTheme {
+                PlayerRoute(entry, false, {}, {
+                    if (++opens == 1) readyPlayer(first,
+                        PlaybackException("Synthetic source failure", null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED))
+                    else readyPlayer(second)
+                }, { throw AssertionError(it) })
+            }
+        }
+        compose.onNodeWithText(text(R.string.player_error)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.playback_retry)).performClick()
+        compose.onNodeWithText(text(R.string.player_error)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.player_play)).assertIsEnabled()
+        compose.runOnIdle {
+            assertEquals(2, opens)
+            assertTrue(first.isReleased)
+            assertFalse(second.playWhenReady)
+            assertEquals(entry.recording.id.toString(), second.currentMediaItem?.mediaId)
+        }
+    }
+
+    @Test fun initialCaptureBlocksConnectionAndCaptureClosesAnAlreadyOpenSpeedMenu() {
+        val engine = nativePlayer()
+        val entry = entry()
+        val blocked = mutableStateOf(true)
+        var opens = 0
+        compose.setContent {
+            MaterialTheme {
+                PlayerRoute(entry, blocked.value, {}, { opens++; readyPlayer(engine) }, { throw AssertionError(it) })
+            }
+        }
+        compose.onNodeWithText(text(R.string.player_capture_active)).assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, opens); blocked.value = false }
+        compose.onNodeWithText(compose.activity.getString(R.string.player_speed, "1")).performScrollTo().performClick()
+        compose.onNodeWithText("2x").assertIsDisplayed()
+        compose.runOnIdle { blocked.value = true }
+        compose.onNodeWithText("2x").assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.player_play)).assertIsNotEnabled()
+        compose.runOnIdle { assertEquals(1, opens); assertFalse(engine.playWhenReady) }
+    }
+
+    private fun nativePlayer(): ExoPlayer {
+        StreamingAeadConfig.register()
+        val encryption = KeysetHandle.generateNew(PredefinedStreamingAeadParameters.AES256_GCM_HKDF_4KB)
+            .getPrimitive(RegistryConfiguration.get(), StreamingAead::class.java)
+        return createRecordingPlayer(compose.activity, CryptoStore(RecordingFiles(temporary.newFolder()), encryption),
+            AppLog(temporary.newFolder(), true, {}, { throw it }))
+    }
+
+    private fun readyPlayer(engine: ExoPlayer, error: PlaybackException? = null): Player = object : ForwardingPlayer(engine) {
+        override fun prepare() = Unit
+        override fun getPlaybackState() = Player.STATE_READY
+        override fun getDuration() = 64_000L
+        override fun getPlayerError() = error
     }
 
     private fun entry(): RecordingWithSession {

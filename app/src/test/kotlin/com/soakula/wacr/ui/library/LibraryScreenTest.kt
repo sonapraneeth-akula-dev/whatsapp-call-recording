@@ -188,5 +188,38 @@ class LibraryScreenTest {
         compose.onNodeWithText(text(R.string.library_empty)).assertIsDisplayed()
     }
 
+    @Test fun repeatedNotificationEntryOpensExactRecordingWithoutReplacingContactSearchFilters() {
+        val session = CallSessionEntity(waDisplayName = "Demo Contact", matchKey = "demo contact", isGroupKnown = true)
+        val entries = listOf(
+            RecordingWithSession(RecordingEntity(UUID(0, 1), 3000, 1, "MIC", title = "Demo clip"), session),
+            RecordingWithSession(RecordingEntity(UUID(0, 2), 2000, 1, "MIC", title = "Other clip"),
+                session.copy(waDisplayName = "Other Person", matchKey = "other person"))
+        )
+        val request = mutableStateOf<Pair<UUID, Int>?>(null)
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(HomeUiState(loaded = true), RecorderState.Idle, LibraryUiState.Ready(entries),
+                    {}, {}, {}, {}, playbackRequest = request.value) { entry, back ->
+                    Column {
+                        Text("Playing ${entry.recording.title}")
+                        TextButton(onClick = back) { Text("Back to calls") }
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText(text(R.string.nav_library)).performClick()
+        compose.onNodeWithText(text(R.string.library_search_name)).performTextInput("demo")
+        compose.onNodeWithContentDescription(compose.activity.getString(
+            R.string.library_view_contact_description, "Demo Contact")).performScrollTo().performClick()
+        for (nonce in 1..2) {
+            compose.runOnIdle { request.value = entries[1].recording.id to nonce }
+            compose.onNodeWithText("Playing Other clip").assertIsDisplayed()
+            compose.onNodeWithText("Back to calls").performClick()
+            compose.onNodeWithText(text(R.string.library_search_name)).assertTextContains("demo")
+            compose.onNodeWithText("Other clip").assertDoesNotExist()
+            compose.onNodeWithText("Demo clip").assertIsDisplayed()
+        }
+    }
+
     private fun text(resource: Int) = compose.activity.getString(resource)
 }

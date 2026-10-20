@@ -15,6 +15,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.SilenceMediaSource
 import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaSessionService
 import androidx.room.Room
 import com.soakula.wacr.MainActivity
 import com.soakula.wacr.R
@@ -24,6 +25,11 @@ import com.soakula.wacr.recording.RecoveryReport
 import com.soakula.wacr.recording.RecorderState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -70,9 +76,7 @@ class PlaybackServiceTest {
         session = ReflectionHelpers.getField(service, "session")
         engine = ReflectionHelpers.getField(service, "engine")
         service.addSession(session)
-        val future = MediaController.Builder(app, session.token).buildAsync()
-        await { future.isDone }
-        controller = future.get()
+        controller = connect()
     }
 
     @After fun close() {
@@ -219,6 +223,74 @@ class PlaybackServiceTest {
         assertTrue(engine.isReleased)
         assertNull(app.playbackService)
         assertFalse(ReflectionHelpers.getField<Lazy<*>>(app, "keys\$delegate").isInitialized())
+    }
+
+    @Test fun productionConnectorBindsPrivateServiceAndSurfacesSessionDisconnection() {
+        val id = select()
+        configureServiceBinding()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        try {
+            val connection = scope.async { createPlaybackController(app) }
+            await { connection.isCompleted }
+            val player = runBlocking { connection.await() }
+            assertEquals(id.toString(), player.currentMediaItem?.mediaId)
+            assertNull(player.playerError)
+            app.stopPlaybackForCapture()
+            await { player.playerError != null }
+            player.release()
+            assertTrue(engine.isReleased)
+        } finally { scope.cancel() }
+    }
+
+    @Test fun cancellingProductionConnectionReleasesItsBindingWithoutClosingSharedAudio() {
+        configureServiceBinding()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        try {
+            val connection = scope.async { createPlaybackController(app) }
+            connection.cancel()
+            await { shadowOf(app).unboundServiceConnections.isNotEmpty() }
+            assertTrue(connection.isCancelled)
+            assertFalse(engine.isReleased)
+        } finally { scope.cancel() }
+    }
+
+    @Test fun missingActiveUnsafeAndDeletingMetadataCannotReplaceAuthorizedAudio() {
+        val invalid = listOf(
+            null,
+            RecordingEntity(UUID.randomUUID(), 1, 1, "MIC"),
+            RecordingEntity(UUID.randomUUID(), 1, 1, "MIC", status = RecordingStatus.FINALIZED,
+                durationMs = 60_000, audioPath = "../audio.aac.enc"),
+            RecordingEntity(UUID.randomUUID(), 1, 1, "MIC", status = RecordingStatus.FINALIZED, durationMs = 60_000)
+                .let { it.copy(audioPath = "${it.id}/audio.aac.enc") }
+        )
+        for ((index, row) in invalid.withIndex()) {
+            if (controller.playerError != null) {
+                controller.release()
+                controller = connect()
+            }
+            select()
+            await { controller.playerError == null }
+            val id = row?.id ?: UUID.randomUUID()
+            runBlocking {
+                if (row != null) database.recordings().insertRecording(row)
+                if (index == 3) database.recordings().insertDeletion(PendingRecordingDeletion(id, UUID.randomUUID(), 6000, 1))
+            }
+            controller.setMediaItem(MediaItem.Builder().setMediaId(id.toString()).build())
+            await { controller.playerError != null && engine.currentMediaItem == null }
+            assertFalse(engine.playWhenReady)
+        }
+    }
+
+    private fun configureServiceBinding() {
+        shadowOf(app).setUnbindServiceCallsOnServiceDisconnected(false)
+        shadowOf(app).setComponentNameAndServiceForBindService(ComponentName(app, PlaybackService::class.java),
+            service.onBind(Intent(MediaSessionService.SERVICE_INTERFACE)))
+    }
+
+    private fun connect(): MediaController {
+        val future = MediaController.Builder(app, session.token).buildAsync()
+        await { future.isDone }
+        return future.get()
     }
 
     private fun await(predicate: () -> Boolean) {
