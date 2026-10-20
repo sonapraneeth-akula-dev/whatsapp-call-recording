@@ -42,6 +42,18 @@ foreach ($case in @(
         }
     }
     if ($case.Id -ne 'com.soakula.wacr.spike') {
+        $recovery = @($manifest.manifest.application.service) | Where-Object {
+            $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.recording.RecoveryJobService'
+        }
+        if (-not $recovery -or $recovery.GetAttribute('permission', $android) -ne 'android.permission.BIND_JOB_SERVICE') {
+            throw "Recovery job service is missing its binding protection in $apk"
+        }
+        $boot = @($manifest.manifest.application.receiver) | Where-Object {
+            $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.health.BootReceiver'
+        }
+        if (-not $boot -or $boot.GetAttribute('exported', $android) -ne 'false') {
+            throw "Boot receiver missing or exported in $apk"
+        }
         $archive = [System.IO.Compression.ZipFile]::OpenRead($apk)
         try {
             $nativeLibraries = @($archive.Entries | Where-Object { $_.FullName -match '^lib/.+\.so$' })

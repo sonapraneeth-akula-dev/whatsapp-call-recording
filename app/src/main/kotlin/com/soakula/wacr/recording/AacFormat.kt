@@ -3,6 +3,9 @@ package com.soakula.wacr.recording
 import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
+import java.security.MessageDigest
+
+internal data class AacContent(val durationUs: Long, val bytes: Long, val hash: ByteArray)
 
 class AacFormat(val channels: Int) {
     init { require(channels in 1..2) { "AAC capture supports mono or stereo" } }
@@ -33,6 +36,21 @@ class AacFormat(val channels: Int) {
             throw IOException("Invalid AAC-LC ADTS frame", error)
         }
         return frame
+    }
+
+    internal fun inspect(input: InputStream, consume: (ByteArray) -> Unit = {}): AacContent {
+        val hash = MessageDigest.getInstance("SHA-256")
+        var frames = 0L
+        var bytes = 0L
+        while (true) {
+            val frame = readFrame(input) ?: break
+            frames++
+            bytes += frame.size
+            hash.update(frame)
+            consume(frame)
+        }
+        if (frames == 0L) throw IOException("Recording contains no AAC frames")
+        return AacContent(frames * FRAME_DURATION_US, bytes, hash.digest())
     }
 
     private fun header(payloadBytes: Int): ByteArray {

@@ -89,21 +89,8 @@ class Finalizer(
         }
     }
 
-    private fun inspect(channel: SeekableByteChannel, consume: (ByteArray) -> Unit = {}): Content =
-        Channels.newInputStream(channel).use { input ->
-            val hash = MessageDigest.getInstance("SHA-256")
-            var frames = 0L
-            var bytes = 0L
-            while (true) {
-                val frame = format.readFrame(input) ?: break
-                frames++
-                bytes += frame.size
-                hash.update(frame)
-                consume(frame)
-            }
-            if (frames == 0L) throw IOException("Recording contains no AAC frames")
-            Content(frames * AacFormat.FRAME_DURATION_US, bytes, hash.digest())
-        }
+    private fun inspect(channel: SeekableByteChannel, consume: (ByteArray) -> Unit = {}): AacContent =
+        Channels.newInputStream(channel).use { format.inspect(it, consume) }
 
     private fun writeFrame(output: WritableByteChannel, frame: ByteArray) {
         val buffer = ByteBuffer.wrap(frame)
@@ -111,8 +98,6 @@ class Finalizer(
             if (output.write(buffer) == 0) throw IOException("Final audio writer made no progress")
         }
     }
-
-    private data class Content(val durationUs: Long, val bytes: Long, val hash: ByteArray)
 
     companion object {
         // ponytail: one finalization lock; per-recording locks if parallel finalization matters.

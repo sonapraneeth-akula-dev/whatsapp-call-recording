@@ -7,6 +7,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 import java.util.UUID
 
 class RecordingFilesTest {
@@ -28,5 +29,20 @@ class RecordingFilesTest {
         for (name in listOf("../audio.aac.enc", "sub/audio.aac.enc", "sub\\audio.aac.enc", "C:\\audio.aac.enc", "/audio.aac.enc", "audio.aac", "seg_00001.enc/..")) {
             assertThrows(IllegalArgumentException::class.java) { paths.file(id, name) }
         }
+
+    }
+
+    @Test fun listingOrdersCanonicalSegmentIndicesAndRejectsAmbiguousNames() {
+        val paths = RecordingFiles(temporary.newFolder())
+        val id = UUID.randomUUID()
+        assertEquals(emptyList<Int>(), paths.segmentIndices(id))
+        val first = paths.file(id, "seg_00001.enc")
+        check(first.parentFile!!.mkdirs())
+        first.writeBytes(byteArrayOf(1))
+        paths.file(id, "seg_00010.enc").writeBytes(byteArrayOf(2))
+        paths.file(id, "audio.aac.enc").writeBytes(byteArrayOf(3))
+        assertEquals(listOf(1, 10), paths.segmentIndices(id))
+        paths.file(id, "seg_000001.enc").writeBytes(byteArrayOf(4))
+        assertThrows(IOException::class.java) { paths.segmentIndices(id) }
     }
 }

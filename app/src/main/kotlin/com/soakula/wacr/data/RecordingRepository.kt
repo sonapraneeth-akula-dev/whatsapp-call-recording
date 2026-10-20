@@ -54,6 +54,24 @@ class RecordingRepository(private val database: AppDatabase) {
         }
     }
 
+    internal suspend fun discardUnauthenticatedTail(id: UUID, index: Int) {
+        database.withTransaction {
+            check(dao.recording(id)?.status == RecordingStatus.RECORDING)
+            check(dao.lastSegmentIndex(id) == index)
+            dao.deleteSegment(id, index)
+        }
+    }
+
+    internal suspend fun failEmptyRecording(id: UUID) {
+        database.withTransaction {
+            val recording = checkNotNull(dao.recording(id))
+            check(recording.status == RecordingStatus.RECORDING)
+            check(dao.updateRecording(recording.copy(
+                status = RecordingStatus.FAILED, fallbackReason = "NO_AUTHENTICATED_AUDIO"
+            )) == 1)
+        }
+    }
+
     /** Called only after Finalizer has published audio and removed the segment files. */
     suspend fun completeCleanup(id: UUID) {
         database.withTransaction {

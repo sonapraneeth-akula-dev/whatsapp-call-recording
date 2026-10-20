@@ -2,7 +2,9 @@ package com.soakula.wacr.crypto
 
 import com.google.crypto.tink.StreamingAead
 import com.soakula.wacr.data.RecordingFiles
+import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.SeekableByteChannel
@@ -62,6 +64,16 @@ class CryptoStore(private val files: RecordingFiles, private val encryption: Str
 
     fun delete(recordingId: UUID, kind: String): Boolean =
         Files.deleteIfExists(files.file(recordingId, kind).toPath())
+
+    internal fun openSegmentSnapshot(recordingId: UUID, kind: String): InputStream {
+        require(kind.startsWith("seg_")) { "Only bounded segments can be buffered" }
+        val ciphertext = Files.newInputStream(files.file(recordingId, kind).toPath()).use {
+            it.readNBytes(1_048_577)
+        }
+        if (ciphertext.size > 1_048_576) throw IOException("Encrypted segment exceeds maximum size")
+        // Disk I/O completes here; subsequent IOExceptions indicate invalid ciphertext/audio, not a failed disk read.
+        return encryption.newDecryptingStream(ByteArrayInputStream(ciphertext), associatedData(recordingId, kind))
+    }
 
     internal fun openPendingAudioWriter(recordingId: UUID): WritableByteChannel =
         openWriter(recordingId, "audio.pending.enc", "audio.aac.enc")

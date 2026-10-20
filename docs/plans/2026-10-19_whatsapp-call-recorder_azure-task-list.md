@@ -347,7 +347,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 |---|------|------|-------------|---------|--------------|-------|
 | 3.3.1.1.1 | Task | `SegmentWriter`: 5 s Tink-encrypted segments — `app/…/recording/SegmentWriter.kt` | 02:30 | 00:15 | Tests: rotation every 5 s; each segment decrypts | **2026-10-20: implemented; local duration/authentication/failure tests + build/lint pass.** Rotate before 5 s at complete ADTS boundaries (78 frames = 4.992 s). Commit callbacks only after ciphertext closes; metadata callback failure preserves the durable segment; failed partial writes remove only the active segment. Recorder/Room wiring remains separate. |
 | 3.3.1.1.2 | Task | `Finalizer`: merge → `audio.aac.enc`, delete segments, status `FINALIZED` — `app/…/recording/Finalizer.kt` | 02:00 | 00:15 | Merged file decodes; duration matches | **2026-10-20: finalization component implemented; local integrity/order/idempotence/failure tests + build/lint pass.** Authenticate whole source segments and ADTS framing, write encrypted pending output using final-kind AD, verify digest/duration, atomically publish, durably notify metadata consumer, then delete segments. Room status wiring/real AAC decode remain separate integration/UAT. |
-| 3.3.1.1.3 | Task | `Recovery` on app start / `BOOT_COMPLETED` / `MY_PACKAGE_REPLACED` → `RECOVERED`; drop unauthenticated tail — `app/…/recording/Recovery.kt` | 02:00 | 00:15 | `adb shell am kill` mid-call → recovered file loses ≤ 5 s |  |
+| 3.3.1.1.3 | Task | `Recovery` on app start / `BOOT_COMPLETED` / `MY_PACKAGE_REPLACED` → `RECOVERED`; drop unauthenticated tail — `app/…/recording/Recovery.kt` | 02:00 | 00:15 | `adb shell am kill` mid-call → recovered file loses ≤ 5 s | **2026-10-20: implemented; local encrypted recovery/DAO/scheduling tests + debug/release builds/lint pass.** Adopt fully closed unregistered segment; authenticate and merge complete prefix; discard only invalid last snapshot, not disk-read errors or corrupt middle segments. Resume metadata-committed partial cleanup; empty recordings become FAILED. Native offline JobService handles startup/boot/upgrade with cancellable I/O; future recorder must await `ensureRecovered()`. Actual kill/reboot timing remains owner UAT after recorder wiring. |
 
 #### Feature 3.3.2 (FEAT-003.3.2): Low-storage guard
 - **Est. Manual**: 03:00 | **Est. AI**: 00:30
@@ -602,7 +602,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 7.2.1.2.1 | Task | `BootReceiver` (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`) → Recovery + health check (+ Ready FGS if AD-012 fallback) — `app/…/health/BootReceiver.kt` | 01:30 | 00:20 | Reboot → next allowlisted call recorded |  |
+| 7.2.1.2.1 | Task | `BootReceiver` (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`) → Recovery + health check (+ Ready FGS if AD-012 fallback) — `app/…/health/BootReceiver.kt` | 01:30 | 00:20 | Reboot → next allowlisted call recorded | **2026-10-20: recovery receiver/offline job implemented under 3.3.1.1.3.** Health check and any Ready FGS still depend on their respective services and the AD-012 spike verdict; do not start microphone capture from boot. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Integration tests**: disabling accessibility / setting battery to Optimized triggers alert (US-031)

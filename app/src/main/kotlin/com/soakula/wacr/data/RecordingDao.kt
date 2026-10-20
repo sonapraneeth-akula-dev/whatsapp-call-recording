@@ -40,6 +40,9 @@ interface RecordingDao {
     @Query("DELETE FROM segment WHERE recording_id = :id")
     suspend fun deleteSegments(id: UUID)
 
+    @Query("DELETE FROM segment WHERE recording_id = :id AND idx = :index")
+    suspend fun deleteSegment(id: UUID, index: Int)
+
     @Query("DELETE FROM recording WHERE id = :id")
     suspend fun deleteRecording(id: UUID)
 

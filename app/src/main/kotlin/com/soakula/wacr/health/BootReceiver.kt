@@ -1,0 +1,17 @@
+package com.soakula.wacr.health
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.soakula.wacr.WacrApp
+import com.soakula.wacr.recording.RecoveryJobService
+
+class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            if (!RecoveryJobService.enqueue(context)) {
+                (context.applicationContext as WacrApp).log.log("recovery", "schedule_failed")
+            }
+        }
+    }
+}

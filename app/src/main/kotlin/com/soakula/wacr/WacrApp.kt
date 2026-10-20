@@ -7,9 +7,15 @@ import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.RecordingFiles
 import com.soakula.wacr.data.AppDatabase
 import com.soakula.wacr.util.AppLog
+import com.soakula.wacr.recording.Recovery
+import com.soakula.wacr.recording.RecoveryJobService
+import com.soakula.wacr.recording.RecoveryReport
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.IOException
 
 class WacrApp : Application() {
     val recordingFiles by lazy { RecordingFiles(filesDir) }
@@ -17,9 +23,20 @@ class WacrApp : Application() {
     val crypto by lazy { CryptoStore(recordingFiles, keys.streamingAead) }
     private val databaseLock = Mutex()
     private var openDatabase: AppDatabase? = null
+    private val recoveryLock = Mutex()
+    private var recovered: RecoveryReport? = null
 
     suspend fun database(): AppDatabase = databaseLock.withLock {
         openDatabase ?: AppDatabase.open(this, keys.aead).also { openDatabase = it }
+    }
+
+    suspend fun ensureRecovered(): RecoveryReport = withContext(Dispatchers.IO) {
+        recoveryLock.withLock {
+            recovered ?: Recovery(database(), recordingFiles, crypto, log).run().also {
+                if (it.errors != 0) throw IOException("Recording recovery incomplete; original files retained")
+                recovered = it
+            }
+        }
     }
 
     lateinit var log: AppLog
@@ -37,5 +54,6 @@ class WacrApp : Application() {
             log.crashHandler(checkNotNull(Thread.getDefaultUncaughtExceptionHandler()))
         )
         log.log("app", "created")
+        if (!RecoveryJobService.enqueue(this)) log.log("recovery", "schedule_failed")
     }
 }
