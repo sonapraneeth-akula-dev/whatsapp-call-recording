@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.os.Process
 import android.service.notification.StatusBarNotification
 import com.soakula.wacr.data.CallDirection
-import com.soakula.wacr.data.CallType
 
 class CallNotificationReader(private val rules: DetectionRules) {
     fun read(
@@ -48,7 +47,7 @@ class CallNotificationReader(private val rules: DetectionRules) {
             direction = if (template == rules.connection.template && styleCallType == 1) {
                 CallDirection.INCOMING
             } else CallDirection.UNKNOWN,
-            callType = video?.let { if (it) CallType.VIDEO else CallType.VOICE }
+            callType = CallTypeClassifier.classify(video)
         ))
     }
 }

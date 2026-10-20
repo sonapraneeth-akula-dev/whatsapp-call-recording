@@ -238,7 +238,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 2.2.1.1.1 | Task | `CallTypeClassifier`: voice vs video at start; voice→video switch event with timestamp — `app/…/detection/CallTypeClassifier.kt` | 02:00 | 00:20 | Tests on video + switch fixtures pass |  |
+| 2.2.1.1.1 | Task | `CallTypeClassifier`: voice vs video at start; voice→video switch event with timestamp — `app/…/detection/CallTypeClassifier.kt` | 02:00 | 00:20 | Tests on video + switch fixtures pass | **2026-10-20: pure classifier and native start-type interpretation implemented.** Explicit present false/true classifies voice/video; missing extra remains unknown. Typed changes preserve exact observation timestamps, ignore repeated/unknown snapshots and support reverse changes. Synthetic video/switch/boundary tests are not captured phone evidence. Session/event persistence and ongoing native change emission continue in 2.2.1.1.2. |
 | 2.2.1.1.2 | Task | Persist `call_type` and `TypeChanged`; golden test | 01:00 | 00:10 | Session row shows final type + switch time |  |
 
 ##### User Story 2.2.1.2 (US-010): Group calls detected with the group name or participant names
