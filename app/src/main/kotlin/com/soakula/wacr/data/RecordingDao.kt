@@ -48,6 +48,9 @@ interface RecordingDao {
     @Query("UPDATE call_session SET call_type = :type WHERE id = :id")
     suspend fun setSessionType(id: Long, type: CallType): Int
 
+    @Query("UPDATE call_session SET decision = :decision WHERE id = :id")
+    suspend fun setSessionDecision(id: Long, decision: RecordingDecision): Int
+
     @Query("SELECT * FROM call_type_event WHERE session_id = :id ORDER BY at_ms, id")
     suspend fun sessionTypeEvents(id: Long): List<CallTypeEventEntity>
 

@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import com.soakula.wacr.recording.RecorderNotification
+import com.soakula.wacr.recording.AskNotification
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -119,6 +120,17 @@ class HealthMonitorTest {
             ?.getStringExtra(Settings.EXTRA_APP_PACKAGE))
         assertEquals(RecorderNotification.CHANNEL, issues[HealthProblem.RECORDING_CHANNEL_DISABLED]?.fixIntent
             ?.getStringExtra(Settings.EXTRA_CHANNEL_ID))
+    }
+
+    @Test fun blockedRecordingRequestChannelHasItsOwnFixWithoutHidingStatusChannelHealth() {
+        enableDetector()
+        notifications.createNotificationChannel(NotificationChannel(
+            AskNotification.CHANNEL, "Synthetic request channel", NotificationManager.IMPORTANCE_NONE
+        ))
+        val issue = monitor.check().single()
+        assertEquals(HealthProblem.REQUEST_CHANNEL_DISABLED, issue.problem)
+        assertEquals(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS, issue.fixIntent?.action)
+        assertEquals(AskNotification.CHANNEL, issue.fixIntent?.getStringExtra(Settings.EXTRA_CHANNEL_ID))
     }
 
     @Test fun globalNotificationDisableAndBackgroundRestrictionAreNotHiddenByGrantedPermissions() {

@@ -10,6 +10,7 @@
     <string name="ask_public_title">Call detected</string>
     <string name="ask_public_detail">Unlock to choose whether to record.</string>
     <string name="recording_call_expired">This call is no longer connected. No recording started.</string>
+    <string name="recording_call_start_failed">Recording could not start. Check the recorder status and setup.</string>
     <string name="recording_busy">Another recording is active or saving. Try again after it finishes.</string>
     <string name="home_manual_recording">Manual recording</string>
     <string name="home_record">Record now</string>
@@ -30,6 +31,7 @@
     <string name="health_microphone">Allow microphone access</string>
     <string name="health_notifications">Enable notifications</string>
     <string name="health_channel">Enable the recording status channel</string>
+    <string name="health_request_channel">Enable call recording requests</string>
     <string name="health_detector">Automatic detection unavailable</string>
     <string name="health_accessibility">Enable call accessibility</string>
     <string name="health_listener">Enable notification access</string>
@@ -123,7 +125,7 @@
     <string name="nav_allowlist">Allowlist</string>
     <string name="allowlist_title">Always-record contacts</string>
     <string name="allowlist_matching_warning">Matching uses WhatsApp display names, not phone numbers. Case, spacing and emoji are normalized. Different contacts with the same normalized name share one rule; duplicate selections never replace an existing rule. Group calls remain manual.</string>
-    <string name="allowlist_detection_pending">Rules are saved locally. Automatic recording is not connected yet; detection alone does not start recording.</string>
+    <string name="allowlist_detection_pending">Automatic recording requires a matching contact and verified one-to-one call. Group classification is not verified yet, so current calls ask first.</string>
     <string name="allowlist_add">Add contact</string>
     <string name="allowlist_empty">No contacts selected. Use Add contact to choose one without granting access to your address book.</string>
     <string name="allowlist_remove">Remove</string>
@@ -165,6 +167,7 @@
     <string name="setup_microphone">Microphone access</string>
     <string name="setup_notifications">Recording notifications</string>
     <string name="setup_channel">Recording notification channel</string>
+    <string name="setup_request_channel">Call recording requests channel</string>
     <string name="setup_detector">Call detector availability</string>
     <string name="setup_accessibility">WhatsApp call-screen access</string>
     <string name="setup_listener">Call notification access</string>

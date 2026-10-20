@@ -7,10 +7,16 @@ import android.os.Build
 import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import com.soakula.wacr.WacrApp
+import com.soakula.wacr.data.RecordingDecision
+import com.soakula.wacr.recording.AskNotification
+import com.soakula.wacr.recording.CallRecordingResult
+import com.soakula.wacr.recording.RecordingCoordinator
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedSendChannelException
@@ -18,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 
@@ -38,6 +45,11 @@ class CallDetection internal constructor(private val app: WacrApp) {
         data class Removed(val owner: Any, val pkg: String, val key: String) : Input
         data class Window(val owner: Any, val pkg: String, val className: String?) : Input
         data class Mode(val watcher: AudioModeWatcher, val mode: Int) : Input
+        data object Recorder : Input
+        data class RecordCall(
+            val sessionId: Long, val decision: RecordingDecision, val authorize: () -> Boolean,
+            val response: CompletableDeferred<CallRecordingResult>
+        ) : Input
         data object Stop : Input
     }
 
@@ -52,6 +64,8 @@ class CallDetection internal constructor(private val app: WacrApp) {
     private var core: CallDetector? = null
     private var trace: DetectionTrace? = null
     private var writer: CallSessionWriter? = null
+    private var recording: RecordingCoordinator? = null
+    private var recordingUpdates: Job? = null
     private var ids: Map<Long, Long> = emptyMap()
     private var operational = false
     private val elapsedOriginMs = SystemClock.elapsedRealtime()
@@ -80,6 +94,8 @@ class CallDetection internal constructor(private val app: WacrApp) {
             operational = false
             mutableState.update { it.copy(ready = false, call = null, sessionId = null, suspension = null) }
             try {
+                recordingUpdates?.cancel()
+                recording?.close()
                 stopWatching()
                 val now = SystemClock.elapsedRealtime()
                 trace?.signal(CallSignal.Unavailable, now)
@@ -92,7 +108,10 @@ class CallDetection internal constructor(private val app: WacrApp) {
             accessibility = null
             listener = null
             snapshot = null
-            while (inputs.tryReceive().isSuccess) Unit
+            while (true) {
+                val pending = inputs.tryReceive().getOrNull() ?: break
+                if (pending is Input.RecordCall) pending.response.complete(CallRecordingResult.Expired)
+            }
         }
     }
 
@@ -116,6 +135,21 @@ class CallDetection internal constructor(private val app: WacrApp) {
 
     internal fun removed(owner: Any, notification: StatusBarNotification) {
         if (notification.packageName in PACKAGES) send(Input.Removed(owner, notification.packageName, notification.key))
+    }
+
+    internal suspend fun recordCall(
+        sessionId: Long, decision: RecordingDecision, authorize: () -> Boolean
+    ): CallRecordingResult {
+        require(sessionId > 0)
+        val response = CompletableDeferred<CallRecordingResult>(currentCoroutineContext()[Job])
+        try {
+            inputs.send(Input.RecordCall(sessionId, decision, authorize, response))
+        } catch (error: ClosedSendChannelException) {
+            app.log.log("policy", "entry_unavailable")
+            response.complete(CallRecordingResult.Expired)
+            return CallRecordingResult.Expired
+        }
+        return response.await()
     }
 
     internal suspend fun shutdown() {
@@ -167,6 +201,16 @@ class CallDetection internal constructor(private val app: WacrApp) {
                 accept(CallSignal.Window(input.pkg, input.className in profile?.callWindowClasses.orEmpty()))
             }
             is Input.Mode -> if (watcher === input.watcher) accept(mode(input.mode))
+            Input.Recorder -> recording?.sync(snapshotState(), ids.values.toSet())
+            is Input.RecordCall -> try {
+                if (input.response.isActive) input.response.complete(
+                    recording?.confirm(input.sessionId, input.decision) {
+                        input.response.isActive && input.authorize()
+                    } ?: CallRecordingResult.Expired
+                )
+            } finally {
+                if (!input.response.isCompleted) input.response.complete(CallRecordingResult.Failed)
+            }
             Input.Stop -> Unit
         }
     }
@@ -190,6 +234,7 @@ class CallDetection internal constructor(private val app: WacrApp) {
             }
         }
         operational = true
+        recording?.sync(snapshotState(), ids.values.toSet())
         publish()
     }
 
@@ -227,22 +272,38 @@ class CallDetection internal constructor(private val app: WacrApp) {
         trace?.signal(signal, now)
         val events = detector.accept(signal, now)
         events.forEach { trace?.event(it) }
+        events.forEach { event ->
+            val sequence = when (event) {
+                is CallEvent.Suspended -> event.call.sequence
+                is CallEvent.Ended -> event.call.sequence
+                else -> null
+            }
+            sequence?.let(ids::get)?.let { recording?.onSignalLoss(it) }
+        }
         if (writer == null && events.any { it is CallEvent.Started }) {
-            writer = CallSessionWriter(app.database(), elapsedOriginMs, wallOriginMs)
+            val database = app.database()
+            writer = CallSessionWriter(database, elapsedOriginMs, wallOriginMs)
+            recording = RecordingCoordinator(database, app.recorder, AskNotification(app, app.log), app.log)
+            recordingUpdates = scope.launch { app.recorder.state.collect { send(Input.Recorder) } }
         }
         writer?.let { ids = it.apply(events, detector.retainedSequences) }
+        recording?.sync(snapshotState(), ids.values.toSet())
         publish()
     }
 
-    private fun publish() {
+    private fun snapshotState(): CallDetectionState {
         val detector = core
-        val updated = CallDetectionState(
+        return CallDetectionState(
             ready = operational,
             call = detector?.activeCall,
             sessionId = detector?.activeCall?.sequence?.let(ids::get),
             suspension = detector?.suspension,
             rulesVersion = mutableState.value.rulesVersion
         )
+    }
+
+    private fun publish() {
+        val updated = snapshotState()
         mutableState.update { if (it.failed) it else updated }
     }
 

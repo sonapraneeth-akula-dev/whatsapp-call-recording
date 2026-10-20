@@ -29,6 +29,7 @@ internal fun setupTitle(problem: HealthProblem): Int = when (problem) {
     HealthProblem.MICROPHONE_PERMISSION -> R.string.setup_microphone
     HealthProblem.NOTIFICATIONS_DISABLED -> R.string.setup_notifications
     HealthProblem.RECORDING_CHANNEL_DISABLED -> R.string.setup_channel
+    HealthProblem.REQUEST_CHANNEL_DISABLED -> R.string.setup_request_channel
     HealthProblem.DETECTION_UNAVAILABLE -> R.string.setup_detector
     HealthProblem.ACCESSIBILITY_DISABLED -> R.string.setup_accessibility
     HealthProblem.NOTIFICATION_ACCESS_DISABLED -> R.string.setup_listener

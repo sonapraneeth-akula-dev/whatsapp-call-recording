@@ -2,6 +2,7 @@ package com.soakula.wacr.detection
 
 import android.Manifest
 import android.app.Notification
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.media.AudioManager
@@ -9,11 +10,20 @@ import android.os.Bundle
 import android.os.Process
 import android.service.notification.StatusBarNotification
 import androidx.room.Room
+import androidx.room.withTransaction
 import com.soakula.wacr.WacrApp
+import com.soakula.wacr.MainActivity
 import com.soakula.wacr.data.AppDatabase
 import com.soakula.wacr.data.CallType
 import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.recording.RecorderService
+import com.soakula.wacr.recording.AskNotification
+import com.soakula.wacr.recording.RecordingEntry
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.soakula.wacr.health.exportDiagnostics
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -25,11 +35,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.json.JSONObject
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.experimental.LazyApplication
 import org.robolectric.util.ReflectionHelpers
+import org.robolectric.shadows.ShadowLooper
+import org.robolectric.shadows.ShadowToast
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipInputStream
@@ -132,6 +145,104 @@ class CallDetectionTest {
         val connected = await { it.ready && it.sessionId != null }
         assertNotNull(connected.call)
         assertEquals(RecorderState.Idle, app.recorder.state.value)
+        Unit
+    }
+
+    @Test fun connectedUnknownCallPromptsAndTrustedResumedEntryStartsWithItsCommittedSession() = runBlocking {
+        shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+        val listener = Any()
+        app.detection.accessibilityConnected(Any())
+        app.detection.listenerConnected(listener) { arrayOf(notification()) }
+        val id = checkNotNull(await { it.ready && it.sessionId != null }.sessionId)
+        val manager = app.getSystemService(NotificationManager::class.java)
+        val prompt = checkNotNull(shadowOf(manager).getNotification(AskNotification.ID))
+        assertEquals(RecordingDecision.ASKED, database.recordings().session(id)?.decision)
+        assertEquals(RecorderState.Idle, app.recorder.state.value)
+        val activity = Robolectric.buildActivity(MainActivity::class.java, shadowOf(prompt.contentIntent).savedIntent).setup()
+        try {
+            withTimeout(10_000) {
+                while (app.recorder.state.value !is RecorderState.Preparing ||
+                    shadowOf(manager).getNotification(AskNotification.ID) != null) {
+                    ShadowLooper.idleMainLooper()
+                    delay(10)
+                }
+            }
+            val command = checkNotNull(shadowOf(app).nextStartedService)
+            val request = checkNotNull(app.recorder.request(checkNotNull(RecorderService.parseId(command))))
+            assertEquals(id, request.sessionId)
+            assertNull(shadowOf(manager).getNotification(AskNotification.ID))
+            app.detection.listenerDisconnected(listener)
+            await { !it.ready && it.sessionId == null }
+            assertTrue(request.stopRequested.get())
+        } finally {
+            activity.pause().stop().destroy()
+        }
+        Unit
+    }
+
+    @Test fun disconnectedCallCancelsPromptAndOldPrivateEntryCannotStartSessionlessCapture() = runBlocking {
+        shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+        val listener = Any()
+        app.detection.accessibilityConnected(Any())
+        app.detection.listenerConnected(listener) { arrayOf(notification()) }
+        val id = checkNotNull(await { it.ready && it.sessionId != null }.sessionId)
+        val oldEntry = RecordingEntry.callIntent(app, id)
+        app.detection.listenerDisconnected(listener)
+        await { !it.ready && it.sessionId == null }
+        assertNull(shadowOf(app.getSystemService(NotificationManager::class.java)).getNotification(AskNotification.ID))
+        val activity = Robolectric.buildActivity(MainActivity::class.java, oldEntry).setup()
+        try {
+            withTimeout(10_000) {
+                while (ShadowToast.getTextOfLatestToast()?.toString() != app.getString(com.soakula.wacr.R.string.recording_call_expired)) {
+                    ShadowLooper.idleMainLooper()
+                    delay(10)
+                }
+
+                @Test fun signalLossRequestsCaptureStopBeforeAContendedDatabaseWriteCanComplete() = runBlocking {
+                    shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+                    val listener = Any()
+                    app.detection.accessibilityConnected(Any())
+                    app.detection.listenerConnected(listener) { arrayOf(notification()) }
+                    val id = checkNotNull(await { it.ready && it.sessionId != null }.sessionId)
+                    val activity = Robolectric.buildActivity(MainActivity::class.java, RecordingEntry.callIntent(app, id)).setup()
+                    val entered = CompletableDeferred<Unit>()
+                    val release = CompletableDeferred<Unit>()
+                    var unlock: kotlinx.coroutines.Job? = null
+                    try {
+                        withTimeout(10_000) {
+                            while (app.recorder.state.value !is RecorderState.Preparing ||
+                                shadowOf(app.getSystemService(NotificationManager::class.java)).getNotification(AskNotification.ID) != null) {
+                                ShadowLooper.idleMainLooper()
+                                delay(10)
+                            }
+                        }
+                        val request = checkNotNull(app.recorder.request(checkNotNull(
+                            RecorderService.parseId(checkNotNull(shadowOf(app).nextStartedService))
+                        )))
+                        unlock = launch(Dispatchers.IO) {
+                            database.withTransaction {
+                                entered.complete(Unit)
+                                release.await()
+                            }
+                        }
+                        entered.await()
+                        app.detection.removed(listener, notification())
+                        withTimeout(10_000) { while (!request.stopRequested.get()) delay(10) }
+                        assertEquals(id, app.detection.state.value.sessionId)
+                        assertFalse(release.isCompleted)
+                    } finally {
+                        release.complete(Unit)
+                        unlock?.join()
+                        activity.pause().stop().destroy()
+                    }
+                    Unit
+                }
+            }
+            assertEquals(RecorderState.Idle, app.recorder.state.value)
+            assertNull(shadowOf(app).nextStartedService)
+        } finally {
+            activity.pause().stop().destroy()
+        }
         Unit
     }
 

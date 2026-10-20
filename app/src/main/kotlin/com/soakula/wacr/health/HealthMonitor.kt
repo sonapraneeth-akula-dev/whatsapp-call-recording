@@ -13,9 +13,10 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import com.soakula.wacr.recording.RecorderNotification
+import com.soakula.wacr.recording.AskNotification
 
 enum class HealthProblem {
-    MICROPHONE_PERMISSION, NOTIFICATIONS_DISABLED, RECORDING_CHANNEL_DISABLED,
+    MICROPHONE_PERMISSION, NOTIFICATIONS_DISABLED, RECORDING_CHANNEL_DISABLED, REQUEST_CHANNEL_DISABLED,
     DETECTION_UNAVAILABLE, ACCESSIBILITY_DISABLED, NOTIFICATION_ACCESS_DISABLED,
     BATTERY_OPTIMIZED, BACKGROUND_RESTRICTED
 }
@@ -44,6 +45,12 @@ class HealthMonitor(context: Context, private val detectionReady: () -> Boolean 
                 settings(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                     .putExtra(Settings.EXTRA_CHANNEL_ID, RecorderNotification.CHANNEL)))
+        }
+        if (notifications.getNotificationChannel(AskNotification.CHANNEL)?.importance == NotificationManager.IMPORTANCE_NONE) {
+            add(HealthIssue(HealthProblem.REQUEST_CHANNEL_DISABLED,
+                settings(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    .putExtra(Settings.EXTRA_CHANNEL_ID, AskNotification.CHANNEL)))
         }
 
         val services = application.packageManager.getPackageInfo(

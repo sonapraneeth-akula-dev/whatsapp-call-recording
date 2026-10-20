@@ -32,6 +32,8 @@ import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.recording.RecordingEntry
+import com.soakula.wacr.recording.CallRecordingResult
+import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.allowlist.AllowlistScreen
 import com.soakula.wacr.ui.allowlist.AllowlistViewModel
@@ -76,6 +78,9 @@ class MainActivity : ComponentActivity() {
     private var manualConfirmation: UUID? = null
     private var stopConfirmation: UUID? = null
     private var entryJob: Job? = null
+    private var startJob: Job? = null
+    private var requestedSession: Long? = null
+    private var requestedDecision = RecordingDecision.MANUAL
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
             recordAfterPermission = false
@@ -193,14 +198,27 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun consumeRecordingEntry(intent: Intent) {
-        if (!RecordingEntry.consume(this, intent)) return
+        val sessionId = RecordingEntry.consumeCall(this, intent)
+        if (sessionId == null && !RecordingEntry.consume(this, intent)) return
         entryJob?.cancel()
-        entryJob = lifecycleScope.launch { lifecycle.withResumed { requestRecording() } }
+        entryJob = lifecycleScope.launch {
+            lifecycle.withResumed {
+                if (sessionId == null) requestRecording() else {
+                    requestedSession = sessionId
+                    requestedDecision = RecordingDecision.ASKED
+                    checkRecordingPermissions()
+                }
+            }
+        }
     }
 
     override fun onStop() {
         entryJob?.cancel()
         entryJob = null
+        startJob?.cancel()
+        startJob = null
+        requestedSession = null
+        requestedDecision = RecordingDecision.MANUAL
         recordAfterPermission = false
         startWhenResumed = false
         manualConfirmation = null
@@ -212,6 +230,13 @@ class MainActivity : ComponentActivity() {
         .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
 
     private fun requestRecording() {
+        val detected = app.detection.state.value
+        requestedSession = detected.sessionId.takeIf { detected.ready && detected.suspension == null }
+        requestedDecision = RecordingDecision.MANUAL
+        checkRecordingPermissions()
+    }
+
+    private fun checkRecordingPermissions() {
         val missing = missingPermissions()
         if (missing.isEmpty()) {
             startWhenResumed = true
@@ -225,7 +250,31 @@ class MainActivity : ComponentActivity() {
     private fun startRecording() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
         startWhenResumed = false
-        manualConfirmation = app.recorder.start()
+        val sessionId = requestedSession
+        if (sessionId == null) {
+            manualConfirmation = app.recorder.start()
+            return
+        }
+        val decision = requestedDecision
+        startJob?.cancel()
+        startJob = lifecycleScope.launch {
+            when (val result = app.detection.recordCall(sessionId, decision) {
+                lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            }) {
+                is CallRecordingResult.Started -> {
+                    manualConfirmation = result.id
+                    val recording = app.recorder.state.value
+                    if (recording is RecorderState.Recording && recording.id == result.id) {
+                        window.decorView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        manualConfirmation = null
+                    }
+                }
+                CallRecordingResult.Expired -> Toast.makeText(this@MainActivity, R.string.recording_call_expired, Toast.LENGTH_LONG).show()
+                CallRecordingResult.Busy -> Toast.makeText(this@MainActivity, R.string.recording_busy, Toast.LENGTH_LONG).show()
+                CallRecordingResult.NotVisible -> Unit
+                CallRecordingResult.Failed -> Toast.makeText(this@MainActivity, R.string.recording_call_start_failed, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun stopRecording() {
