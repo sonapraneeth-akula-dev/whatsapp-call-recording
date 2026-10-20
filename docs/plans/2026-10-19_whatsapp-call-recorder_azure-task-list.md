@@ -463,7 +463,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 5.1.2.1.1 | Task | All recordings under `filesDir/rec/`; no MediaStore; instrumented check that external dirs are empty | 01:00 | 00:15 | My Files / Gallery show nothing |  |
+| 5.1.2.1.1 | Task | All recordings under `filesDir/rec/`; no MediaStore; instrumented check that external dirs are empty | 01:00 | 00:15 | My Files / Gallery show nothing | **2026-10-20: private-path implementation + JVM checks complete.** `RecordingFiles` owns canonical UUID directories and encrypted artifact names; traversal/plaintext paths rejected. CryptoStore consumes this boundary. My Files/Gallery UAT remains with owner once recording is wired. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Security**: CI manifest check passes; `aapt dump permissions` shows no `INTERNET` (US-022)
