@@ -24,6 +24,7 @@ import com.soakula.wacr.ui.library.LibraryUiState
 import com.soakula.wacr.ui.library.LibraryFailure
 import com.soakula.wacr.ui.library.RecordingRow
 import kotlinx.coroutines.delay
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +35,8 @@ fun HomeScreen(
     onStop: () -> Unit,
     onFix: (HealthIssue) -> Unit,
     library: LibraryUiState? = null,
-    onRetryLibrary: () -> Unit = {}
+    onRetryLibrary: () -> Unit = {},
+    onOpen: (UUID) -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) }) { padding ->
         Column(
@@ -87,7 +89,7 @@ fun HomeScreen(
                     LibraryUiState.Failed -> LibraryFailure(onRetryLibrary)
                     is LibraryUiState.Ready -> {
                         if (library.entries.isEmpty()) Text(stringResource(R.string.library_empty))
-                        for (entry in library.entries.take(5)) RecordingRow(entry)
+                        for (entry in library.entries.take(5)) RecordingRow(entry, onOpen)
                         Text(stringResource(R.string.library_storage_used, Formatter.formatShortFileSize(
                             LocalContext.current, library.entries.sumOf { it.recording.sizeBytes ?: 0 }
                         )))

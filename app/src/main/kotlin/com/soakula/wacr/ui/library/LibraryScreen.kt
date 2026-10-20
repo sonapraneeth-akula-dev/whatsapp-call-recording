@@ -18,10 +18,11 @@ import com.soakula.wacr.data.RecordingStatus
 import com.soakula.wacr.data.RecordingWithSession
 import java.text.DateFormat
 import java.util.Date
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit) {
+fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit, onOpen: (UUID) -> Unit = {}) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.library_title)) }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
@@ -32,7 +33,7 @@ fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit) {
                 LibraryUiState.Failed -> item { LibraryFailure(onRetry) }
                 is LibraryUiState.Ready -> {
                     if (state.entries.isEmpty()) item { Text(stringResource(R.string.library_empty)) }
-                    items(state.entries, key = { it.recording.id }) { RecordingRow(it) }
+                    items(state.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
                 }
             }
         }
@@ -48,7 +49,7 @@ fun LibraryFailure(onRetry: () -> Unit) {
 }
 
 @Composable
-fun RecordingRow(entry: RecordingWithSession) {
+fun RecordingRow(entry: RecordingWithSession, onOpen: ((UUID) -> Unit)? = null) {
     val recording = entry.recording
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -77,6 +78,9 @@ fun RecordingRow(entry: RecordingWithSession) {
                 false -> R.string.library_remote_no
                 null -> R.string.library_remote_unknown
             }), style = MaterialTheme.typography.bodySmall)
+            if (onOpen != null) {
+                TextButton(onClick = { onOpen(recording.id) }) { Text(stringResource(R.string.library_open)) }
+            }
         }
     }
 }

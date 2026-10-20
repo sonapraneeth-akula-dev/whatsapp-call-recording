@@ -25,10 +25,16 @@ import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.home.HomeViewModel
 import com.soakula.wacr.ui.library.LibraryViewModel
+import com.soakula.wacr.ui.player.PlayerRoute
+import com.soakula.wacr.playback.createRecordingPlayer
+import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
+@androidx.annotation.OptIn(UnstableApi::class)
 class MainActivity : ComponentActivity() {
     private val app: WacrApp get() = checkNotNull(application as? WacrApp)
     private val home: HomeViewModel by viewModels()
@@ -81,7 +87,18 @@ class MainActivity : ComponentActivity() {
                 val state by home.state.collectAsStateWithLifecycle()
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
-                AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry)
+                AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry) { entry, back ->
+                    PlayerRoute(entry,
+                        blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
+                        onBack = back,
+                        createPlayer = {
+                            val crypto = withContext(Dispatchers.IO) { app.crypto }
+                            createRecordingPlayer(this, crypto, app.log)
+                        },
+                        reportFailure = { error ->
+                            app.log.log("playback", "open_failed", mapOf("error_type" to error.javaClass.simpleName))
+                        })
+                }
             }
         }
     }

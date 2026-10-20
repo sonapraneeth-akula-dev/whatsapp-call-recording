@@ -76,4 +76,14 @@
     <string name="library_remote_unknown">Remote audio unverified</string>
     <string name="library_storage_used">Saved encrypted audio: %1$s</string>
     <string name="library_storage_detail">Finalized audio sizes only. Active segments, metadata, logs and pending deletion files also use storage.</string>
+    <string name="library_open">Open recording</string>
+    <string name="player_title">Recording details</string>
+    <string name="player_back">Back</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_seek">Playback position</string>
+    <string name="player_times">%1$s / %2$s</string>
+    <string name="player_error">Playback failed. Reopen this recording to retry. Encrypted files have not been changed.</string>
+    <string name="player_unavailable">Audio is not available while recording or when recovery found no playable audio.</string>
+    <string name="player_capture_active">Playback is paused during recording to avoid competing with call audio.</string>
 </resources>

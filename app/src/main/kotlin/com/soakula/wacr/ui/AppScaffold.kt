@@ -18,6 +18,7 @@ import com.soakula.wacr.ui.home.HomeScreen
 import com.soakula.wacr.ui.home.HomeUiState
 import com.soakula.wacr.ui.library.LibraryScreen
 import com.soakula.wacr.ui.library.LibraryUiState
+import com.soakula.wacr.data.RecordingWithSession
 
 @Composable
 fun AppScaffold(
@@ -27,21 +28,29 @@ fun AppScaffold(
     onRecord: () -> Unit,
     onStop: () -> Unit,
     onFix: (HealthIssue) -> Unit,
-    onRetryLibrary: () -> Unit
+    onRetryLibrary: () -> Unit,
+    playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
     var showLibrary by rememberSaveable { mutableStateOf(false) }
-    BackHandler(showLibrary) { showLibrary = false }
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selected = (library as? LibraryUiState.Ready)?.entries?.firstOrNull { it.recording.id.toString() == selectedId }
+    LaunchedEffect(selectedId, library) {
+        if (selectedId != null && library is LibraryUiState.Ready && selected == null) selectedId = null
+    }
+    BackHandler(selectedId != null || showLibrary) {
+        if (selectedId != null) selectedId = null else showLibrary = false
+    }
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = !showLibrary, onClick = { showLibrary = false },
+                    selected = !showLibrary, onClick = { selectedId = null; showLibrary = false },
                     icon = { Icon(painterResource(R.drawable.ic_home), null) },
                     label = { Text(stringResource(R.string.nav_home)) }
                 )
                 NavigationBarItem(
-                    selected = showLibrary, onClick = { showLibrary = true },
+                    selected = showLibrary, onClick = { selectedId = null; showLibrary = true },
                     icon = { Icon(painterResource(R.drawable.ic_library), null) },
                     label = { Text(stringResource(R.string.nav_library)) }
                 )
@@ -49,8 +58,13 @@ fun AppScaffold(
         }
     ) { padding ->
         Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
-            if (showLibrary) LibraryScreen(library, onRetryLibrary)
-            else HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary)
+            when {
+                selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
+                showLibrary || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
+                else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
+                    selectedId = it.toString()
+                }
+            }
         }
     }
 }

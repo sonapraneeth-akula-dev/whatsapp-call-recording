@@ -3,6 +3,8 @@ package com.soakula.wacr.ui.library
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -38,7 +40,7 @@ class LibraryScreenTest {
         compose.setContent {
             MaterialTheme {
                 AppScaffold(HomeUiState(loaded = true), RecorderState.Idle, LibraryUiState.Ready(entries),
-                    {}, {}, {}, {})
+                    {}, {}, {}, {}) { _, _ -> }
             }
         }
         compose.onNodeWithText("Synthetic 5").performScrollTo().assertIsDisplayed()
@@ -54,7 +56,7 @@ class LibraryScreenTest {
     @Test fun failedLibraryOffersWorkingRetryAndEmptyStateIsDistinct() {
         val state = mutableStateOf<LibraryUiState>(LibraryUiState.Failed)
         var retries = 0
-        compose.setContent { MaterialTheme { LibraryScreen(state.value) { retries++ } } }
+        compose.setContent { MaterialTheme { LibraryScreen(state.value, { retries++ }) } }
         compose.onNodeWithText(text(R.string.library_error)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.library_empty)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.library_retry)).performClick()
@@ -62,6 +64,25 @@ class LibraryScreenTest {
         compose.runOnIdle { state.value = LibraryUiState.Ready(emptyList()) }
         compose.onNodeWithText(text(R.string.library_empty)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.library_error)).assertDoesNotExist()
+    }
+
+    @Test fun removingSelectedMetadataDisposesItsPlayerDestination() {
+        val entry = RecordingWithSession(RecordingEntity(UUID.randomUUID(), 1000, 1, "MIC"), null)
+        val state = mutableStateOf<LibraryUiState>(LibraryUiState.Ready(listOf(entry)))
+        var disposed = false
+        compose.setContent {
+            MaterialTheme {
+                AppScaffold(HomeUiState(loaded = true), RecorderState.Idle, state.value, {}, {}, {}, {}) { _, _ ->
+                    DisposableEffect(Unit) { onDispose { disposed = true } }
+                    Text("Synthetic player destination")
+                }
+            }
+        }
+        compose.onNodeWithText(text(R.string.library_open)).performScrollTo().performClick()
+        compose.onNodeWithText("Synthetic player destination").assertIsDisplayed()
+        compose.runOnIdle { state.value = LibraryUiState.Ready(emptyList()) }
+        compose.onNodeWithText("Synthetic player destination").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(true, disposed) }
     }
 
     private fun text(resource: Int) = compose.activity.getString(resource)
