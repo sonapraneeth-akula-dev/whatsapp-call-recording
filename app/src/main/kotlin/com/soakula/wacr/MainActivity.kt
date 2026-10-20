@@ -25,6 +25,7 @@ import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.home.HomeViewModel
 import com.soakula.wacr.ui.library.LibraryViewModel
+import com.soakula.wacr.ui.library.RecordingActions
 import com.soakula.wacr.ui.player.PlayerRoute
 import com.soakula.wacr.playback.createRecordingPlayer
 import androidx.media3.common.util.UnstableApi
@@ -87,7 +88,10 @@ class MainActivity : ComponentActivity() {
                 val state by home.state.collectAsStateWithLifecycle()
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
-                AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry) { entry, back ->
+                val actions by library.actions.collectAsStateWithLifecycle()
+                AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry,
+                    actions = actions, onUndo = library::undo, onDismissUndo = library::dismissUndo,
+                    onDismissError = library::dismissError) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
                         onBack = back,
@@ -97,6 +101,12 @@ class MainActivity : ComponentActivity() {
                         },
                         reportFailure = { error ->
                             app.log.log("playback", "open_failed", mapOf("error_type" to error.javaClass.simpleName))
+                        },
+                        actions = { pause ->
+                            RecordingActions(entry, actions, { title -> library.rename(entry.recording.id, title) }) {
+                                pause()
+                                library.delete(entry.recording.id)
+                            }
                         })
                 }
             }
@@ -106,6 +116,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         home.refresh()
+        library.restoreUndo()
         if (startWhenResumed) startRecording()
     }
 

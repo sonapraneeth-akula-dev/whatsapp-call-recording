@@ -46,6 +46,15 @@ class RecordingDeletion(
         check(dao.removeDeletion(pending.recordingId, pending.requestId) == 1)
     }
 
+    suspend fun pendingUndo(): PendingRecordingDeletion? = withContext(Dispatchers.IO) {
+        val time = now()
+        require(time >= 0) { "Invalid deletion time" }
+        val boot = currentBoot()
+        dao.pendingDeletions().filter {
+            !it.committed && it.bootCount == boot && time < it.undoUntilElapsedMs
+        }.maxByOrNull { it.undoUntilElapsedMs }
+    }
+
     suspend fun purgeDue(): Long? = withContext(Dispatchers.IO) {
         cleanupLock.withLock {
             val time = now()

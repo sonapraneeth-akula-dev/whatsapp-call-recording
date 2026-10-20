@@ -38,7 +38,8 @@ fun PlayerScreen(
     blocked: Boolean,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    actions: @Composable () -> Unit = {}
 ) {
     val playable = entry.recording.hasPlayableAudio()
     val duration = state.durationMs.coerceAtLeast(0)
@@ -78,6 +79,7 @@ fun PlayerScreen(
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(if (state.playRequested) R.string.player_pause else R.string.player_play)) }
             RecordingRow(entry)
+            actions()
         }
     }
 }

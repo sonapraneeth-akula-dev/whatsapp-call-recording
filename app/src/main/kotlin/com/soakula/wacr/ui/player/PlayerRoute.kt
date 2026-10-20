@@ -22,7 +22,8 @@ fun PlayerRoute(
     blocked: Boolean,
     onBack: () -> Unit,
     createPlayer: suspend () -> Player,
-    reportFailure: (Throwable) -> Unit
+    reportFailure: (Throwable) -> Unit,
+    actions: @Composable (() -> Unit) -> Unit = {}
 ) {
     var engine by remember { mutableStateOf<Player?>(null) }
     var state by remember { mutableStateOf(PlaybackUiState()) }
@@ -95,7 +96,8 @@ fun PlayerRoute(
                 player.play()
             }
         }
-    }, onSeek = { position -> if (!blocked) player?.seekTo(position) })
+    }, onSeek = { position -> if (!blocked) player?.seekTo(position) },
+        actions = { actions { player?.pause() } })
 }
 
 private fun playbackState(player: Player, metadataDuration: Long?) = PlaybackUiState(

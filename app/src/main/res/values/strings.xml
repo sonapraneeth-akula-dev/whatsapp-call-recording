@@ -86,4 +86,21 @@
     <string name="player_error">Playback failed. Reopen this recording to retry. Encrypted files have not been changed.</string>
     <string name="player_unavailable">Audio is not available while recording or when recovery found no playable audio.</string>
     <string name="player_capture_active">Playback is paused during recording to avoid competing with call audio.</string>
+    <string name="library_rename">Rename</string>
+    <string name="library_delete">Delete</string>
+    <string name="library_cancel">Cancel</string>
+    <string name="library_save">Save</string>
+    <string name="library_recording_title">Recording title</string>
+    <string name="library_title_rules">Use 1-200 characters, without control characters.</string>
+    <string name="library_rename_detail">Changes this recording title only, not the contact or allowlist.</string>
+    <string name="library_delete_confirm">Delete this recording?</string>
+    <string name="library_delete_detail">Audio and recording metadata will be permanently removed. Undo is available for five seconds after confirmation.</string>
+    <string name="library_deleted">Recording deleted. Undo available for five seconds.</string>
+    <string name="library_undo">Undo</string>
+    <string name="library_delete_wait">Finish or dismiss the current Undo before deleting another recording.</string>
+    <string name="library_dismiss">Dismiss</string>
+    <string name="library_rename_error">Could not rename this recording. Original data is retained; review the title and try again.</string>
+    <string name="library_delete_error">Could not schedule deletion. The recording has not been hidden; retry or review diagnostics.</string>
+    <string name="library_undo_error">Undo failed or expired. The stored deletion request remains in effect.</string>
+    <string name="library_undo_restore_error">Could not restore pending Undo status. Retry by reopening the app.</string>
 </resources>

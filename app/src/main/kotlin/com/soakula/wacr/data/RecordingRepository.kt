@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.UUID
 
+fun validRecordingTitle(title: String): Boolean = title.trim().let {
+    it.isNotBlank() && it.codePointCount(0, it.length) <= 200 && it.none(Char::isISOControl)
+}
+
 class RecordingRepository(private val database: AppDatabase) {
     private val dao = database.recordings()
 
@@ -18,8 +22,7 @@ class RecordingRepository(private val database: AppDatabase) {
 
     suspend fun rename(id: UUID, title: String) {
         val value = title.trim()
-        require(value.isNotBlank() && value.codePointCount(0, value.length) <= 200 &&
-            value.none(Char::isISOControl)) { "Recording title must contain 1-200 characters without controls" }
+        require(validRecordingTitle(value)) { "Recording title must contain 1-200 characters without controls" }
         check(dao.rename(id, value) == 1) { "Recording does not exist or is pending deletion" }
     }
 

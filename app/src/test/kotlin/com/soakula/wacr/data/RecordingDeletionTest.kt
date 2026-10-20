@@ -112,10 +112,12 @@ class RecordingDeletionTest {
         val other = recording()
         val ticket = deletion.request(id)
         time = 6000
+        assertNull(deletion.pendingUndo())
         assertThrows(IllegalStateException::class.java) { runBlocking { deletion.undo(ticket) } }
         assertThrows(IllegalStateException::class.java) {
             runBlocking { deletion.undo(ticket.copy(undoUntilElapsedMs = Long.MAX_VALUE)) }
         }
+
         assertNull(deletion.purgeDue())
         assertNull(database.recordings().recording(id))
         assertTrue(database.recordings().segments(id).isEmpty())
@@ -125,6 +127,21 @@ class RecordingDeletionTest {
         assertNotNull(database.recordings().recording(other))
         assertTrue(files.file(other, "audio.aac.enc").isFile)
         assertEquals(other, repository.observeAll().first().single().recording.id)
+    }
+
+    @Test fun restoresOnlyLiveSameBootUncommittedUndoTickets() = runBlocking {
+        assertNull(deletion.pendingUndo())
+        val first = deletion.request(recording())
+        time++
+        val second = deletion.request(recording())
+        assertEquals(second, deletion.pendingUndo())
+        deletion.undo(second)
+        assertEquals(first, deletion.pendingUndo())
+        Settings.Global.putInt(application.contentResolver, Settings.Global.BOOT_COUNT, 2)
+        assertNull(deletion.pendingUndo())
+        Settings.Global.putInt(application.contentResolver, Settings.Global.BOOT_COUNT, 1)
+        database.recordings().commitDeletion(first.recordingId, first.requestId)
+        assertNull(deletion.pendingUndo())
     }
 
     @Test fun durableRequestSurvivesDatabaseReopenAndCleanupIsIdempotentAcrossConcurrentWorkers() = runBlocking {
