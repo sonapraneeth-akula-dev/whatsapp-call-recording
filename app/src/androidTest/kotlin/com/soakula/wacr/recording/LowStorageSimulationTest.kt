@@ -58,7 +58,7 @@ class LowStorageSimulationTest {
             val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
             try {
                 val id = UUID.randomUUID()
-                var elapsed = 0L
+                var samplingStartedAt: Long? = null
                 var checks = 0
                 var saving = 0
                 val warnings = mutableListOf<Boolean>()
@@ -68,12 +68,17 @@ class LowStorageSimulationTest {
                         3 -> StorageGuard.WARN_BYTES - 1
                         else -> StorageGuard.STOP_BYTES - 1
                     }
-                }, { elapsed })
+                }, {
+                    samplingStartedAt?.let {
+                        (SystemClock.elapsedRealtime() - it) / 1000 * StorageGuard.INTERVAL_MS
+                    } ?: 0L
+                })
                 val log = AppLog(temporary.newFolder(), true, {}, { throw it })
-                val result = checkNotNull(RecordingJob(database, files, store, log, guard).run(id, null, {
-                    elapsed += StorageGuard.INTERVAL_MS
-                    false
-                }, { _, warning -> warnings += warning }, { saving++ }))
+                val result = checkNotNull(RecordingJob(database, files, store, log, guard).run(id, null, { false },
+                    { _, warning ->
+                        if (samplingStartedAt == null) samplingStartedAt = SystemClock.elapsedRealtime()
+                        warnings += warning
+                    }, { saving++ }))
                 assertEquals(RecordingStopReason.LOW_STORAGE, result.reason)
                 assertEquals(listOf(false, true), warnings)
                 assertEquals(4, checks)

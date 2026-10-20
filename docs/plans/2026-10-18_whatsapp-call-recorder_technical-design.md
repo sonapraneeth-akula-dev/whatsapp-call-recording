@@ -693,6 +693,8 @@ Preparing/Recording/Saving reject session Play. More importantly, RecorderServic
 
 Assertions require a LOW_STORAGE clean result, exactly one saving transition, warning change, matching finalized duration/encrypted size, no remote-capture claim and no remaining segments/pending artifacts. MediaExtractor reads the encrypted result through a synchronized seekable Tink-backed MediaDataSource, then the phone's real MediaCodec AAC decoder must reach EOS and produce non-empty PCM. No plaintext audio file or external/network source is introduced. Host orchestration tests additionally authenticate/inspect the whole resulting AAC framing, check microphone release and verify cleanup/metadata, but their copying codec is not a native decoder claim. AndroidJUnitRunner/test extension are test-only pinned dependencies with strict checksums; runner analytics are disabled and INTERNET is removed from the test APK as well. Local compilation and host tests do not substitute for the owner's native phone run.
 
+The injected native-test clock starts at the first recording callback and advances one simulated 30-second storage interval per real second. This leaves roughly three seconds for actual nonblocking microphone input; advancing on read attempts could stop on initial empty reads before any PCM exists.
+
 Run while no call/recording is active. The test captures a short microphone sample and leaves microphone permission granted; it does not start a WhatsApp call or prove either side's audibility. Install the matching app and instrumentation APKs on the selected phone, then run the single test:
 
 ```powershell
