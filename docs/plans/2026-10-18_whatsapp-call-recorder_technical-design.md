@@ -512,6 +512,8 @@ whatsapp-call-recording/
 
 **Diagnostics implementation (2026-10-20, task 5.1.1.1.2)**: both applications now consume `:logging` for the existing JSON encoder and redaction hashes; no app-to-spike dependency. Production `AppLog` keeps complete UTF-8 JSONL entries within a 1 MB ring, limits individual entries to 4 KB, mirrors to logcat, and chains Android's original crash handler after writing a crash file. Release builds conservatively hash all string data values and exclude throwable messages (including causes); tags/events must be static snake_case identifiers and attribute keys must be static field names, never call content. Disk-write failures remain visible in logcat. Local builds/JVM tests are the current gate; CI is deferred and phone UAT belongs to the owner.
 
+**Key management implementation (2026-10-20, task 5.2.1.1.1)**: Tink 1.19.0, `AES256_GCM_HKDF_4KB` for recordings and `AES256_GCM` for small secrets. Use Tink's `AndroidKeystore` API directly, not `AndroidKeysetManager` (which permits plaintext fallback). Wrapped keysets live in `noBackupFilesDir/keys`, authenticated by keyset kind; writes are fsynced and atomically renamed under a process-wide lock. Keystore/keyset failures propagate and existing keys are never silently replaced. JVM tests use an in-memory Tink wrapping key to test persistence/corruption/races; actual Android Keystore behavior needs owner phone UAT.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

@@ -483,7 +483,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 5.2.1.1.1 | Task | Add Tink; `KeyManager` creates Keystore-wrapped StreamingAead + Aead keysets — `app/…/crypto/KeyManager.kt` | 02:00 | 00:15 | Keyset survives restart |  |
+| 5.2.1.1.1 | Task | Add Tink; `KeyManager` creates Keystore-wrapped StreamingAead + Aead keysets — `app/…/crypto/KeyManager.kt` | 02:00 | 00:15 | Keyset survives restart | **2026-10-20: implemented; local persistence/tamper/concurrency tests + builds/lint pass.** Tink 1.19.0; explicit Android Keystore wrapping, encrypted keysets in `noBackupFilesDir/keys`, atomic writes. No plaintext fallback or regeneration of unreadable keys. Actual Android Keystore restart UAT remains with owner. |
 | 5.2.1.1.2 | Task | `CryptoStore.openWriter` streaming encryption, AD = `v1\|recId\|kind` — `app/…/crypto/CryptoStore.kt` | 02:00 | 00:15 | Round-trip + tamper tests; ≥ 90% coverage |  |
 | 5.2.1.1.3 | Task | SQLCipher for Room: random passphrase wrapped by Tink Aead — `app/…/data/AppDatabase.kt` | 01:30 | 00:15 | DB pulled via adb unreadable by `sqlite3` |  |
 

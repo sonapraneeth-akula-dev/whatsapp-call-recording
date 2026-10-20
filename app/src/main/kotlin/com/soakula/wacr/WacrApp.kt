@@ -2,12 +2,14 @@ package com.soakula.wacr
 
 import android.app.Application
 import android.util.Log
+import com.soakula.wacr.crypto.KeyManager
 import com.soakula.wacr.data.RecordingFiles
 import com.soakula.wacr.util.AppLog
 import java.io.File
 
 class WacrApp : Application() {
     val recordingFiles by lazy { RecordingFiles(filesDir) }
+    val keys by lazy { KeyManager.open(this) }
 
     lateinit var log: AppLog
         private set
