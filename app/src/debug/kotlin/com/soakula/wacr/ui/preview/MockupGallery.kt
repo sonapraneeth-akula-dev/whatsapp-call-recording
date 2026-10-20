@@ -30,7 +30,10 @@ enum class MockupScreen(val title: String) {
     ONBOARDING("Get ready"),
     HOME("Home"),
     LIBRARY("Recordings"),
-    PLAYER("Recording")
+    PLAYER("Recording"),
+    ALLOWLIST("Always record"),
+    SETTINGS("Settings"),
+    TRANSCRIPT("Transcript concept")
 }
 
 class MockupScreens : PreviewParameterProvider<MockupScreen> {
@@ -65,7 +68,7 @@ private fun ProposalFrame(screen: MockupScreen) {
             TopAppBar(
                 title = { Text(screen.title) },
                 navigationIcon = {
-                    if (screen == MockupScreen.PLAYER) {
+                    if (screen == MockupScreen.PLAYER || screen == MockupScreen.TRANSCRIPT) {
                         IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                     }
                 }
@@ -74,7 +77,11 @@ private fun ProposalFrame(screen: MockupScreen) {
         bottomBar = {
             if (screen != MockupScreen.ONBOARDING) {
                 NavigationBar {
-                    val selected = if (screen == MockupScreen.HOME) 0 else 1
+                    val selected = when (screen) {
+                        MockupScreen.HOME -> 0
+                        MockupScreen.SETTINGS, MockupScreen.ALLOWLIST -> 2
+                        else -> 1
+                    }
                     listOf(
                         Triple("Home", Icons.Default.Home, 0),
                         Triple("Library", Icons.AutoMirrored.Filled.List, 1),
@@ -103,6 +110,9 @@ private fun ProposalFrame(screen: MockupScreen) {
                 MockupScreen.HOME -> HomeProposal()
                 MockupScreen.LIBRARY -> LibraryProposal()
                 MockupScreen.PLAYER -> PlayerProposal()
+                MockupScreen.ALLOWLIST -> AllowlistProposal()
+                MockupScreen.SETTINGS -> SettingsProposal()
+                MockupScreen.TRANSCRIPT -> TranscriptProposal()
             }
         }
     }
@@ -235,6 +245,7 @@ private fun PlayerProposal() {
                 Offset(x, size.height / 2 - amplitude), Offset(x, size.height / 2 + amplitude), strokeWidth = 3.dp.toPx()
             )
         }
+
     }
     Slider(value = 0.35f, onValueChange = {}, modifier = Modifier.fillMaxWidth())
     Detail("00:42", "02:00")
@@ -262,5 +273,99 @@ private fun PlayerProposal() {
         TextButton(onClick = {}, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
             Text("Delete")
         }
+    }
+}
+
+@Composable
+private fun AllowlistProposal() {
+    Text("Only these people record automatically.", style = MaterialTheme.typography.headlineSmall)
+    Text("Matched by WhatsApp display name, not phone number. People with the same name cannot be distinguished.")
+    Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Add from contacts") }
+    Text("Android contact picker only. No broad contacts permission.", style = MaterialTheme.typography.bodySmall)
+    listOf("Demo contact", "Second demo").forEach { name ->
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            ListItem(
+                headlineContent = { Text(name) },
+                supportingContent = { Text("Always record | Audio only") },
+                leadingContent = { Icon(Icons.Default.Person, contentDescription = null) },
+                trailingContent = {
+                    IconButton(onClick = {}) { Icon(Icons.Default.Delete, contentDescription = "Remove $name") }
+                }
+            )
+        }
+    }
+    ProposalCard("Other calls stay manual") {
+        Text("Unknown callers and groups are never auto-recorded in v1. Use Record this call when needed.")
+        Text("Contact renamed in WhatsApp? Update this list to match.", style = MaterialTheme.typography.bodySmall)
+    }
+    Snackbar(action = { TextButton(onClick = {}) { Text("Undo") } }) { Text("Sample contact removed") }
+}
+
+@Composable
+private fun SettingsProposal() {
+    ProposalCard("Recording") {
+        Detail("Mode", "Audio only")
+        Detail("Preferred source", "VOICE_RECOGNITION")
+        Text("Provisional A73 profile. Repeat the microphone test after WhatsApp or system updates.")
+        OutlinedButton(onClick = {}) { Text("Microphone test") }
+    }
+    ProposalCard("Appearance") {
+        listOf("Follow system", "Light", "Dark").forEachIndexed { index, label ->
+            ListItem(
+                headlineContent = { Text(label) },
+                leadingContent = {
+                    RadioButton(
+                        selected = index == 0, onClick = {},
+                        modifier = Modifier.semantics { contentDescription = "$label theme" }
+                    )
+                }
+            )
+        }
+        Text("Material You colors follow your wallpaper. Teal shown here is the preview fallback.")
+    }
+    ProposalCard("Privacy") {
+        Text("Audio and metadata encrypted on this device. No network access or cloud backup.")
+        ListItem(
+            headlineContent = { Text("App lock | v1.1 concept") },
+            supportingContent = { Text("Locks browsing, not background recording.") },
+            trailingContent = {
+                Switch(
+                    checked = false, onCheckedChange = {}, enabled = false,
+                    modifier = Modifier.semantics { contentDescription = "Future app lock" }
+                )
+            }
+        )
+    }
+    ProposalCard("Health and diagnostics") {
+        Detail("Accessibility", "Enabled")
+        Detail("Notification access", "Enabled")
+        Detail("Battery", "Unrestricted")
+        Text("Bounded local logs; no automatic sharing.", style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = {}) { Text("View diagnostics") }
+        OutlinedButton(onClick = {}) { Text("Save diagnostics") }
+    }
+    Text("Video, retention, export and transcription are not v1 settings.", style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun TranscriptProposal() {
+    Text("FUTURE PHASE | v1.2", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+    Text("Demo contact", style = MaterialTheme.typography.headlineMedium)
+    Text("Sample conversation only. No transcription engine or model has been implemented or selected.")
+    Text("Romanized first, native script below. Tap a segment to seek.", style = MaterialTheme.typography.bodyMedium)
+    listOf(
+        Triple("You | 00:12", "Kal baat karte hain.", "\u0915\u0932 \u092c\u093e\u0924 \u0915\u0930\u0924\u0947 \u0939\u0948\u0902\u0964"),
+        Triple("Demo contact | 00:16", "Sare, tomorrow works.", "\u0c38\u0c30\u0c47, tomorrow works."),
+        Triple("You | 00:20", "I will call at ten.", "")
+    ).forEach { (speaker, romanized, native) ->
+        ProposalCard(speaker) {
+            Text(romanized, style = MaterialTheme.typography.bodyLarge)
+            if (native.isNotEmpty()) Text(native, style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = {}) { Text("Play from this segment") }
+        }
+    }
+    ProposalCard("Audio quality limits transcription") {
+        Text("Only audible recorded speech can be transcribed. Missing remote audio cannot be reconstructed.")
+        Text("Speaker labels and language accuracy need a later model bake-off.", style = MaterialTheme.typography.bodySmall)
     }
 }

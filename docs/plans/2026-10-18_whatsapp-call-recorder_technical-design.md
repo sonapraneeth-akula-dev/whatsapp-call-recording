@@ -533,6 +533,8 @@ whatsapp-call-recording/
 
 **Mockup proposal (2026-10-20, task 8.1.1.1.1)**: debug-only `ui/preview/MockupGallery.kt` uses the existing Compose stack for synthetic onboarding, dashboard, contact-grouped library and player proposals. Android Studio previews cover light/dark, 200% text and landscape, with deep-teal fallback colors, 16 dp card shapes and native controls. No production screens or navigation are wired; release excludes tooling and mockup source. Existing Material 3 icons are reused without another dependency. Owner was unavailable for Q-1, so Compose is a proposed review format, not a confirmed decision. Local compilation/lint does not demonstrate rendered layout, accessibility or owner sign-off; M-008.1 remains open.
 
+**Additional mockup proposal (2026-10-20, task 8.1.1.1.2)**: the same debug-only gallery includes allowlist, settings and a clearly future-v1.2 transcript with synthetic Hindi/Telugu/English snippets. Name collisions and manual-only groups are explicit; privacy text does not promise remote audio. No settings persistence, contact picking, app lock or transcription behavior is implemented by these proposals. All controls are inert sample views; rendering and owner sign-off remain pending.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

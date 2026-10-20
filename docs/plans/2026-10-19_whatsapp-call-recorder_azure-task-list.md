@@ -627,7 +627,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 8.1.1.1.1 | Task | Mockups (Compose `@Preview` gallery or Figma — Q-1): onboarding, dashboard, library, player | 02:00 | 00:20 | Previews render light/dark | **2026-10-20: debug-only Compose proposal drafted and compiled.** Synthetic data only; light/dark, 200% text and landscape annotations. Open `app\src\debug\kotlin\com\soakula\wacr\ui\preview\MockupGallery.kt` in Android Studio with the debug variant. No product screen/navigation wiring; preview tooling/source excluded from release, existing Material 3 icons reused. Rendering, accessibility review, Q-1 owner choice and sign-off remain pending; compilation is not rendering approval. |
-| 8.1.1.1.2 | Task | Mockups: allowlist, settings, transcript, light/dark | 02:00 | 00:15 | Previews render |  |
+| 8.1.1.1.2 | Task | Mockups: allowlist, settings, transcript, light/dark | 02:00 | 00:15 | Previews render | **2026-10-20: additional debug-only Compose proposals drafted.** Reuse the same light/dark, 200% text and landscape gallery; allowlist explains display-name collisions and manual-only groups in v1. Transcript clearly labelled future v1.2, app-lock control future v1.1; no ASR/model, settings persistence, permissions or contact-picker actions wired. Rendering/accessibility review and owner approval pending. |
 | 8.1.1.1.3 | Task | Review session with owner; apply revisions | 01:00 | 00:10 | Owner sign-off |  |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
