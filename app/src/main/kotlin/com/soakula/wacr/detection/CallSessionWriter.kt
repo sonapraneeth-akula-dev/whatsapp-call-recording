@@ -22,7 +22,7 @@ internal class CallSessionWriter(
         require(retained.size <= 17 && retained.all { it > 0 }) { "Invalid retained call identities" }
         val updated = sessions.toMutableMap()
         val dao = database.recordings()
-        database.withTransaction {
+        if (events.any { it !is CallEvent.Transition }) database.withTransaction {
             for (event in events) {
                 when (event) {
                     is CallEvent.Started -> if (event.call.sequence !in updated) {
@@ -58,6 +58,14 @@ internal class CallSessionWriter(
         check(database.recordings().setSessionEnd(
             checkNotNull(sessions[sequence]) { "Missing resumed call identity" }, null
         ) == 1) { "Resumed call session is missing" }
+    }
+
+    suspend fun closeAll(elapsedMs: Long) {
+        val endedAt = wallTime(elapsedMs)
+        database.withTransaction {
+            sessions.values.forEach { database.recordings().closeOpenSession(it, endedAt) }
+        }
+        sessions = emptyMap()
     }
 
     private fun wallTime(elapsedMs: Long): Long {

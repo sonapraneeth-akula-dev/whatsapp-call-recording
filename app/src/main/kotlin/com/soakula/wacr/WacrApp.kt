@@ -15,6 +15,7 @@ import com.soakula.wacr.recording.RecoveryReport
 import com.soakula.wacr.recording.RecorderController
 import com.soakula.wacr.recording.DeletionJobService
 import com.soakula.wacr.health.HealthMonitor
+import com.soakula.wacr.detection.CallDetection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -31,7 +32,8 @@ class WacrApp : Application() {
     private val recoveryLock = Mutex()
     private var recovered: RecoveryReport? = null
     val recorder by lazy { RecorderController(this, log) }
-    val health by lazy { HealthMonitor(this) }
+    val detection by lazy { CallDetection(this) }
+    val health by lazy { HealthMonitor(this) { detection.state.value.ready } }
     val preferences by lazy { AppPreferences.open(this) }
 
     internal suspend fun requireRecovery() = recoveryLock.withLock { recovered = null }

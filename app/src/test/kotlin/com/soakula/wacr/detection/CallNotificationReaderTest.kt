@@ -7,6 +7,7 @@ import android.app.Person
 import android.content.Intent
 import android.os.Bundle
 import android.os.Process
+import android.os.UserHandle
 import android.service.notification.StatusBarNotification
 import com.soakula.wacr.data.CallDirection
 import com.soakula.wacr.data.CallType
@@ -80,6 +81,15 @@ class CallNotificationReaderTest {
         value.category = Notification.CATEGORY_CALL
         value.flags = value.flags or Notification.FLAG_GROUP_SUMMARY
         assertTrue(reader().read(status(value), "2.26.40.76", "SM-A736B", 36) is CallSignal.Removed)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun otherUserProfileCannotBorrowThisUsersInstalledBuildProfile() {
+        val value = notification()
+        value.extras.putInt(Notification.EXTRA_TITLE, 7)
+        val otherUser = StatusBarNotification("com.whatsapp", "com.whatsapp", 1, null, 210000, 0, 0,
+            value, UserHandle.getUserHandleForUid(210000), 1000)
+        assertNull(reader().read(otherUser, "2.26.40.76", "SM-A736B", 36))
     }
 
     @Test fun explicitVideoPresenceDiffersFromMissingAndWrongTypedExtrasThrow() {

@@ -22,7 +22,7 @@ enum class HealthProblem {
 
 data class HealthIssue(val problem: HealthProblem, val fixIntent: Intent?)
 
-class HealthMonitor(context: Context) {
+class HealthMonitor(context: Context, private val detectionReady: () -> Boolean = { true }) {
     private val application = context.applicationContext
 
     fun check(): List<HealthIssue> = buildList {
@@ -57,13 +57,16 @@ class HealthMonitor(context: Context) {
         val manager = checkNotNull(application.getSystemService(AccessibilityManager::class.java))
         val enabled = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
             .map { ComponentName(it.resolveInfo.serviceInfo.packageName, it.resolveInfo.serviceInfo.name) }.toSet()
-        if (accessibility.isNotEmpty() && (!manager.isEnabled ||
-            accessibility.none { ComponentName(it.packageName, it.name) in enabled })) {
+        val accessibilityEnabled = manager.isEnabled && accessibility.any { ComponentName(it.packageName, it.name) in enabled }
+        if (accessibility.isNotEmpty() && !accessibilityEnabled) {
             add(HealthIssue(HealthProblem.ACCESSIBILITY_DISABLED, settings(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
         }
-        if (listeners.isNotEmpty() &&
-            listeners.none { notifications.isNotificationListenerAccessGranted(ComponentName(it.packageName, it.name)) }) {
+        val listenerEnabled = listeners.any { notifications.isNotificationListenerAccessGranted(ComponentName(it.packageName, it.name)) }
+        if (listeners.isNotEmpty() && !listenerEnabled) {
             add(HealthIssue(HealthProblem.NOTIFICATION_ACCESS_DISABLED, settings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)))
+        }
+        if (accessibilityEnabled && listenerEnabled && !detectionReady()) {
+            add(HealthIssue(HealthProblem.DETECTION_UNAVAILABLE, null))
         }
 
         if (!checkNotNull(application.getSystemService(PowerManager::class.java)).isIgnoringBatteryOptimizations(packageName)) {

@@ -2,6 +2,7 @@ package com.soakula.wacr.detection
 
 import android.app.Notification
 import android.os.Bundle
+import android.os.Process
 import android.service.notification.StatusBarNotification
 import com.soakula.wacr.data.CallDirection
 import com.soakula.wacr.data.CallType
@@ -14,7 +15,7 @@ class CallNotificationReader(private val rules: DetectionRules) {
         sdkInt: Int
     ): CallSignal? {
         val pkg = notification.packageName
-        if (pkg !in rules.packages) return null
+        if (pkg !in rules.packages || notification.user != Process.myUserHandle()) return null
         val key = notification.key
         require(key.isNotBlank() && key.length <= 512) { "Invalid notification identity" }
         val value = notification.notification

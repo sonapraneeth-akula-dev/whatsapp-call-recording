@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -28,6 +30,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val mutableState = MutableStateFlow(HomeUiState())
     val state = mutableState.asStateFlow()
     private var refreshJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            app.detection.state.map { it.ready to it.failed }.distinctUntilChanged().collect { refresh() }
+        }
+    }
 
     fun refresh() {
         refreshJob?.cancel()

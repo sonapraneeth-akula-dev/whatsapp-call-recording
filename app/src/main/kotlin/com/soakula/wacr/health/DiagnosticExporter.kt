@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import com.soakula.wacr.logging.Json
+import com.soakula.wacr.WacrApp
 import com.soakula.wacr.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,7 +29,7 @@ suspend fun exportDiagnostics(context: Context, log: AppLog, output: OutputStrea
             "android_release" to Build.VERSION.RELEASE,
             "sdk_int" to Build.VERSION.SDK_INT,
             "security_patch" to Build.VERSION.SECURITY_PATCH,
-            "health_issues" to HealthMonitor(application).check().map { it.problem.name },
+            "health_issues" to ((application as? WacrApp)?.health ?: HealthMonitor(application)).check().map { it.problem.name },
             "capability_results" to null,
             "capability_status" to "not_available_in_this_build",
             "scope" to "redacted_ring_log_and_technical_status_only"

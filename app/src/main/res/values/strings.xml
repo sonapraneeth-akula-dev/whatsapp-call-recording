@@ -25,7 +25,10 @@
     <string name="health_background">Remove background restrictions</string>
     <string name="health_microphone_detail">Needed to record microphone audio. Record now requests native permissions; app settings can restore access after a denial.</string>
     <string name="health_notifications_detail">Needed for a visible recording indicator and Stop control. Recording is refused when notification delivery is blocked.</string>
-    <string name="health_detector_detail">Automatic call adapters are not available in this build. You can still start and stop manually with the required permissions.</string>
+    <string name="health_detector_detail">Call services are disconnected or could not initialize. Check service access and diagnostics. After a detection error, restart the app process before retrying. Manual start and stop remain available with the required permissions.</string>
+    <string name="detection_accessibility_label">WACR WhatsApp call detection</string>
+    <string name="detection_listener_label">WACR WhatsApp call notifications</string>
+    <string name="detection_accessibility_description">Observes WhatsApp call window changes only. Does not read window text, messages or contacts. Call notification access is separate. Detection does not prove remote audio capture.</string>
     <string name="health_accessibility_detail">Recognizes WhatsApp call controls, not chat messages. Sideloaded apps may first need App info: Allow restricted settings.</string>
     <string name="health_listener_detail">Corroborates WhatsApp call state. Other apps and unrelated notification text are not retained.</string>
     <string name="health_battery_detail">Allow background operation for reliable detection. On Samsung, also review Background usage limits and Never sleeping apps; Android APIs cannot verify that separate list.</string>

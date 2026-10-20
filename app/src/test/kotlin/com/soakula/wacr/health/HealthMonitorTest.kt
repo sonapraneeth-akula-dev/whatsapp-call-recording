@@ -8,6 +8,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.pm.ResolveInfo
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.PowerManager
 import android.provider.Settings
@@ -48,6 +49,11 @@ class HealthMonitorTest {
     }
 
     private fun enableDetector(): Pair<ServiceInfo, ServiceInfo> {
+        application.packageManager.getPackageInfo(application.packageName,
+            PackageManager.PackageInfoFlags.of(PackageManager.GET_SERVICES.toLong())).services.orEmpty()
+            .filter { it.permission == Manifest.permission.BIND_ACCESSIBILITY_SERVICE ||
+                it.permission == Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE }
+            .forEach { shadowOf(application.packageManager).addOrUpdateService(ServiceInfo(it).apply { enabled = false }) }
         val a11y = service("SyntheticAccessibility", Manifest.permission.BIND_ACCESSIBILITY_SERVICE)
         val listener = service("SyntheticListener", Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE)
         shadowOf(application.packageManager).addOrUpdateService(a11y)
@@ -62,10 +68,23 @@ class HealthMonitorTest {
 
     private fun problems() = monitor.check().map { it.problem }.toSet()
 
-    @Test fun currentBuildReportsMissingProductionDetectorInsteadOfReadyOrAFakeSettingsFix() {
+    @Test fun productionAdaptersRequireExplicitGrantsWithRealSettingsFixes() {
         val issues = monitor.check()
-        assertEquals(listOf(HealthProblem.DETECTION_UNAVAILABLE), issues.map { it.problem })
-        assertNull(issues.single().fixIntent)
+        assertEquals(setOf(HealthProblem.ACCESSIBILITY_DISABLED, HealthProblem.NOTIFICATION_ACCESS_DISABLED),
+            issues.map { it.problem }.toSet())
+        assertEquals(Settings.ACTION_ACCESSIBILITY_SETTINGS, issues.first { it.problem == HealthProblem.ACCESSIBILITY_DISABLED }.fixIntent?.action)
+        assertEquals(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, issues.first { it.problem == HealthProblem.NOTIFICATION_ACCESS_DISABLED }.fixIntent?.action)
+    }
+
+    @Test fun grantedServicesWithoutOperationalDetectorNeverReportReady() {
+        enableDetector()
+        var ready = false
+        monitor = HealthMonitor(application) { ready }
+        assertEquals(setOf(HealthProblem.DETECTION_UNAVAILABLE), problems())
+        ready = true
+        assertTrue(monitor.check().isEmpty())
+        ready = false
+        assertEquals(setOf(HealthProblem.DETECTION_UNAVAILABLE), problems())
     }
 
     @Test fun allNativeChecksMustPassAndRecheckingObservesRevocationAndReenablement() {
