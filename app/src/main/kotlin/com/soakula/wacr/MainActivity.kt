@@ -23,6 +23,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.ui.AppScaffold
+import com.soakula.wacr.ui.allowlist.AllowlistScreen
+import com.soakula.wacr.ui.allowlist.AllowlistViewModel
 import com.soakula.wacr.ui.home.HomeViewModel
 import com.soakula.wacr.ui.library.LibraryViewModel
 import com.soakula.wacr.ui.library.RecordingActions
@@ -40,6 +42,10 @@ class MainActivity : ComponentActivity() {
     private val app: WacrApp get() = checkNotNull(application as? WacrApp)
     private val home: HomeViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
+    private val allowlist: AllowlistViewModel by viewModels()
+    private val contactPicker = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
+        if (uri != null) allowlist.addPickedContact(uri)
+    }
     private var recordAfterPermission = false
     private var startWhenResumed = false
     private var manualConfirmation: UUID? = null
@@ -89,9 +95,15 @@ class MainActivity : ComponentActivity() {
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
                 val actions by library.actions.collectAsStateWithLifecycle()
+                val contactRules by allowlist.state.collectAsStateWithLifecycle()
+                val contactActions by allowlist.actions.collectAsStateWithLifecycle()
                 AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry,
                     actions = actions, onUndo = library::undo, onDismissUndo = library::dismissUndo,
-                    onDismissError = library::dismissError) { entry, back ->
+                    onDismissError = library::dismissError,
+                    allowlistContent = {
+                        AllowlistScreen(contactRules, contactActions, ::pickContact, allowlist::retry,
+                            allowlist::remove, allowlist::undo, allowlist::dismissUndo, allowlist::dismissError)
+                    }) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
                         onBack = back,
@@ -165,6 +177,16 @@ class MainActivity : ComponentActivity() {
             settingsFailed(error)
         } catch (error: SecurityException) {
             settingsFailed(error)
+        }
+    }
+
+    private fun pickContact() {
+        try {
+            contactPicker.launch(null)
+        } catch (error: ActivityNotFoundException) {
+            allowlist.pickerFailed(error)
+        } catch (error: SecurityException) {
+            allowlist.pickerFailed(error)
         }
     }
 

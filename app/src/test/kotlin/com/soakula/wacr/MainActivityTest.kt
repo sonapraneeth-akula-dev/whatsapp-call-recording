@@ -1,6 +1,10 @@
 package com.soakula.wacr
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.ContactsContract
 import android.view.WindowManager
 import com.soakula.wacr.recording.RecorderService
 import com.soakula.wacr.recording.RecorderState
@@ -74,6 +78,23 @@ class MainActivityTest {
             assertNull(shadowOf(app).nextStartedService)
             activity.restart().start().resume()
             assertEquals(RecorderState.Idle, app.recorder.state.value)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+
+    }
+
+    @Test fun contactPickerUsesNativeActionPickAndCancellationNeedsNoContactsPermission() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            ReflectionHelpers.callInstanceMethod<Unit>(activity.get(), "pickContact")
+            val request = checkNotNull(shadowOf(activity.get()).nextStartedActivityForResult)
+            assertEquals(Intent.ACTION_PICK, request.intent.action)
+            assertEquals(ContactsContract.Contacts.CONTENT_TYPE, request.intent.type)
+            assertEquals(PackageManager.PERMISSION_DENIED, activity.get().checkSelfPermission(Manifest.permission.READ_CONTACTS))
+            shadowOf(activity.get()).receiveResult(request.intent, Activity.RESULT_CANCELED, null)
+            assertEquals(RecorderState.Idle, app.recorder.state.value)
+            assertNull(shadowOf(app).nextStartedService)
         } finally {
             activity.pause().stop().destroy()
         }

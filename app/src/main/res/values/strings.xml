@@ -103,4 +103,21 @@
     <string name="library_delete_error">Could not schedule deletion. The recording has not been hidden; retry or review diagnostics.</string>
     <string name="library_undo_error">Undo failed or expired. The stored deletion request remains in effect.</string>
     <string name="library_undo_restore_error">Could not restore pending Undo status. Retry by reopening the app.</string>
+    <string name="nav_allowlist">Allowlist</string>
+    <string name="allowlist_title">Always-record contacts</string>
+    <string name="allowlist_matching_warning">Matching uses WhatsApp display names, not phone numbers. Case, spacing and emoji are normalized. Different contacts with the same normalized name share one rule; duplicate selections never replace an existing rule. Group calls remain manual.</string>
+    <string name="allowlist_detection_pending">Rules are saved locally. Automatic call detection is not connected yet.</string>
+    <string name="allowlist_add">Add contact</string>
+    <string name="allowlist_empty">No contacts selected. Use Add contact to choose one without granting access to your address book.</string>
+    <string name="allowlist_remove">Remove</string>
+    <string name="allowlist_remove_name">Remove %1$s from allowlist</string>
+    <string name="allowlist_removed">%1$s removed from allowlist. Undo is available for five seconds; recordings are unchanged.</string>
+    <string name="allowlist_group_manual">Group rule retained; group calls remain manual in this release.</string>
+    <string name="allowlist_load_error">Could not load the allowlist. Stored rules have not been changed.</string>
+    <string name="allowlist_pick_error">Could not add the selected contact. Choose a contact with a readable display name, or retry. Existing rules are unchanged.</string>
+    <string name="allowlist_duplicate">This normalized name is already allowlisted. Contacts sharing that name share the existing rule; nothing was replaced.</string>
+    <string name="allowlist_remove_error">Could not remove this rule. Retry or review diagnostics.</string>
+    <string name="allowlist_undo_error">Could not restore the removed rule, or Undo expired. Other rules are unchanged.</string>
+    <string name="allowlist_undo_conflict">Undo conflicts with a newly added rule. Nothing was overwritten.</string>
+    <string name="allowlist_picker_unavailable">Could not open the system contact picker. Check that a Contacts app is enabled, then retry.</string>
 </resources>

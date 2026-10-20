@@ -29,6 +29,8 @@ import com.soakula.wacr.data.PendingRecordingDeletion
 import com.soakula.wacr.ui.library.RecordingActionsState
 import kotlinx.coroutines.withTimeoutOrNull
 
+private enum class Destination { HOME, LIBRARY, ALLOWLIST }
+
 @Composable
 fun AppScaffold(
     home: HomeUiState,
@@ -42,9 +44,10 @@ fun AppScaffold(
     onUndo: (PendingRecordingDeletion) -> Unit = {},
     onDismissUndo: (PendingRecordingDeletion) -> Unit = {},
     onDismissError: () -> Unit = {},
+    allowlistContent: @Composable () -> Unit = {},
     playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
-    var showLibrary by rememberSaveable { mutableStateOf(false) }
+    var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
     val snackbar = remember { SnackbarHostState() }
     val undoMessage = stringResource(R.string.library_deleted)
     val undoLabel = stringResource(R.string.library_undo)
@@ -61,8 +64,8 @@ fun AppScaffold(
     LaunchedEffect(selectedId, library) {
         if (selectedId != null && library is LibraryUiState.Ready && selected == null) selectedId = null
     }
-    BackHandler(selectedId != null || showLibrary) {
-        if (selectedId != null) selectedId = null else showLibrary = false
+    BackHandler(selectedId != null || destination != Destination.HOME) {
+        if (selectedId != null) selectedId = null else destination = Destination.HOME
     }
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -80,14 +83,20 @@ fun AppScaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = !showLibrary, onClick = { selectedId = null; showLibrary = false },
+                    selected = destination == Destination.HOME, onClick = { selectedId = null; destination = Destination.HOME },
                     icon = { Icon(painterResource(R.drawable.ic_home), null) },
                     label = { Text(stringResource(R.string.nav_home)) }
                 )
                 NavigationBarItem(
-                    selected = showLibrary, onClick = { selectedId = null; showLibrary = true },
+                    selected = destination == Destination.LIBRARY, onClick = { selectedId = null; destination = Destination.LIBRARY },
                     icon = { Icon(painterResource(R.drawable.ic_library), null) },
                     label = { Text(stringResource(R.string.nav_library)) }
+                )
+                NavigationBarItem(
+                    selected = destination == Destination.ALLOWLIST,
+                    onClick = { selectedId = null; destination = Destination.ALLOWLIST },
+                    icon = { Icon(painterResource(R.drawable.ic_allowlist), null) },
+                    label = { Text(stringResource(R.string.nav_allowlist)) }
                 )
             }
         }
@@ -95,7 +104,8 @@ fun AppScaffold(
         Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
             when {
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
-                showLibrary || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
+                destination == Destination.ALLOWLIST -> allowlistContent()
+                destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
                 else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
                     selectedId = it.toString()
                 }
