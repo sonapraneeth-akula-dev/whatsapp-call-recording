@@ -8,12 +8,17 @@ import java.nio.channels.FileChannel
 import java.nio.channels.SeekableByteChannel
 import java.nio.channels.WritableByteChannel
 import java.nio.file.Files
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardOpenOption.*
 import java.util.UUID
 
 class CryptoStore(private val files: RecordingFiles, private val encryption: StreamingAead) {
-    fun openWriter(recordingId: UUID, kind: String): WritableByteChannel {
-        val file = files.file(recordingId, kind)
+    fun openWriter(recordingId: UUID, kind: String): WritableByteChannel =
+        openWriter(recordingId, kind, kind)
+
+    private fun openWriter(recordingId: UUID, fileName: String, kind: String): WritableByteChannel {
+        val file = files.file(recordingId, fileName)
         val parent = file.parentFile!!
         if (!parent.isDirectory && !parent.mkdirs()) throw IOException("Cannot create recording directory")
         // ponytail: sync ciphertext at speech bitrates; batch on segment close if profiling requires it.
@@ -31,8 +36,11 @@ class CryptoStore(private val files: RecordingFiles, private val encryption: Str
         }
     }
 
-    fun openReader(recordingId: UUID, kind: String): SeekableByteChannel {
-        val input = FileChannel.open(files.file(recordingId, kind).toPath(), READ)
+    fun openReader(recordingId: UUID, kind: String): SeekableByteChannel =
+        openReader(recordingId, kind, kind)
+
+    private fun openReader(recordingId: UUID, fileName: String, kind: String): SeekableByteChannel {
+        val input = FileChannel.open(files.file(recordingId, fileName).toPath(), READ)
         var handedOff = false
         try {
             val decrypted = encryption.newSeekableDecryptingChannel(input, associatedData(recordingId, kind))
@@ -54,6 +62,18 @@ class CryptoStore(private val files: RecordingFiles, private val encryption: Str
 
     fun delete(recordingId: UUID, kind: String): Boolean =
         Files.deleteIfExists(files.file(recordingId, kind).toPath())
+
+    internal fun openPendingAudioWriter(recordingId: UUID): WritableByteChannel =
+        openWriter(recordingId, "audio.pending.enc", "audio.aac.enc")
+
+    internal fun openPendingAudioReader(recordingId: UUID): SeekableByteChannel =
+        openReader(recordingId, "audio.pending.enc", "audio.aac.enc")
+
+    internal fun publishAudio(recordingId: UUID) {
+        val destination = files.file(recordingId, "audio.aac.enc")
+        if (destination.exists()) throw FileAlreadyExistsException(destination.path)
+        Files.move(files.file(recordingId, "audio.pending.enc").toPath(), destination.toPath(), ATOMIC_MOVE)
+    }
 
     private fun associatedData(recordingId: UUID, kind: String) =
         "v1|$recordingId|$kind".toByteArray(Charsets.UTF_8)

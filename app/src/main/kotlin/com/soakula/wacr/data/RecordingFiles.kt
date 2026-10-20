@@ -14,6 +14,6 @@ class RecordingFiles(filesDir: File) {
     }
 
     companion object {
-        private val NAME = Regex("(audio\\.aac|video\\.mp4|seg_[0-9]{5,10})\\.enc")
+        private val NAME = Regex("(audio\\.aac|audio\\.pending|video\\.mp4|seg_[0-9]{5,10})\\.enc")
     }
 }

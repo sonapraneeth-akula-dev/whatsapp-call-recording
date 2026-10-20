@@ -2,6 +2,8 @@ package com.soakula.wacr.recording
 
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.IOException
 
 class AacFormatTest {
     @Test fun monoAndStereoHeadersEncodeLc16kHzAndExactFrameLength() {
@@ -30,5 +32,22 @@ class AacFormatTest {
         assertThrows(IllegalArgumentException::class.java) { format.packet(ByteArray(8185)) }
         assertThrows(IllegalArgumentException::class.java) { AacFormat(0) }
         assertEquals(8191, format.packet(ByteArray(8184)).size)
+    }
+
+    @Test fun parserBoundsFramesAndRejectsPartialOrInvalidAudio() {
+        val format = AacFormat(1)
+        val packet = format.packet(ByteArray(20))
+        ByteArrayInputStream(packet + packet).use { input ->
+            assertArrayEquals(packet, format.readFrame(input))
+            assertArrayEquals(packet, format.readFrame(input))
+            assertNull(format.readFrame(input))
+        }
+        for (bad in listOf(
+            packet.copyOf(6), packet.copyOf(packet.size - 1),
+            packet.copyOf().also { it[0] = 0 },
+            packet.copyOf().also { it[3] = 0x40; it[4] = 0; it[5] = 0 }
+        )) {
+            assertThrows(IOException::class.java) { format.readFrame(ByteArrayInputStream(bad)) }
+        }
     }
 }

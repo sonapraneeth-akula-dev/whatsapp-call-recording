@@ -1,5 +1,9 @@
 package com.soakula.wacr.recording
 
+import java.io.EOFException
+import java.io.IOException
+import java.io.InputStream
+
 class AacFormat(val channels: Int) {
     init { require(channels in 1..2) { "AAC capture supports mono or stereo" } }
 
@@ -11,6 +15,24 @@ class AacFormat(val channels: Int) {
         require(packet.size > 7 && header(packet.size - 7).contentEquals(packet.copyOfRange(0, 7))) {
             "Expected one complete 16 kHz AAC-LC ADTS frame"
         }
+    }
+
+    fun readFrame(input: InputStream): ByteArray? {
+        val header = input.readNBytes(7)
+        if (header.isEmpty()) return null
+        if (header.size != 7) throw EOFException("Truncated ADTS header")
+        val size = ((header[3].toInt() and 3) shl 11) or
+            ((header[4].toInt() and 0xFF) shl 3) or ((header[5].toInt() and 0xE0) shr 5)
+        if (size !in 8..8191) throw IOException("Invalid ADTS frame size")
+        val payload = input.readNBytes(size - 7)
+        if (payload.size != size - 7) throw EOFException("Truncated AAC payload")
+        val frame = header + payload
+        try {
+            validate(frame)
+        } catch (error: IllegalArgumentException) {
+            throw IOException("Invalid AAC-LC ADTS frame", error)
+        }
+        return frame
     }
 
     private fun header(payloadBytes: Int): ByteArray {

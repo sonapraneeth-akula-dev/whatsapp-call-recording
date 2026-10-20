@@ -516,6 +516,8 @@ whatsapp-call-recording/
 
 **Encrypted files implementation (2026-10-20, tasks 5.1.2.1.1 / 5.2.1.1.2)**: `RecordingFiles` permits only UUID directories and encrypted audio/video/segment artifact names under canonical `filesDir/rec/`, rejecting traversal and symlinks. `CryptoStore` creates files exclusively, synchronously writes ciphertext and binds AD to `v1|recordingId|artifactName` (including a segment's index). Readers authenticate the first block before exposing size/seek; Tink 1.19's empty seek streams are rejected when they stop making progress rather than spinning. No plaintext temp files. Full-stream reads authenticate the tail; opening/size alone does not authenticate every block.
 
+**Finalization implementation (2026-10-20, task 3.3.1.1.2)**: validate complete ordered source segments, ADTS headers and metadata, then stream to encrypted `audio.pending.enc` using the final audio's AD. Verify the pending plaintext digest/duration, atomically rename to `audio.aac.enc`, call the durable metadata commit, and only then remove source segments. Crashes before rename retain sources; crashes/callback failures after rename permit idempotent retry using authenticated final audio. Existing mismatched/corrupt final files are never silently overwritten. No temporary plaintext; a single process-wide finalization lock fits the one-active-recorder design.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|
