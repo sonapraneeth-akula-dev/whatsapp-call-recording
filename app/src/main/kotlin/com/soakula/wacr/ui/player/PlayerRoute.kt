@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.playback.DecryptingDataSource
@@ -100,6 +101,11 @@ fun PlayerRoute(
             }
         }
     }, onSeek = { position -> if (!blocked) player?.seekTo(position) },
+        onSpeed = { speed ->
+            require(speed in PLAYBACK_SPEEDS) { "Unsupported playback speed" }
+            if (!blocked && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+                player?.playbackParameters = PlaybackParameters(speed, 1f)
+        },
         waveform = {
             if (playable) WaveformPanel(entry.recording.id,
                 if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f,
@@ -114,5 +120,6 @@ private fun playbackState(player: Player, metadataDuration: Long?) = PlaybackUiS
     buffering = player.playbackState == Player.STATE_BUFFERING,
     positionMs = player.currentPosition.coerceAtLeast(0),
     durationMs = player.duration.takeIf { it > 0 } ?: metadataDuration ?: 0,
-    failed = player.playerError != null
+    failed = player.playerError != null,
+    speed = player.playbackParameters.speed
 )

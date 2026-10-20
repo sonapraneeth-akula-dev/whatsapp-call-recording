@@ -20,6 +20,10 @@
     <string name="player_waveform">Audio amplitude waveform</string>
     <string name="player_waveform_missing">Waveform data unavailable for this recording.</string>
     <string name="player_waveform_error">Unable to load waveform.</string>
+    <string name="player_skip_back">Back 10 s</string>
+    <string name="player_skip_forward">Forward 10 s</string>
+    <string name="player_speed">Playback speed: %1$sx</string>
+    <string name="player_speed_value">%1$sx</string>
     <plurals name="library_group_count">
         <item quantity="one">%d recording</item>
         <item quantity="other">%d recordings</item>

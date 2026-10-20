@@ -23,7 +23,8 @@ data class PlaybackUiState(
     val buffering: Boolean = false,
     val positionMs: Long = 0,
     val durationMs: Long = 0,
-    val failed: Boolean = false
+    val failed: Boolean = false,
+    val speed: Float = 1f
 )
 
 internal fun RecordingEntity.hasPlayableAudio() =
@@ -39,6 +40,7 @@ fun PlayerScreen(
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
+    onSpeed: (Float) -> Unit = {},
     waveform: @Composable () -> Unit = {},
     actions: @Composable () -> Unit = {}
 ) {
@@ -80,6 +82,7 @@ fun PlayerScreen(
                 enabled = playable && state.ready && !state.failed && !blocked,
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(if (state.playRequested) R.string.player_pause else R.string.player_play)) }
+            TransportControls(state, playable && state.ready && !state.failed && !blocked, onSeek, onSpeed)
             RecordingRow(entry)
             actions()
         }

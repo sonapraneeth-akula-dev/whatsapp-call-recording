@@ -26,6 +26,8 @@ fun createRecordingPlayer(context: Context, store: CryptoStore, log: AppLog): Ex
             true
         )
         .setHandleAudioBecomingNoisy(true)
+        .setSeekBackIncrementMs(10_000)
+        .setSeekForwardIncrementMs(10_000)
         .build()
         .also { player ->
             player.addListener(object : Player.Listener {

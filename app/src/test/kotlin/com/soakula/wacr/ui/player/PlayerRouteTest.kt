@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
@@ -84,10 +85,35 @@ class PlayerRouteTest {
         compose.onNodeWithContentDescription(text(R.string.player_seek))
             .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(32_000f)) }
         compose.runOnIdle { assertEquals(32_000L, engine.currentPosition) }
+        compose.onNodeWithText(text(R.string.player_skip_back)).performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(22_000L, engine.currentPosition) }
+        compose.onNodeWithText(text(R.string.player_skip_forward)).performClick()
+        compose.runOnIdle { assertEquals(32_000L, engine.currentPosition) }
+        compose.onNodeWithText(compose.activity.getString(R.string.player_speed, "1")).performClick()
+        compose.onNodeWithText("2x").performClick()
+        compose.runOnIdle {
+            assertEquals(2f, engine.playbackParameters.speed, 0f)
+            assertEquals(1f, engine.playbackParameters.pitch, 0f)
+            assertEquals(10_000L, engine.seekBackIncrement)
+            assertEquals(10_000L, engine.seekForwardIncrement)
+        }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithText(compose.activity.getString(R.string.player_speed, "2")).performClick()
+        compose.onNodeWithText("0.75x").performClick()
+        compose.runOnIdle {
+            assertEquals(.75f, engine.playbackParameters.speed, 0f)
+            assertEquals(1f, engine.playbackParameters.pitch, 0f)
+        }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithText(compose.activity.getString(R.string.player_speed, "0.75")).performClick()
+        compose.onNodeWithText("2x").performClick()
+        compose.mainClock.advanceTimeBy(300)
         compose.onNodeWithText(text(R.string.player_play)).performClick()
         compose.runOnIdle { blocked.value = true }
         compose.onNodeWithText(text(R.string.player_pause)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.player_play)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.player_skip_back)).assertIsNotEnabled()
+        compose.onNodeWithText(compose.activity.getString(R.string.player_speed, "2")).assertIsNotEnabled()
         compose.runOnIdle { assertFalse(engine.playWhenReady); blocked.value = false }
         compose.onNodeWithText(text(R.string.player_play)).performClick()
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
