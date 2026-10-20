@@ -247,8 +247,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 2.2.1.2.1 | Task | Group detection: flag, group name, visible participants → `participants_json` — `CallTypeClassifier.kt`, `NameExtractor.kt` | 02:00 | 00:20 | Tests on group fixtures pass |  |
-| 2.2.1.2.2 | Task | Room fields + group golden test | 01:00 | 00:10 | Group session stored with names |  |
+| 2.2.1.2.1 | Task | Group detection: flag, group name, visible participants → `participants_json` — `CallTypeClassifier.kt`, `NameExtractor.kt` | 02:00 | 00:20 | Tests on group fixtures pass | **2026-10-20: blocked on signal evidence, not ordinary phone acceptance.** Current captured profile covers outgoing voice only and explicitly leaves group classification unverified. Need a redacted group-call spike capture with call screen/participant view to identify approved group-vs-one-to-one/name selectors. Title, a participant button or absent group markers alone cannot certify one-to-one. No group selector or caller/participant identity is invented; unknown group confidence stays unknown. Owner asked for evidence or a decision to defer these two tasks while other implementation continues; owner unavailable at this checkpoint. |
+| 2.2.1.2.2 | Task | Room fields + group golden test | 01:00 | 00:10 | Group session stored with names | **2026-10-20: blocked with 2.2.1.2.1.** Existing encrypted fields and explicit group confidence are present, but no positive captured group fixture is available. Synthetic storage alone cannot close native group identification or its golden test. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: classifier tests pass (FEAT-002.2.1)

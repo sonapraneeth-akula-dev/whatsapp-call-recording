@@ -111,7 +111,7 @@
     <string name="nav_allowlist">Allowlist</string>
     <string name="allowlist_title">Always-record contacts</string>
     <string name="allowlist_matching_warning">Matching uses WhatsApp display names, not phone numbers. Case, spacing and emoji are normalized. Different contacts with the same normalized name share one rule; duplicate selections never replace an existing rule. Group calls remain manual.</string>
-    <string name="allowlist_detection_pending">Rules are saved locally. Automatic call detection is not connected yet.</string>
+    <string name="allowlist_detection_pending">Rules are saved locally. Automatic recording is not connected yet; detection alone does not start recording.</string>
     <string name="allowlist_add">Add contact</string>
     <string name="allowlist_empty">No contacts selected. Use Add contact to choose one without granting access to your address book.</string>
     <string name="allowlist_remove">Remove</string>
