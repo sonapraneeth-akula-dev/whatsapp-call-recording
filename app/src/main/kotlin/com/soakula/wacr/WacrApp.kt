@@ -5,13 +5,22 @@ import android.util.Log
 import com.soakula.wacr.crypto.KeyManager
 import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.RecordingFiles
+import com.soakula.wacr.data.AppDatabase
 import com.soakula.wacr.util.AppLog
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 class WacrApp : Application() {
     val recordingFiles by lazy { RecordingFiles(filesDir) }
     val keys by lazy { KeyManager.open(this) }
     val crypto by lazy { CryptoStore(recordingFiles, keys.streamingAead) }
+    private val databaseLock = Mutex()
+    private var openDatabase: AppDatabase? = null
+
+    suspend fun database(): AppDatabase = databaseLock.withLock {
+        openDatabase ?: AppDatabase.open(this, keys.aead).also { openDatabase = it }
+    }
 
     lateinit var log: AppLog
         private set

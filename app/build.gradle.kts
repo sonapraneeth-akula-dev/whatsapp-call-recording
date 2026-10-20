@@ -109,6 +109,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.tink.android)
     implementation(libs.room.runtime)
+    implementation(libs.datastore.preferences)
+    implementation(libs.sqlcipher)
     kapt(libs.room.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

@@ -42,6 +42,18 @@ foreach ($case in @(
         }
     }
     if ($case.Id -ne 'com.soakula.wacr.spike') {
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($apk)
+        try {
+            $nativeLibraries = @($archive.Entries | Where-Object { $_.FullName -match '^lib/.+\.so$' })
+            if ('lib/arm64-v8a/libsqlcipher.so' -notin $nativeLibraries.FullName) {
+                throw "SQLCipher native library missing in $apk"
+            }
+            if ($nativeLibraries | Where-Object { $_.FullName -notmatch '^lib/arm64-v8a/' }) {
+                throw "Unexpected native ABI in $apk"
+            }
+        } finally {
+            $archive.Dispose()
+        }
         if (-not $manifest.manifest.application.GetAttribute('dataExtractionRules', $android)) {
             throw "Backup/transfer exclusions missing in $apk"
         }

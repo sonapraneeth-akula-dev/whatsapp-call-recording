@@ -8,6 +8,8 @@ junit = "4.13.2"
 tink = "1.19.0"
 room = "2.8.4"
 robolectric = "4.16.1"
+datastore = "1.2.1"
+sqlcipher = "4.19.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -20,6 +22,8 @@ tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+sqlcipher = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
