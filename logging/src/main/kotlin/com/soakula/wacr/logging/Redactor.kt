@@ -1,4 +1,4 @@
-package com.soakula.wacr.spike.log
+package com.soakula.wacr.logging
 
 import java.security.MessageDigest
 

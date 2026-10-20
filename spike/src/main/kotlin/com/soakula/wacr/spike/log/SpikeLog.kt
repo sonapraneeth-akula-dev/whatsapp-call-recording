@@ -3,6 +3,7 @@ package com.soakula.wacr.spike.log
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
+import com.soakula.wacr.logging.Json
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.BufferedWriter

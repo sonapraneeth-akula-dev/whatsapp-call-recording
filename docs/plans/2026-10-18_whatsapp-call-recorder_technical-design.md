@@ -486,6 +486,7 @@ No mocking library: interfaces + fakes keep tests readable and Kotlin-final-frie
 whatsapp-call-recording/
 ├─ docs/{plans,prds}/
 ├─ gradle/libs.versions.toml
+├─ logging/                          # shared pure-Kotlin JSON/redaction utilities
 ├─ build-logic/                      # convention plugins (android-app, android-lib, verifyNoInternet)
 ├─ app/
 │  ├─ schemas/                       # Room exported schema JSON
@@ -508,6 +509,8 @@ whatsapp-call-recording/
 **Conventions**: package-by-feature; `XxxScreen`/`XxxRoute`/`XxxViewModel`/`XxxUiState`; repositories expose `Flow`, never Room entities to UI (map to UI models); Kotlin official style via [ktlint](https://pinterest.github.io/ktlint/) + Android Lint `warningsAsErrors` in CI; commit messages reference IDs (`REQ-003 / FEAT-…`).
 
 **Foundation implementation (2026-10-20, task 5.1.1.1.1)**: `:app` and `:spike` are separate applications sharing only the root Gradle setup and version catalog; neither depends on the other. The app starts with a Material 3 placeholder, no capture services, no network permission and backup/transfer exclusions. Navigation, Room/SQLCipher, DataStore and `AppContainer` are deferred until their first consuming feature; convention plugins are deferred until shared build behavior warrants extraction. No unused persistence/DI scaffolding or spike-debug code is copied into production. Product screens still require M-008.1 approval; the capture decision in discovery §11 remains provisional.
+
+**Diagnostics implementation (2026-10-20, task 5.1.1.1.2)**: both applications now consume `:logging` for the existing JSON encoder and redaction hashes; no app-to-spike dependency. Production `AppLog` keeps complete UTF-8 JSONL entries within a 1 MB ring, limits individual entries to 4 KB, mirrors to logcat, and chains Android's original crash handler after writing a crash file. Release builds conservatively hash all string data values and exclude throwable messages (including causes); tags/events must be static snake_case identifiers and attribute keys must be static field names, never call content. Disk-write failures remain visible in logcat. Local builds/JVM tests are the current gate; CI is deferred and phone UAT belongs to the owner.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |

@@ -1,4 +1,4 @@
-package com.soakula.wacr.spike.log
+package com.soakula.wacr.logging
 
 /** Minimal JSON encoder (no dependency, JVM-testable). Non-ASCII is written raw (UTF-8 files). */
 object Json {

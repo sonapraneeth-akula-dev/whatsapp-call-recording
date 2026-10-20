@@ -9,7 +9,7 @@ import android.os.SystemClock
 import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
 import com.soakula.wacr.spike.Prefs
-import com.soakula.wacr.spike.log.Json
+import com.soakula.wacr.logging.Json
 import com.soakula.wacr.spike.log.SpikeLog
 
 /** While the WhatsApp call screen is shown: dump its view tree ~1/s (tree/<ts>.json) and optional screenshots (shots/). */

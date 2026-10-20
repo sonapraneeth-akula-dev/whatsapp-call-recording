@@ -1,5 +1,8 @@
 package com.soakula.wacr.spike.log
 
+import com.soakula.wacr.logging.Json
+import com.soakula.wacr.logging.Redactor
+
 import android.Manifest
 import android.content.ClipData
 import android.content.ContentValues

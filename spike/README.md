@@ -92,7 +92,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
 ## Where it lives
 
-- Production shell: `app\src\main\kotlin\com\soakula\wacr\`; no recording behavior yet. The spike's code, settings and saved runs are unchanged.
+- Production shell: `app\src\main\kotlin\com\soakula\wacr\`; no recording behavior yet. Both apps reuse JSON/redaction helpers from `:logging`; spike capture behavior, settings and saved runs are preserved.
 - Separate install identities: **WACR Spike** = `com.soakula.wacr.spike`, **WACR Debug** = `com.soakula.wacr.debug`, release **WACR** = `com.soakula.wacr`. Installing the app does not replace the spike.
 - Source code: `spike/src/main/kotlin/com/soakula/wacr/spike/`
 - Logs on the phone: app-private `files/runs/<time>_<label>/` containing `events.jsonl`, `device.json`, `matrix.md`, `audio/*.wav`, `tree/*.json`, `shots/*.jpg` and `crash.txt`.

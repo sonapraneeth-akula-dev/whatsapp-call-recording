@@ -2,8 +2,8 @@ package com.soakula.wacr.spike
 
 import com.soakula.wacr.spike.analysis.FrameMeter
 import com.soakula.wacr.spike.analysis.Rms
-import com.soakula.wacr.spike.log.Json
-import com.soakula.wacr.spike.log.Redactor
+import com.soakula.wacr.logging.Json
+import com.soakula.wacr.logging.Redactor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

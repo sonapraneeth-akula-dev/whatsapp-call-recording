@@ -450,9 +450,9 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 5.1.1.1.1 | Task | Scaffold independent `:app` (Compose, Material 3); ids `com.soakula.wacr` / `.debug`; retain `:spike` unchanged — `app/build.gradle.kts` | 02:30 | 00:25 | Build both app variants + spike; `tools\test-app-shell.ps1` checks APK identities/privacy; app placeholder launches | First v1 code. **2026-10-20: foundation implemented.** Ponytail scope: defer Navigation, Room/SQLCipher, DataStore and `AppContainer` to first consumers; convention plugins to shared build behavior. No product UI or capture-gate completion claimed. |
-| 5.1.1.1.2 | Task | `AppLog`: 1 MB ring file in `files/logs/`, logcat tag `WACR`, release redaction of names/numbers, crash handler `crash-*.txt` — `app/…/util/AppLog.kt` | 02:00 | 00:20 | Redaction tests; forced crash writes file | Same tooling style as spike |
+| 5.1.1.1.2 | Task | `AppLog`: 1 MB ring file in `files/logs/`, logcat tag `WACR`, release redaction of names/numbers, crash handler `crash-*.txt` — `app/…/util/AppLog.kt` | 02:00 | 00:20 | Redaction tests; forced crash writes file | **2026-10-20: implemented; local JVM tests/build/lint pass.** Shared JSON/hash utilities extracted to `:logging`; spike behavior retained. Release hashes all string data values and omits exception messages; disk failures reported to logcat; system crash handler always chained. Phone UAT by owner. |
 | 5.1.1.1.3 | Task | Manifest hardening: `allowBackup=false`, `dataExtractionRules` exclude all, `INTERNET` `tools:node="remove"`; `verifyNoInternet` Gradle task | 01:30 | 00:20 | `aapt2 dump permissions` has no INTERNET; task fails if added |  |
-| 5.1.1.1.4 | Task | GitHub Actions: lint, test, `verifyNoInternet`, `assembleDebug` — `.github/workflows/ci.yml` | 01:00 | 00:10 | Workflow green | No artifact upload |
+| 5.1.1.1.4 | Task | GitHub Actions: lint, test, `verifyNoInternet`, `assembleDebug` — `.github/workflows/ci.yml` | 01:00 | 00:10 | Workflow green | **Deferred by owner (2026-10-20)**; local builds/unit tests only for now. No artifact upload. |
 
 #### Feature 5.1.2 (FEAT-005.1.2): App-private storage
 - **Est. Manual**: 01:00 | **Est. AI**: 00:15
