@@ -345,7 +345,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 3.3.1.1.1 | Task | `SegmentWriter`: 5 s Tink-encrypted segments — `app/…/recording/SegmentWriter.kt` | 02:30 | 00:15 | Tests: rotation every 5 s; each segment decrypts | After M-005.2 |
+| 3.3.1.1.1 | Task | `SegmentWriter`: 5 s Tink-encrypted segments — `app/…/recording/SegmentWriter.kt` | 02:30 | 00:15 | Tests: rotation every 5 s; each segment decrypts | **2026-10-20: implemented; local duration/authentication/failure tests + build/lint pass.** Rotate before 5 s at complete ADTS boundaries (78 frames = 4.992 s). Commit callbacks only after ciphertext closes; metadata callback failure preserves the durable segment; failed partial writes remove only the active segment. Recorder/Room wiring remains separate. |
 | 3.3.1.1.2 | Task | `Finalizer`: merge → `audio.aac.enc`, delete segments, status `FINALIZED` — `app/…/recording/Finalizer.kt` | 02:00 | 00:15 | Merged file decodes; duration matches |  |
 | 3.3.1.1.3 | Task | `Recovery` on app start / `BOOT_COMPLETED` / `MY_PACKAGE_REPLACED` → `RECOVERED`; drop unauthenticated tail — `app/…/recording/Recovery.kt` | 02:00 | 00:15 | `adb shell am kill` mid-call → recovered file loses ≤ 5 s |  |
 

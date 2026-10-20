@@ -52,6 +52,9 @@ class CryptoStore(private val files: RecordingFiles, private val encryption: Str
         }
     }
 
+    fun delete(recordingId: UUID, kind: String): Boolean =
+        Files.deleteIfExists(files.file(recordingId, kind).toPath())
+
     private fun associatedData(recordingId: UUID, kind: String) =
         "v1|$recordingId|$kind".toByteArray(Charsets.UTF_8)
 }
