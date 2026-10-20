@@ -103,6 +103,7 @@ tasks.named("check") { dependsOn(verifyNoInternet) }
 // ponytail: add Navigation and DI when a feature consumes them.
 dependencies {
     implementation(project(":logging"))
+    implementation(project(":audio"))
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

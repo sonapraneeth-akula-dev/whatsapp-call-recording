@@ -1,4 +1,4 @@
-package com.soakula.wacr.spike.analysis
+package com.soakula.wacr.audio
 
 import kotlin.math.ceil
 import kotlin.math.log10

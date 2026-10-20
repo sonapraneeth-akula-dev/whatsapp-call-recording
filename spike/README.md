@@ -92,7 +92,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
 ## Where it lives
 
-- Production shell: `app\src\main\kotlin\com\soakula\wacr\`; no recording behavior yet. Both apps reuse JSON/redaction helpers from `:logging`; spike capture behavior, settings and saved runs are preserved.
+- Production shell/backend: `app\src\main\kotlin\com\soakula\wacr\`; capture, encryption, metadata and recovery components exist, but no recording service/product UI is wired yet. Both apps reuse JSON/redaction helpers from `:logging` and unchanged RMS utilities from `:audio`; spike capture behavior, settings and saved runs are preserved.
 - Separate install identities: **WACR Spike** = `com.soakula.wacr.spike`, **WACR Debug** = `com.soakula.wacr.debug`, release **WACR** = `com.soakula.wacr`. Installing the app does not replace the spike.
 - Source code: `spike/src/main/kotlin/com/soakula/wacr/spike/`
 - Logs on the phone: app-private `files/runs/<time>_<label>/` containing `events.jsonl`, `device.json`, `matrix.md`, `audio/*.wav`, `tree/*.json`, `shots/*.jpg` and `crash.txt`.
@@ -111,7 +111,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
   .\tools\test-app-shell.ps1 -SdkPath "$env:LOCALAPPDATA\Android\Sdk"
   ```
 
-  Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. The shell requests no recording permissions and cannot record calls.
+  Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. The microphone permission is declared for the capture backend but no permission flow/service starts capture; the shell still cannot record calls.
 
   Every production APK build runs the merged-manifest network guard automatically. The scripts also check backup/transfer exclusions in the packaged resources; CI is intentionally deferred.
 

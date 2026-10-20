@@ -11,9 +11,9 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import com.soakula.wacr.spike.Prefs
-import com.soakula.wacr.spike.analysis.FrameMeter
+import com.soakula.wacr.audio.FrameMeter
 import com.soakula.wacr.spike.analysis.MatrixReport
-import com.soakula.wacr.spike.analysis.Rms
+import com.soakula.wacr.audio.Rms
 import com.soakula.wacr.spike.analysis.SourceResult
 import com.soakula.wacr.spike.log.Names
 import com.soakula.wacr.spike.log.SpikeLog

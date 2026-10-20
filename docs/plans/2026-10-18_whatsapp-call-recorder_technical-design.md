@@ -529,6 +529,8 @@ whatsapp-call-recording/
 
 **Storage guard implementation (2026-10-20, task 3.3.2.1.1)**: MB thresholds are decimal: warn below 500,000,000 available bytes and stop below 100,000,000. The recording worker must force a fresh check before each start and call `poll()` while capturing; filesystem reads occur no more often than every 30 monotonic seconds. `StatFs` samples the app-private partition. Failed/negative samples throw rather than caching READY; recorder notification/stop wiring belongs to the service task.
 
+**Capture implementation (2026-10-20, task 3.1.1.1.1)**: follow discovery §11's provisional mono 16 kHz `VOICE_RECOGNITION` decision; no fabricated own/remote stereo mapping. `CaptureProfile` accepts ordered fallback lists and route overrides, but seeds only the proven preferred source. Like the encoder, `CaptureEngine` is worker-confined and uses nonblocking PCM pulls instead of queuing a `Flow`; zero-length reads require a worker wait and become source failures after two seconds. Explicit framework silencing or dead input can advance the configured source order; RMS/digital-zero speech pauses never do. The engine never requests focus or changes audio mode, route or speaker state, and does not request privacy-sensitive/exclusive capture. Existing RMS utilities now live unchanged in shared pure-JVM `:audio`, consumed by both apps. Permission/security failures surface rather than trying to disguise them as source fallback. Native capture, remote audibility and dual-source support still need phone evidence.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

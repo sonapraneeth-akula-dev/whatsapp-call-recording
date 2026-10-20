@@ -1,7 +1,7 @@
 package com.soakula.wacr.spike
 
-import com.soakula.wacr.spike.analysis.FrameMeter
-import com.soakula.wacr.spike.analysis.Rms
+import com.soakula.wacr.audio.FrameMeter
+import com.soakula.wacr.audio.Rms
 import com.soakula.wacr.logging.Json
 import com.soakula.wacr.logging.Redactor
 import org.junit.Assert.assertEquals
