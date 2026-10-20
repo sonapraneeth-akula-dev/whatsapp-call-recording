@@ -119,6 +119,7 @@ class RecordingJobTest {
     @Test fun storageWarningAndForcedStopStillFinalizeAuthenticatedAudio() = runBlocking {
         val id = UUID.randomUUID()
         val warnings = mutableListOf<Boolean>()
+        var saving = 0
         val result = checkNotNull(job().run(id, null, {
             elapsed += StorageGuard.INTERVAL_MS
             bytes = when {
@@ -127,11 +128,24 @@ class RecordingJobTest {
                 else -> 1_000_000_000
             }
             false
-        }, { _, warning -> warnings += warning }, {}))
+        }, { _, warning -> warnings += warning }, { saving++ }))
         assertEquals(listOf(false, true), warnings)
         assertEquals(RecordingStopReason.LOW_STORAGE, result.reason)
         assertEquals(3, reads)
-        assertEquals(RecordingStatus.FINALIZED, database.recordings().recording(id)?.status)
+        assertEquals(1, saving)
+        assertTrue(inputs.all { it.state == AudioRecord.STATE_UNINITIALIZED })
+        val row = checkNotNull(database.recordings().recording(id))
+        assertEquals(RecordingStatus.FINALIZED, row.status)
+        assertEquals(result.audio.durationUs / 1000, row.durationMs)
+        assertEquals(result.audio.encryptedBytes, row.sizeBytes)
+        assertNull(row.remoteCaptured)
+        val inspected = Channels.newInputStream(crypto.openReader(id, "audio.aac.enc")).use { AacFormat(1).inspect(it) }
+        assertTrue(inspected.durationUs > 0)
+        assertEquals(result.audio.durationUs, inspected.durationUs)
+        assertEquals(result.audio.plainBytes, inspected.bytes)
+        assertTrue(files.segmentIndices(id).isEmpty())
+        assertTrue(database.recordings().segments(id).isEmpty())
+        assertEquals(listOf("audio.aac.enc"), files.file(id, "audio.aac.enc").parentFile!!.listFiles()!!.map { it.name })
         assertNotNull(database.recordings().waveform(id))
     }
 

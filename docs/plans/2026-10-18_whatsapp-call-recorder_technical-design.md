@@ -689,6 +689,21 @@ Preparing/Recording/Saving reject session Play. More importantly, RecorderServic
 
 **Advanced player interaction coverage (2026-10-20, task 11.2.1.1.3)**: added native Compose EOF/restart, fresh-engine paused Retry, initial capture connection blocking and capture-dismissed speed-menu tests. Repeated private notification requests open the exact recording even outside current contact/search filters; Back restores those filters. The production cancellable connector is exercised through the real service-token/manifest binding, not only direct in-process session tokens, including disconnect/error and cancellation/unbind without shared-engine release. Missing, active, unsafe-artifact and pending-deletion rows all fail source selection without retaining old audio. Media3 custom playback exceptions disable mutation commands on that controller, so tests reconnect as the product Retry does rather than silently clearing the exception from test code. Existing actual notification PendingIntent transport, native speed/pitch/seek, waveform, source authentication, private metadata and microphone-priority coverage remains. Synthetic host timelines do not replace owner phone AAC/audibility/System UI acceptance.
 
+**Low-storage native simulation (2026-10-20, task 3.3.2.1.2)**: LowStorageSimulationTest is a real androidTest, built separately from the app. It uses a visible MainActivity, grants microphone permission, refuses an in-progress capture and closes background playback before running the real capture/encoder/finalizer with an injected free-space source and monotonic clock. Storage transitions exercise the exact 500,000,000-byte warning boundary, one byte below it, and one byte below the 100,000,000-byte stop boundary without filling the phone. Recording/database/keys/logs live only in a unique JUnit-owned cache directory/in-memory synthetic database, cleaned afterward; production recording metadata/artifacts are not used.
+
+Assertions require a LOW_STORAGE clean result, exactly one saving transition, warning change, matching finalized duration/encrypted size, no remote-capture claim and no remaining segments/pending artifacts. MediaExtractor reads the encrypted result through a synchronized seekable Tink-backed MediaDataSource, then the phone's real MediaCodec AAC decoder must reach EOS and produce non-empty PCM. No plaintext audio file or external/network source is introduced. Host orchestration tests additionally authenticate/inspect the whole resulting AAC framing, check microphone release and verify cleanup/metadata, but their copying codec is not a native decoder claim. AndroidJUnitRunner/test extension are test-only pinned dependencies with strict checksums; runner analytics are disabled and INTERNET is removed from the test APK as well. Local compilation and host tests do not substitute for the owner's native phone run.
+
+Run while no call/recording is active. The test captures a short microphone sample and leaves microphone permission granted; it does not start a WhatsApp call or prove either side's audibility. Install the matching app and instrumentation APKs on the selected phone, then run the single test:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb -s <serial> install -r .\dist\app-debug.apk
+& $adb -s <serial> install -r -t .\dist\app-debug-androidTest.apk
+& $adb -s <serial> shell am instrument -w -e disableAnalytics true -e class com.soakula.wacr.recording.LowStorageSimulationTest com.soakula.wacr.debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+**Open app-lock behavior decision (2026-10-20, tasks 11.3.1.1.1/.2)**: before enabling the persisted optional lock, owner must choose whether the 60-second background relock stops already-started playback, or permits it to continue until paused while requiring authentication for further playback/selection/seek. UI route gating, strong biometric/device credential, open onboarding, FLAG_SECURE and continued recording while locked are already specified; no playback-lifetime choice was silently made. Owner was unavailable for the question; both usable gate/toggle remain blocked while independent implementation proceeds.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

@@ -360,7 +360,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 3.3.2.1.1 | Task | `StorageGuard`: check before start and every 30 s; warn < 500 MB, clean stop + finalize < 100 MB — `app/…/recording/StorageGuard.kt` | 02:00 | 00:20 | Tests with fake free-space source; warning shown | **2026-10-20: guard component implemented; exact boundary/timing/failure tests + debug build/lint pass.** Decimal MB thresholds, fresh pre-start reading, monotonic 30 s polling, native private-partition `StatFs`. Notification and clean-stop/finalization integration awaits recorder service; errors never become cached READY. |
-| 3.3.2.1.2 | Task | Instrumented low-storage simulation | 01:00 | 00:10 | Clean stop; file valid |  |
+| 3.3.2.1.2 | Task | Instrumented low-storage simulation | 01:00 | 00:10 | Clean stop; file valid | **2026-10-20: real-device simulation implemented and test APK builds locally; device execution remains owner UAT.** Isolated temporary metadata/files/keys, real AudioRecord/AAC encoder, injected monotonic storage checks (500 MB, below 500 MB, below 100 MB), exact warning/saving/LOW_STORAGE/final metadata/cleanup assertions. Native MediaExtractor/MediaCodec must decode authenticated encrypted AAC to non-empty PCM and reach EOS through a seekable in-memory adapter: no plaintext temp audio, disk filling or remote-audibility inference. Refuses an existing recording, stops playback first, grants microphone access and keeps the app visible. Existing local Android-API simulation now also fully authenticates/inspects the final artifact and verifies microphone release, one save, metadata and no leftover segments. AndroidJUnitRunner analytics disabled; test APK removes INTERNET too. This is compiled instrumentation, not a claimed phone pass; commands in technical design. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: chunk writer and repair logic tests pass; ≥ 80% coverage (FEAT-003.3.1, FEAT-003.3.2)
@@ -842,8 +842,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 11.3.1.1.1 | Task | Biometric gate (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`), relock after 60 s, `FLAG_SECURE` | 02:00 | 00:20 | Manual on both phones |  |
-| 11.3.1.1.2 | Task | Lock toggle in Settings | 00:30 | 00:10 | Persists |  |
+| 11.3.1.1.1 | Task | Biometric gate (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`), relock after 60 s, `FLAG_SECURE` | 02:00 | 00:20 | Manual on both phones | **Blocked (2026-10-20): owner playback/relock choice needed.** Approved route map gates Home/Library/Player/Allowlist/Settings, leaves onboarding open, and keeps recording independent of UI authentication. It does not say whether already-started background playback must stop at the 60-second relock or may continue until paused while new playback/selection/seek require authentication. Asked owner; unavailable. No default silently imposed; existing FLAG_SECURE retained. Independent work continues. |
+| 11.3.1.1.2 | Task | Lock toggle in Settings | 00:30 | 00:10 | Persists | **Blocked by 11.3.1.1.1 (2026-10-20).** A usable toggle must not advertise a privacy gate before its playback behavior is resolved and enforced. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Manual / UAT**: lock verified on both phones (US-045)
