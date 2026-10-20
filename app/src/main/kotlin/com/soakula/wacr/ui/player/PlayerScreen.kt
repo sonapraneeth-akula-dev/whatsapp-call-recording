@@ -39,6 +39,7 @@ fun PlayerScreen(
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
+    waveform: @Composable () -> Unit = {},
     actions: @Composable () -> Unit = {}
 ) {
     val playable = entry.recording.hasPlayableAudio()
@@ -59,6 +60,7 @@ fun PlayerScreen(
                 state.failed -> Text(stringResource(R.string.player_error), color = MaterialTheme.colorScheme.error)
                 !state.ready || state.buffering -> LinearProgressIndicator(Modifier.fillMaxWidth())
             }
+            waveform()
             Slider(
                 value = (scrub ?: state.positionMs.toFloat()).coerceIn(0f, duration.toFloat()),
                 onValueChange = { scrub = it },

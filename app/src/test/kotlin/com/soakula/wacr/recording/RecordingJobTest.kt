@@ -90,6 +90,9 @@ class RecordingJobTest {
         assertNull(row.remoteCaptured)
         assertEquals(result.audio.durationUs / 1000, row.durationMs)
         assertEquals(result.audio.encryptedBytes, row.sizeBytes)
+        val waveform = checkNotNull(database.recordings().waveform(id)).decode()
+        assertEquals(minOf(reads * 1024L, result.audio.durationUs / AacFormat.FRAME_DURATION_US * 1024), waveform.frameCount)
+        assertTrue(waveform.encodedPeaks().size <= WaveformAccumulator.MAX_PEAKS)
         assertTrue(files.segmentIndices(id).isEmpty())
         assertTrue(database.recordings().segments(id).isEmpty())
         val inspected = Channels.newInputStream(crypto.openReader(id, "audio.aac.enc")).use { AacFormat(1).inspect(it) }
@@ -129,6 +132,7 @@ class RecordingJobTest {
         assertEquals(RecordingStopReason.LOW_STORAGE, result.reason)
         assertEquals(3, reads)
         assertEquals(RecordingStatus.FINALIZED, database.recordings().recording(id)?.status)
+        assertNotNull(database.recordings().waveform(id))
     }
 
     @Test fun failureRetainsEncryptedAudioForRecoveryInsteadOfClaimingSuccess() = runBlocking {
@@ -143,6 +147,7 @@ class RecordingJobTest {
         assertFalse(files.file(id, "audio.aac.enc").exists())
         assertEquals(RecoveryReport(1, 0, 0), Recovery(database, files, crypto, log).run())
         assertEquals(RecordingStatus.RECOVERED, database.recordings().recording(id)?.status)
+        assertNotNull(database.recordings().waveform(id))
     }
 
     @Test fun immediateStopAfterSetupDoesNotInventAnAudioFile() = runBlocking<Unit> {

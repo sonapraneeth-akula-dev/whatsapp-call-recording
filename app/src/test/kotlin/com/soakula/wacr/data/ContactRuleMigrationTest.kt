@@ -59,7 +59,7 @@ class ContactRuleMigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 3, true, AppDatabase.MIGRATION_2_3).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
             .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4,
-                AppDatabase.MIGRATION_4_5).build()
+                AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6).build()
         try {
             val recording = checkNotNull(db.recordings().recording(id))
             assertTrue(recording.starred)
@@ -97,7 +97,7 @@ class ContactRuleMigrationTest {
         }
         helper.runMigrationsAndValidate(TEST_DB, 4, true, AppDatabase.MIGRATION_3_4).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
-            .addMigrations(AppDatabase.MIGRATION_4_5).build()
+            .addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6).build()
         try {
             val legacy = checkNotNull(db.recordings().session(7))
             assertFalse(legacy.isGroup)
@@ -131,7 +131,8 @@ class ContactRuleMigrationTest {
             """.trimIndent(), arrayOf(id.toString()))
         }
         helper.runMigrationsAndValidate(TEST_DB, 5, true, AppDatabase.MIGRATION_4_5).close()
-        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
+        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
+            .addMigrations(AppDatabase.MIGRATION_5_6).build()
         try {
             assertEquals(CallType.VOICE, db.recordings().session(7)?.callType)
             assertTrue(checkNotNull(db.recordings().session(7)).isGroupKnown)
@@ -145,6 +146,27 @@ class ContactRuleMigrationTest {
         } finally {
             db.close()
         }
+    }
+
+    @Test fun waveformMigrationPreservesExistingRowsAndAddsCascadingBoundedMetadata() = runBlocking {
+        val id = UUID.randomUUID()
+        helper.createDatabase(TEST_DB, 5).use { db ->
+            db.execSQL("""
+                INSERT INTO recording (id, started_at, channels, capture_source, status, has_video, starred)
+                VALUES (?, 1000, 1, 'MIC', 'FINALIZED', 0, 1)
+            """.trimIndent(), arrayOf(id.toString()))
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 6, true, AppDatabase.MIGRATION_5_6).close()
+        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
+        try {
+            assertTrue(checkNotNull(db.recordings().recording(id)).starred)
+            assertNull(db.recordings().waveform(id))
+            val peaks = com.soakula.wacr.recording.WaveformPeaks(1600, 1024, byteArrayOf(100))
+            db.recordings().putWaveform(RecordingWaveformEntity.encode(id, peaks))
+            assertArrayEquals(byteArrayOf(100), db.recordings().waveform(id)?.decode()?.encodedPeaks())
+            db.recordings().deleteRecording(id)
+            assertNull(db.recordings().waveform(id))
+        } finally { db.close() }
     }
 
     private companion object { const val TEST_DB = "synthetic-contact-rule-migration.db" }

@@ -30,6 +30,7 @@ import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.playback.DecryptingDataSource
 import com.soakula.wacr.playback.createRecordingPlayer
 import com.soakula.wacr.util.AppLog
+import com.soakula.wacr.recording.WaveformPeaks
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -67,13 +68,15 @@ class PlayerRouteTest {
         val blocked = mutableStateOf(false)
         compose.setContent {
             MaterialTheme {
-                if (shown.value) PlayerRoute(entry, blocked.value, {}, { ready }, { throw AssertionError(it) })
+                if (shown.value) PlayerRoute(entry, blocked.value, {}, { ready }, { throw AssertionError(it) },
+                    loadWaveform = { WaveformPeaks(1600, 1_024_000, ByteArray(640) { 100 }) })
             }
         }
         compose.runOnIdle {
             assertFalse(engine.playWhenReady)
             assertEquals(DecryptingDataSource.uri(entry.recording.id), engine.currentMediaItem?.localConfiguration?.uri)
         }
+        compose.onNodeWithContentDescription(text(R.string.player_waveform)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.player_play)).performClick()
         compose.runOnIdle { assertTrue(engine.playWhenReady) }
         compose.onNodeWithText(text(R.string.player_pause)).performClick()

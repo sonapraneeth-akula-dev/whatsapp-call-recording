@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.playback.DecryptingDataSource
+import com.soakula.wacr.recording.WaveformPeaks
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.io.IOException
@@ -23,6 +24,8 @@ fun PlayerRoute(
     onBack: () -> Unit,
     createPlayer: suspend () -> Player,
     reportFailure: (Throwable) -> Unit,
+    loadWaveform: suspend () -> WaveformPeaks? = { null },
+    reportWaveformFailure: (Throwable) -> Unit = reportFailure,
     actions: @Composable (() -> Unit) -> Unit = {}
 ) {
     var engine by remember { mutableStateOf<Player?>(null) }
@@ -97,6 +100,11 @@ fun PlayerRoute(
             }
         }
     }, onSeek = { position -> if (!blocked) player?.seekTo(position) },
+        waveform = {
+            if (playable) WaveformPanel(entry.recording.id,
+                if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f,
+                loadWaveform, reportWaveformFailure)
+        },
         actions = { actions { player?.pause() } })
 }
 

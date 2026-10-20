@@ -2,6 +2,7 @@ package com.soakula.wacr.data
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -15,10 +16,14 @@ interface RecordingDao {
     @Insert suspend fun insertRecording(recording: RecordingEntity)
     @Insert suspend fun insertSegment(segment: SegmentEntity)
     @Insert suspend fun insertRoute(event: RouteEventEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putWaveform(waveform: RecordingWaveformEntity)
     @Update suspend fun updateRecording(recording: RecordingEntity): Int
 
     @Query("SELECT * FROM recording WHERE id = :id")
     suspend fun recording(id: UUID): RecordingEntity?
+
+    @Query("SELECT * FROM recording_waveform WHERE recording_id = :id")
+    suspend fun waveform(id: UUID): RecordingWaveformEntity?
 
     @Transaction
     @Query("""

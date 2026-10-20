@@ -45,6 +45,8 @@ class RecordingJob(
         if (initialStorage.level == StorageLevel.STOP) throw LowStorageException()
         if (shouldStop()) return null
         val segments = mutableListOf<CommittedSegment>()
+        val waveform = WaveformAccumulator(1)
+        var committedDurationUs = 0L
         var reason = RecordingStopReason.REQUESTED
         val initialRoute = routes?.takeInitialRoute()
         CaptureEngine(profile, initialRoute, log).use { capture ->
@@ -54,7 +56,9 @@ class RecordingJob(
             runBlocking { repository.start(RecordingEntity(id, startedAt, 1, capture.source.name, sessionId = sessionId)) }
             if (initialRoute != null) runBlocking { repository.recordRoute(id, initialRoute, 0) }
             SegmentWriter(id, crypto, capture.format) { segment ->
-                runBlocking { repository.commitSegment(id, segment, now()) }
+                committedDurationUs += segment.durationUs
+                val peaks = waveform.snapshot()?.limitedTo(committedDurationUs / AacFormat.FRAME_DURATION_US * 1024)
+                runBlocking { repository.commitSegment(id, segment, now(), peaks) }
                 segments += segment
             }.use { writer ->
                 AacEncoder(capture.format, writer::write).use { encoder ->
@@ -79,7 +83,10 @@ class RecordingJob(
                             capture.changeRoute(change.route)
                         }
                         val count = capture.read(pcm)
-                        if (count > 0) encoder.encode(pcm, count) else Thread.sleep(10)
+                        if (count > 0) {
+                            waveform.append(pcm, count)
+                            encoder.encode(pcm, count)
+                        } else Thread.sleep(10)
                     }
                 }
             }
@@ -90,7 +97,7 @@ class RecordingJob(
             throw EmptyRecordingException()
         }
         val audio = Finalizer(files, crypto, AacFormat(1)) { _, result ->
-            runBlocking { repository.finalize(id, result) }
+            runBlocking { repository.finalize(id, result, waveform = waveform.snapshot()) }
         }.finish(id, segments)
         runBlocking { repository.completeCleanup(id) }
         log.log("recorder", "finalized", mapOf(

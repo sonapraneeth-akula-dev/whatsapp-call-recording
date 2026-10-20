@@ -5,6 +5,7 @@ import com.soakula.wacr.recording.AacFormat
 import com.soakula.wacr.recording.CommittedSegment
 import com.soakula.wacr.recording.FinalizedAudio
 import com.soakula.wacr.recording.SegmentWriter
+import com.soakula.wacr.recording.WaveformPeaks
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.UUID
@@ -37,7 +38,7 @@ class RecordingRepository(private val database: AppDatabase) {
         }
     }
 
-    suspend fun commitSegment(id: UUID, segment: CommittedSegment, writtenAt: Long) {
+    suspend fun commitSegment(id: UUID, segment: CommittedSegment, writtenAt: Long, waveform: WaveformPeaks? = null) {
         require(segment.durationUs in 1..SegmentWriter.MAX_DURATION_US &&
             segment.durationUs % AacFormat.FRAME_DURATION_US == 0L && writtenAt >= 0)
         val frames = segment.durationUs / AacFormat.FRAME_DURATION_US
@@ -46,6 +47,7 @@ class RecordingRepository(private val database: AppDatabase) {
             check(dao.recording(id)?.status == RecordingStatus.RECORDING) { "Recording is not active" }
             require(segment.index == (dao.lastSegmentIndex(id) ?: 0) + 1) { "Segment index is not contiguous" }
             dao.insertSegment(SegmentEntity(id, segment.index, segment.durationUs, segment.plainBytes, writtenAt))
+            waveform?.let { dao.putWaveform(RecordingWaveformEntity.encode(id, it)) }
         }
     }
 
@@ -59,7 +61,7 @@ class RecordingRepository(private val database: AppDatabase) {
         }
     }
 
-    suspend fun finalize(id: UUID, audio: FinalizedAudio, recovered: Boolean = false) {
+    suspend fun finalize(id: UUID, audio: FinalizedAudio, recovered: Boolean = false, waveform: WaveformPeaks? = null) {
         require(audio.durationUs > 0 && audio.durationUs % AacFormat.FRAME_DURATION_US == 0L)
         require(audio.plainBytes > 0 && audio.encryptedBytes > audio.plainBytes)
         database.withTransaction {
@@ -76,6 +78,11 @@ class RecordingRepository(private val database: AppDatabase) {
                     status = if (recovered) RecordingStatus.RECOVERED else RecordingStatus.FINALIZED,
                     durationMs = audio.durationUs / 1000, sizeBytes = audio.encryptedBytes, audioPath = path
                 )) == 1)
+            }
+            val peaks = waveform ?: dao.waveform(id)?.decode()
+            peaks?.let {
+                dao.putWaveform(RecordingWaveformEntity.encode(id,
+                    it.limitedTo(audio.durationUs / AacFormat.FRAME_DURATION_US * 1024)))
             }
         }
     }

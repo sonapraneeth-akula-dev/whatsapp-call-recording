@@ -18,9 +18,10 @@ import java.util.UUID
 @Database(
     entities = [
         CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
-        ContactRuleEntity::class, PendingRecordingDeletion::class, CallTypeEventEntity::class
+        ContactRuleEntity::class, PendingRecordingDeletion::class, CallTypeEventEntity::class,
+        RecordingWaveformEntity::class
     ],
-    version = 5, exportSchema = true
+    version = 6, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -70,6 +71,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS recording_waveform (
+                        recording_id TEXT NOT NULL PRIMARY KEY, frames_per_peak INTEGER NOT NULL,
+                        frame_count INTEGER NOT NULL, peaks BLOB NOT NULL,
+                        FOREIGN KEY(recording_id) REFERENCES recording(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+            }
+        }
+
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
             val password = DatabaseSecret.open(application, application.getDatabasePath(NAME), encryption).load()
@@ -79,7 +92,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true

@@ -177,6 +177,12 @@ class MainActivity : ComponentActivity() {
                         reportFailure = { error ->
                             app.log.log("playback", "open_failed", mapOf("error_type" to error.javaClass.simpleName))
                         },
+                        loadWaveform = {
+                            withContext(Dispatchers.IO) { app.database().recordings().waveform(entry.recording.id)?.decode() }
+                        },
+                        reportWaveformFailure = { error ->
+                            app.log.log("playback", "waveform_load_failed", mapOf("error_type" to error.javaClass.simpleName))
+                        },
                         actions = { pause ->
                             RecordingActions(entry, actions, { title -> library.rename(entry.recording.id, title) }) {
                                 pause()

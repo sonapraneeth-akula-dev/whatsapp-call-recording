@@ -17,6 +17,9 @@
     <string name="library_all_dates">All dates</string>
     <string name="library_clear_filters">Clear filters</string>
     <string name="library_filter_empty">No recordings match these filters.</string>
+    <string name="player_waveform">Audio amplitude waveform</string>
+    <string name="player_waveform_missing">Waveform data unavailable for this recording.</string>
+    <string name="player_waveform_error">Unable to load waveform.</string>
     <plurals name="library_group_count">
         <item quantity="one">%d recording</item>
         <item quantity="other">%d recordings</item>

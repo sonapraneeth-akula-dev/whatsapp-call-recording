@@ -821,7 +821,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 11.2.1.1.1 | Task | Waveform peaks computed at finalize + `Waveform` composable | 02:00 | 00:20 | Waveform renders for 60-min file |  |
+| 11.2.1.1.1 | Task | Waveform peaks computed at finalize + `Waveform` composable | 02:00 | 00:20 | Waveform renders for 60-min file | **2026-10-20: implemented; 293 app tests pass, both builds and lint pass.** Streaming PCM envelope compacts peak pairs into at most 2,048 unsigned amplitude bytes, preserves impulses/partial buckets and publishes final peaks with metadata. Schema 6 adds an FK-cascading waveform table inside SQLCipher, separate from library queries. Encrypted segment checkpoints preserve approximate envelopes through recovery; finalization clips timelines to retained authenticated audio. Player loads off-main and renders screen-width bars with playback progress, explicit legacy-missing and independent failed/Retry states; never decodes the full file or exposes plaintext sidecars. Tests cover a 60-minute PCM stream/envelope native Canvas draw, chunk equivalence, signed extremes, partial/stereo envelopes, migration/data retention, normal/low-storage/recovered capture and existing controls. No speaker/remote-audibility inference; actual 60-minute file/render latency on phone remains owner UAT. |
 | 11.2.1.1.2 | Task | Speed 0.75–2×, ±10 s skip, MediaSession | 01:30 | 00:15 | Controls work from notification |  |
 | 11.2.1.1.3 | Task | Player UI tests | 01:00 | 00:10 | Tests pass |  |
 
