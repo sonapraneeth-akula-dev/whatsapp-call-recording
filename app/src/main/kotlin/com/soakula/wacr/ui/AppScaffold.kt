@@ -100,24 +100,24 @@ fun AppScaffold(
         bottomBar = {
             if (!forceSetup && !startupLoading) NavigationBar {
                 NavigationBarItem(
-                    selected = destination == Destination.HOME, onClick = { selectedId = null; destination = Destination.HOME },
+                    selected = destination == Destination.HOME, onClick = { showSetup = false; selectedId = null; destination = Destination.HOME },
                     icon = { Icon(painterResource(R.drawable.ic_home), null) },
                     label = { Text(stringResource(R.string.nav_home)) }
                 )
                 NavigationBarItem(
-                    selected = destination == Destination.LIBRARY, onClick = { selectedId = null; destination = Destination.LIBRARY },
+                    selected = destination == Destination.LIBRARY, onClick = { showSetup = false; selectedId = null; destination = Destination.LIBRARY },
                     icon = { Icon(painterResource(R.drawable.ic_library), null) },
                     label = { Text(stringResource(R.string.nav_library)) }
                 )
                 NavigationBarItem(
                     selected = destination == Destination.ALLOWLIST,
-                    onClick = { selectedId = null; destination = Destination.ALLOWLIST },
+                    onClick = { showSetup = false; selectedId = null; destination = Destination.ALLOWLIST },
                     icon = { Icon(painterResource(R.drawable.ic_allowlist), null) },
                     label = { Text(stringResource(R.string.nav_allowlist)) }
                 )
                 NavigationBarItem(
                     selected = destination == Destination.SETTINGS,
-                    onClick = { selectedId = null; destination = Destination.SETTINGS },
+                    onClick = { showSetup = false; selectedId = null; destination = Destination.SETTINGS },
                     icon = { Icon(painterResource(R.drawable.ic_settings), null) },
                     label = { Text(stringResource(R.string.nav_settings)) }
                 )

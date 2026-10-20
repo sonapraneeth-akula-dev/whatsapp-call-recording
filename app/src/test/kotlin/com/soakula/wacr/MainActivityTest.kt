@@ -10,6 +10,8 @@ import com.soakula.wacr.health.HealthProblem
 import android.view.WindowManager
 import androidx.lifecycle.ViewModelProvider
 import com.soakula.wacr.ui.home.HomeViewModel
+import com.soakula.wacr.ui.settings.DiagnosticsViewModel
+import com.soakula.wacr.ui.settings.DiagnosticExportState
 import com.soakula.wacr.recording.RecorderService
 import com.soakula.wacr.recording.RecorderState
 import org.junit.After
@@ -129,6 +131,21 @@ class MainActivityTest {
             shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO)
             activity.restart().start().resume()
             await(false)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
+
+    @Test fun diagnosticExportUsesCreateDocumentAndCancelDoesNotReportSuccess() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            ReflectionHelpers.callInstanceMethod<Unit>(activity.get(), "chooseDiagnosticDocument")
+            val request = checkNotNull(shadowOf(activity.get()).nextStartedActivityForResult)
+            assertEquals(Intent.ACTION_CREATE_DOCUMENT, request.intent.action)
+            assertEquals("application/zip", request.intent.type)
+            assertEquals("wacr-diagnostics.zip", request.intent.getStringExtra(Intent.EXTRA_TITLE))
+            shadowOf(activity.get()).receiveResult(request.intent, Activity.RESULT_CANCELED, null)
+            assertEquals(DiagnosticExportState.IDLE, ViewModelProvider(activity.get())[DiagnosticsViewModel::class.java].state.value)
         } finally {
             activity.pause().stop().destroy()
         }

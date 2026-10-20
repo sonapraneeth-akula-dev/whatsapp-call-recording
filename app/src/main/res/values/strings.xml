@@ -154,4 +154,14 @@
     <string name="setup_battery">Android battery optimization</string>
     <string name="setup_background">Background execution</string>
     <string name="setup_detector_checked_detail">Call adapters are declared and enabled. This check does not prove detection accuracy, remote audio or recording reliability.</string>
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_back">Back to Settings</string>
+    <string name="diagnostics_scope">Exports a bounded, redacted event log and technical app/device/setup status. Text values and arbitrary log keys are hashed even in debug builds. No recordings, contacts, transcripts, database, keys or raw crash files are included. Call traces and capability results are included only when implemented; unavailable results are reported as unavailable.</string>
+    <string name="diagnostics_destination_warning">You choose the ZIP destination. Select an on-device folder for offline storage; another document provider may sync its own files. Nothing is shared automatically. If export is interrupted, an incomplete document may remain at the chosen destination.</string>
+    <string name="diagnostics_export">Export diagnostics</string>
+    <string name="diagnostics_idle">Choose a destination to create a redacted ZIP.</string>
+    <string name="diagnostics_choosing">Waiting for your document selection. Cancel does not export or delete your data.</string>
+    <string name="diagnostics_writing">Writing redacted diagnostics...</string>
+    <string name="diagnostics_saved">Latest export completed: diagnostics saved to the selected document.</string>
+    <string name="diagnostics_failed">Export failed. Recordings are unchanged; source logs were not cleared. An incomplete ZIP may remain at the selected destination; remove it using Files and retry. If the picker did not open, check that a document-provider app is enabled.</string>
 </resources>

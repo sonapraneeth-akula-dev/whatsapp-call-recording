@@ -13,12 +13,16 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +40,8 @@ import com.soakula.wacr.ui.player.PlayerRoute
 import com.soakula.wacr.ui.settings.SettingsScreen
 import com.soakula.wacr.ui.settings.SettingsUiState
 import com.soakula.wacr.ui.settings.SettingsViewModel
+import com.soakula.wacr.ui.settings.DiagnosticsViewModel
+import com.soakula.wacr.ui.settings.DiagnosticsScreen
 import com.soakula.wacr.ui.theme.WacrTheme
 import com.soakula.wacr.ui.theme.isDark
 import com.soakula.wacr.ui.onboarding.SetupChecklistScreen
@@ -55,6 +61,10 @@ class MainActivity : ComponentActivity() {
     private val library: LibraryViewModel by viewModels()
     private val allowlist: AllowlistViewModel by viewModels()
     private val settings: SettingsViewModel by viewModels()
+    private val diagnostics: DiagnosticsViewModel by viewModels()
+    private val diagnosticDocument = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri == null) diagnostics.cancelSelection() else diagnostics.export(uri)
+    }
     private val contactPicker = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
         if (uri != null) allowlist.addPickedContact(uri)
     }
@@ -115,6 +125,7 @@ class MainActivity : ComponentActivity() {
                 val actions by library.actions.collectAsStateWithLifecycle()
                 val contactRules by allowlist.state.collectAsStateWithLifecycle()
                 val contactActions by allowlist.actions.collectAsStateWithLifecycle()
+                val exportState by diagnostics.state.collectAsStateWithLifecycle()
                 AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry,
                     actions = actions, onUndo = library::undo, onDismissUndo = library::dismissUndo,
                     onDismissError = library::dismissError,
@@ -122,8 +133,15 @@ class MainActivity : ComponentActivity() {
                         AllowlistScreen(contactRules, contactActions, ::pickContact, allowlist::retry,
                             allowlist::remove, allowlist::undo, allowlist::dismissUndo, allowlist::dismissError)
                     }, settingsContent = { openSetup ->
-                        SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
-                            settings::retry, settings::dismissError, onSetup = openSetup)
+                        var showDiagnostics by rememberSaveable { mutableStateOf(false) }
+                        if (showDiagnostics) {
+                            BackHandler { showDiagnostics = false }
+                            DiagnosticsScreen(exportState, ::chooseDiagnosticDocument) { showDiagnostics = false }
+                        } else {
+                            SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
+                                settings::retry, settings::dismissError, onSetup = openSetup,
+                                onDiagnostics = { showDiagnostics = true })
+                        }
                     }, setupContent = { closeSetup ->
                         SetupChecklistScreen(state, appearanceActions.busy, appearanceActions.failed,
                             home::refresh, ::openFix, ::grantSetupPermission,
@@ -225,6 +243,17 @@ class MainActivity : ComponentActivity() {
             settingsFailed(error)
         } catch (error: SecurityException) {
             settingsFailed(error)
+        }
+    }
+
+    private fun chooseDiagnosticDocument() {
+        if (!diagnostics.chooseDestination()) return
+        try {
+            diagnosticDocument.launch("wacr-diagnostics.zip")
+        } catch (error: ActivityNotFoundException) {
+            diagnostics.pickerFailed(error)
+        } catch (error: SecurityException) {
+            diagnostics.pickerFailed(error)
         }
     }
 

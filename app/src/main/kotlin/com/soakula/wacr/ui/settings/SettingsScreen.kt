@@ -26,7 +26,8 @@ fun SettingsScreen(
     onDynamicColor: (Boolean) -> Unit,
     onRetry: () -> Unit,
     onDismissError: () -> Unit,
-    onSetup: () -> Unit = {}
+    onSetup: () -> Unit = {},
+    onDiagnostics: () -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
@@ -35,6 +36,9 @@ fun SettingsScreen(
             item {
                 OutlinedButton(onClick = onSetup, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.setup_title))
+                }
+                OutlinedButton(onClick = onDiagnostics, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.diagnostics_title))
                 }
             }
             if (actions.failed) item {

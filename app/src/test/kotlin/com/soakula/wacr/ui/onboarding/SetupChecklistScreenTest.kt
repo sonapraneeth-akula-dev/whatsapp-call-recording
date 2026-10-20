@@ -65,6 +65,9 @@ class SetupChecklistScreenTest {
         compose.onNodeWithText(text(R.string.setup_continue)).performClick()
         compose.onNodeWithText(text(R.string.settings_appearance)).performScrollTo().assertIsDisplayed()
         assertEquals(2, refreshed)
+        compose.onNodeWithText(text(R.string.setup_title)).performScrollTo().performClick()
+        compose.onNodeWithText(text(R.string.nav_home)).performClick()
+        compose.onNodeWithText(text(R.string.home_record)).assertIsDisplayed()
     }
 
     @Test fun allStepsGuidanceAndNativeFixCallbacksAreAvailable() {
