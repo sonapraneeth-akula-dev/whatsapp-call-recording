@@ -1,4 +1,12 @@
 <resources>
+    <string name="library_manual_calls">Manual recordings</string>
+    <string name="library_unknown_calls">Unidentified calls</string>
+    <string name="library_group_calls">Group calls</string>
+    <string name="library_group_unverified">Group classification unverified</string>
+    <plurals name="library_group_count">
+        <item quantity="one">%d recording</item>
+        <item quantity="other">%d recordings</item>
+    </plurals>
     <string name="tile_record">Record call</string>
     <string name="tile_stop">Stop recording</string>
     <string name="tile_recording">Recording</string>

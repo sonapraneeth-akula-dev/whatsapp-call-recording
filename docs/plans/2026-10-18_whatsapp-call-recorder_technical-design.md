@@ -658,6 +658,8 @@ The setup_health notification is private, local-only, auto-cancelable and only-a
 
 Host tests cover persisted/offline interval scheduling, boot/update idempotent job identities, protected real-check job publication, cancellation without completion or microphone launch, private/blocked notification behavior and actual Compose checklist navigation/return. Both app variants and lint pass; physical notification delivery, actual Samsung Settings behavior and background timing remain owner phone UAT.
 
+**Contact-grouped library (2026-10-20, task 11.1.1.1.1)**: the production Library now shows normalized caller groups ordered by each group's newest recording, with deterministic newest-first children, contact/count headings and initials avatars. Positive contact/group classification, unverified classification, manual recordings and unidentified calls use separate group identities; no missing group evidence becomes a contact assertion. Display names use the newest matching metadata, not owner-renamed recording titles. Unicode ICU grapheme boundaries retain combining marks and emoji, including nonbreaking word separators; decorative initials are excluded from accessibility announcements while contact headings remain semantic headings. Existing row type/direction/date/duration/status/size/remote-uncertainty fields and player actions are unchanged. Home still shows only its newest flat five. Pure ordering/group-separation tests and native Compose heading/count/metadata/grapheme tests pass with both app builds and lint; physical phone layout/accessibility remains owner acceptance.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

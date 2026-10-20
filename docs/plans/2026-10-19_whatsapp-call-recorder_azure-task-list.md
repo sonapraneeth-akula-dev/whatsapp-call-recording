@@ -791,7 +791,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 11.1.1.1.1 | Task | Library grouped by contact; initials avatar; type/direction/duration/date row | 02:00 | 00:20 | UI grouping tests |  |
+| 11.1.1.1.1 | Task | Library grouped by contact; initials avatar; type/direction/duration/date row | 02:00 | 00:20 | UI grouping tests | **2026-10-20: implemented; local grouping/Compose tests, builds and lint pass.** Most-recent contact first, deterministic newest-first children, contact/count headings and Unicode-grapheme initials. Manual, unidentified, positively classified group/contact and unverified groups remain distinct; unverified classification is explicitly labelled. Existing type/direction/date/duration/source-status/remote-uncertainty and player actions retained; Home remains its flat recent-five view. No contact-photo permission or new dependency. Phone layout/accessibility acceptance remains owner UAT. |
 | 11.1.1.1.2 | Task | Contact route `library?contact=` | 00:45 | 00:10 | Back/restore keeps filter |  |
 
 ##### User Story 11.1.1.2 (US-043): To filter by contact and date range and search by name

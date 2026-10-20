@@ -2,14 +2,22 @@ package com.soakula.wacr.ui.library
 
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import android.icu.text.BreakIterator
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.soakula.wacr.R
 import com.soakula.wacr.data.CallDirection
@@ -19,10 +27,13 @@ import com.soakula.wacr.data.RecordingWithSession
 import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit, onOpen: (UUID) -> Unit = {}) {
+    val entries = (state as? LibraryUiState.Ready)?.entries.orEmpty()
+    val groups = remember(entries) { groupRecordings(entries) }
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.library_title)) }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
@@ -33,11 +44,53 @@ fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit, onOpen: (UUID) -> 
                 LibraryUiState.Failed -> item { LibraryFailure(onRetry) }
                 is LibraryUiState.Ready -> {
                     if (state.entries.isEmpty()) item { Text(stringResource(R.string.library_empty)) }
-                    items(state.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
+                    groups.forEach { group ->
+                        item(key = "contact:${group.key}") { ContactHeader(group) }
+                        items(group.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ContactHeader(group: RecordingGroup) {
+    val name = when (group.kind) {
+        LibraryContactKind.MANUAL -> stringResource(R.string.library_manual_calls)
+        LibraryContactKind.UNKNOWN -> stringResource(R.string.library_unknown_calls)
+        else -> checkNotNull(group.name)
+    }
+    val initials = remember(name) { contactInitials(name) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape,
+            modifier = Modifier.defaultMinSize(48.dp, 48.dp).clearAndSetSemantics {}
+        ) {
+            Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                Text(initials, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            }
+        }
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            Text(name, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
+            Text(pluralStringResource(R.plurals.library_group_count, group.entries.size, group.entries.size),
+                style = MaterialTheme.typography.bodyMedium)
+            if (group.kind == LibraryContactKind.UNVERIFIED) Text(stringResource(R.string.library_group_unverified),
+                style = MaterialTheme.typography.bodySmall)
+            if (group.kind == LibraryContactKind.GROUP) Text(stringResource(R.string.library_group_calls),
+                style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+internal fun contactInitials(name: String): String {
+    val words = name.trim().split(Regex("[\\p{Z}\\s]+")).filter { it.isNotEmpty() }
+    val selected = if (words.size < 2) words else listOf(words.first(), words.last())
+    val characters = BreakIterator.getCharacterInstance(Locale.getDefault())
+    return selected.joinToString("") {
+        characters.setText(it)
+        it.substring(0, characters.next())
+    }.uppercase(Locale.getDefault())
 }
 
 @Composable

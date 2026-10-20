@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +15,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.soakula.wacr.R
 import com.soakula.wacr.data.CallSessionEntity
+import com.soakula.wacr.data.CallDirection
+import com.soakula.wacr.data.CallType
 import com.soakula.wacr.data.RecordingEntity
 import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.recording.RecorderState
@@ -96,6 +99,29 @@ class LibraryScreenTest {
         compose.onNodeWithText(text(R.string.library_unknown_type), substring = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.library_manual)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.library_voice), substring = true).assertDoesNotExist()
+    }
+
+    @Test fun libraryShowsContactHeadingCountAndExistingMetadataForEveryRecording() {
+        val session = CallSessionEntity(waDisplayName = "Demo Contact", matchKey = "demo contact",
+            callType = CallType.VOICE, direction = CallDirection.INCOMING, isGroupKnown = true)
+        val entries = listOf(
+            RecordingWithSession(RecordingEntity(UUID(0, 1), 3000, 1, "MIC", title = "Clip latest", durationMs = 90_000), session),
+            RecordingWithSession(RecordingEntity(UUID(0, 2), 1000, 1, "MIC", title = "Clip old", durationMs = 60_000), session)
+        )
+        compose.setContent { MaterialTheme { LibraryScreen(LibraryUiState.Ready(entries), {}) } }
+        compose.onNodeWithText("Demo Contact").assertIsDisplayed()
+        compose.onNodeWithText("2 recordings").assertIsDisplayed()
+        compose.onNodeWithText("Clip latest").assertIsDisplayed()
+        compose.onAllNodesWithText(text(R.string.library_voice), substring = true).assertCountEquals(2)
+        compose.onAllNodesWithText(text(R.string.library_incoming), substring = true).assertCountEquals(2)
+        compose.onNodeWithText("Clip old").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun contactInitialsKeepCombiningCharactersEmojiAndUnicodeWordSeparators() {
+        assertEquals("DC", contactInitials("Demo Contact"))
+        assertEquals("A\u0301P", contactInitials("A\u0301lex\u00A0Person"))
+        assertEquals("\uD83D\uDC69\u200D\uD83D\uDCBBE", contactInitials("\uD83D\uDC69\u200D\uD83D\uDCBB Engineer"))
+        assertEquals("", contactInitials("  "))
     }
 
     private fun text(resource: Int) = compose.activity.getString(resource)
