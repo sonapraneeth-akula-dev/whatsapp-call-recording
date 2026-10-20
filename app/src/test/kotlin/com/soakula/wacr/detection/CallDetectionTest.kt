@@ -62,7 +62,7 @@ class CallDetectionTest {
     }
 
     @Suppress("DEPRECATION")
-    private fun notification(malformed: Boolean = false) = StatusBarNotification(
+    private fun notification(malformed: Boolean = false, video: Boolean? = null) = StatusBarNotification(
         "com.whatsapp", "com.whatsapp", 1, null, 1000, 0, 0,
         Notification().apply {
             category = Notification.CATEGORY_CALL
@@ -74,6 +74,7 @@ class CallDetectionTest {
                 if (malformed) putString(Notification.EXTRA_SHOW_CHRONOMETER, "true")
                 else putBoolean(Notification.EXTRA_SHOW_CHRONOMETER, true)
                 putString(Notification.EXTRA_TITLE, "Synthetic caller")
+                if (video != null) putBoolean(Notification.EXTRA_CALL_IS_VIDEO, video)
             }
         }, Process.myUserHandle(), 1000
     )
@@ -156,6 +157,30 @@ class CallDetectionTest {
         await { it.ready && it.sessionId != null }
         assertFalse(app.detection.state.value.failed)
         assertEquals(RecorderState.Idle, app.recorder.state.value)
+        Unit
+    }
+
+    @Test fun syntheticNativeVideoSwitchUpdatesOneSessionHistoryWithoutStartingCapture() = runBlocking {
+        val listener = Any()
+        app.detection.accessibilityConnected(Any())
+        app.detection.listenerConnected(listener) { arrayOf(notification(video = false)) }
+        val first = await { it.ready && it.call?.callType == CallType.VOICE }
+        val id = checkNotNull(first.sessionId)
+        app.detection.posted(listener, notification(video = true))
+        await { it.call?.callType == CallType.VIDEO }
+        app.detection.posted(listener, notification())
+        app.detection.posted(listener, notification(video = true))
+        app.detection.posted(listener, notification(video = false))
+        val last = await { it.call?.callType == CallType.VOICE }
+        assertEquals(id, last.sessionId)
+        assertEquals(first.call?.sequence, last.call?.sequence)
+        val history = database.recordings().sessionTypeEvents(id)
+        assertEquals(listOf(CallType.VOICE, CallType.VIDEO), history.map { it.from })
+        assertEquals(listOf(CallType.VIDEO, CallType.VOICE), history.map { it.to })
+        assertEquals(history.map { it.atMs }.sorted(), history.map { it.atMs })
+        assertEquals(CallType.VOICE, database.recordings().session(id)?.callType)
+        assertEquals(RecorderState.Idle, app.recorder.state.value)
+        assertNull(shadowOf(app).nextStartedService)
         Unit
     }
 

@@ -265,6 +265,10 @@ SQLite via Room + SQLCipher. Times are epoch ms (`INTEGER`). Enums stored as `TE
 | | call_type | TEXT | N | | `VOICE` \| `VIDEO` \| `UNKNOWN`; new sessions default to unverified |
 | | ringing_at / connected_at / ended_at | INTEGER | Y | idx(connected_at) | |
 | | decision | TEXT | N | | `AUTO` \| `ASKED` \| `MANUAL` \| `IGNORED` |
+| call_type_event | id | INTEGER PK | N | PK | observed classification history |
+| | session_id | INTEGER FK → call_session | N | idx(session_id, at_ms) | CASCADE on delete |
+| | from_type / to_type | TEXT | N | | prior classification (possibly UNKNOWN), positive observed VOICE/VIDEO |
+| | at_ms | INTEGER | N | idx(session_id, at_ms) | wall timestamp mapped from the detector's fixed elapsed/wall origin |
 | recording | id | TEXT PK (UUIDv4) | N | PK | also directory name |
 | | session_id | INTEGER FK → call_session | Y | idx | SET NULL on delete |
 | | title | TEXT | Y | | user rename; default derived |
@@ -627,6 +631,10 @@ Health checks retain real access-setting remedies, additionally require the live
 **Private detector tracing (2026-10-20, task 2.1.2.1.2)**: DetectionTrace logs every typed signal before interpretation and every resulting state/start/suspend/resume/end effect through AppLog and its WACR mirror, including terminal source loss. Logged data is restricted to structural booleans, elapsed timestamps, protocol type integers and ephemeral sequence numbers. Caller names/match keys, native notification identities/instances, arbitrary classes and message/node text never enter the trace even in debug builds. Rules version is loaded from the validated asset; runtime status retains it across failure and exports it explicitly with ready/failed technical metadata. Existing bounded redacted app.jsonl includes the same ordered events; no additional sensitive file/archive scope is introduced. Debug/release trace tests and native/ZIP checks cover retention, event order, privacy and runtime-version export. No adb/device observation is claimed by local tests.
 
 **Call-type classifier (2026-10-20, task 2.2.1.1.1)**: the native notification reader delegates explicit EXTRA_CALL_IS_VIDEO presence to a pure classifier. Present false/true maps to voice/video; absent remains unknown, not a voice default. CallTypeChange carries a known observed type, prior type (possibly UNKNOWN) and the exact monotonic observation timestamp. Duplicate and unknown snapshots do not manufacture type switches; reverse video-to-voice changes are supported and invalid time is rejected before any no-change result. Synthetic switch fixtures supplement the real outgoing fixture, whose unrecorded video-extra presence remains unknown. Persistent/live type-change wiring is the next task.
+
+**Live and persisted call-type changes (2026-10-20, task 2.2.1.1.2)**: known type observations update the same active, held or provisionally ended call identity and emit TypeChanged with the exact monotonic observation time. Repeated/absent/UNKNOWN snapshots cannot manufacture switches or downgrade an uninterrupted known classification. Reconnect retains the existing conservative unknown-live-metadata behavior, while stored history retains its last positive observation. A different call instance cannot change the previous call's type. No recording or screen capture is started by classification.
+
+Schema 5 adds indexed, cascading call_type_event rows and a preserving 4->5 migration; the full migration chain remains registered without destructive fallback. One transaction updates call_session.call_type and inserts each type-change history row. Epoch display timestamps use the existing fixed elapsed/wall origin. Failed batches roll back both final type and history, preserving the writer's committed identity mapping. Native synthetic callback, held/reconnect, reverse switch, duplicate/unknown, replacement-call, migration/retention/cascade and privacy-trace tests cover the path. The unchanged captured outgoing fixture still has unknown type because video-extra presence was never logged. Full local regression passes 232 tests; detector coverage is 215/216 lines and 328/364 branches, above the original 80% gate. These checks do not claim actual phone video/switch accuracy.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |

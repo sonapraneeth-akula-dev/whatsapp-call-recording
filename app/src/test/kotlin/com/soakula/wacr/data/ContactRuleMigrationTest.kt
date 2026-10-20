@@ -58,7 +58,8 @@ class ContactRuleMigrationTest {
         }
         helper.runMigrationsAndValidate(TEST_DB, 3, true, AppDatabase.MIGRATION_2_3).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4).build()
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5).build()
         try {
             val recording = checkNotNull(db.recordings().recording(id))
             assertTrue(recording.starred)
@@ -95,7 +96,8 @@ class ContactRuleMigrationTest {
             """.trimIndent(), arrayOf(id.toString(), UUID.randomUUID().toString()))
         }
         helper.runMigrationsAndValidate(TEST_DB, 4, true, AppDatabase.MIGRATION_3_4).close()
-        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
+        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
+            .addMigrations(AppDatabase.MIGRATION_4_5).build()
         try {
             val legacy = checkNotNull(db.recordings().session(7))
             assertFalse(legacy.isGroup)
@@ -111,6 +113,35 @@ class ContactRuleMigrationTest {
             assertFalse(unknown.isGroupKnown)
             val knownId = db.recordings().insertSession(CallSessionEntity(isGroup = false, isGroupKnown = true))
             assertTrue(checkNotNull(db.recordings().session(knownId)).isGroupKnown)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test fun typeHistoryMigrationPreservesSessionsRecordingsAndAddsCascadingEvents() = runBlocking {
+        val id = UUID.randomUUID()
+        helper.createDatabase(TEST_DB, 4).use { db ->
+            db.execSQL("""
+                INSERT INTO call_session (id, is_group, group_known, direction, call_type, decision, connected_at)
+                VALUES (7, 0, 1, 'INCOMING', 'VOICE', 'MANUAL', 1000)
+            """.trimIndent())
+            db.execSQL("""
+                INSERT INTO recording (id, started_at, channels, capture_source, session_id, status, has_video, starred)
+                VALUES (?, 1000, 1, 'VOICE_RECOGNITION', 7, 'FINALIZED', 0, 1)
+            """.trimIndent(), arrayOf(id.toString()))
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 5, true, AppDatabase.MIGRATION_4_5).close()
+        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
+        try {
+            assertEquals(CallType.VOICE, db.recordings().session(7)?.callType)
+            assertTrue(checkNotNull(db.recordings().session(7)).isGroupKnown)
+            assertEquals(7L, db.recordings().recording(id)?.sessionId)
+            assertTrue(db.recordings().sessionTypeEvents(7).isEmpty())
+            db.recordings().insertCallTypeEvent(CallTypeEventEntity(7, CallType.VOICE, CallType.VIDEO, 2000))
+            assertEquals(CallType.VIDEO, db.recordings().sessionTypeEvents(7).single().to)
+            db.recordings().deleteSession(7)
+            assertTrue(db.recordings().sessionTypeEvents(7).isEmpty())
+            assertNull(db.recordings().recording(id)?.sessionId)
         } finally {
             db.close()
         }

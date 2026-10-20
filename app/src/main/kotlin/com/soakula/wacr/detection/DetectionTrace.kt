@@ -1,6 +1,7 @@
 package com.soakula.wacr.detection
 
 import com.soakula.wacr.util.AppLog
+import com.soakula.wacr.data.CallType
 import java.util.Locale
 
 internal class DetectionTrace(private val log: AppLog, rules: DetectionRules) {
@@ -18,7 +19,8 @@ internal class DetectionTrace(private val log: AppLog, rules: DetectionRules) {
                     "call_style" to (value.template == "CallStyle"),
                     "style_call_type" to value.styleCallType,
                     "caller_key_available" to (value.caller.matchKey != null),
-                    "group_known" to (value.isGroup != null), "type_known" to (value.callType != null),
+                    "group_known" to (value.isGroup != null),
+                    "type_known" to (value.callType != null && value.callType != CallType.UNKNOWN),
                     "hold_known" to (value.onHold != null)
                 )
                 "signal_posted"
@@ -66,6 +68,13 @@ internal class DetectionTrace(private val log: AppLog, rules: DetectionRules) {
                 data["sequence"] = event.call.sequence
                 data["at_elapsed_ms"] = event.endedAtMs
                 "call_ended"
+            }
+            is CallEvent.TypeChanged -> {
+                data["sequence"] = event.call.sequence
+                data["at_elapsed_ms"] = event.change.atMs
+                data["from_type"] = event.change.from.ordinal
+                data["to_type"] = event.change.to.ordinal
+                "call_type_changed"
             }
         }
         log.log("detection", name, data)

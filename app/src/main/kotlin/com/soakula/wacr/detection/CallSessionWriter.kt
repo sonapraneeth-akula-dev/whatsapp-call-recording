@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.soakula.wacr.data.AppDatabase
 import com.soakula.wacr.data.CallSessionEntity
 import com.soakula.wacr.data.CallType
+import com.soakula.wacr.data.CallTypeEventEntity
 import com.soakula.wacr.data.RecordingDecision
 
 /** Owned by one serialized detector loop; only committed transactions advance its identity map. */
@@ -45,6 +46,14 @@ internal class CallSessionWriter(
                     ) == 1) { "Ended call session is missing" }
                     is CallEvent.Resumed -> reopen(updated, event.call.sequence)
                     is CallEvent.Suspended -> reopen(updated, event.call.sequence)
+                    is CallEvent.TypeChanged -> {
+                        val id = checkNotNull(updated[event.call.sequence]) { "Missing classified call identity" }
+                        val change = event.change
+                        require(change.to != CallType.UNKNOWN && change.from != change.to && change.to == event.call.callType &&
+                            change.atMs >= event.call.connectedAtMs) { "Invalid call-type change" }
+                        check(dao.setSessionType(id, change.to) == 1) { "Classified call session is missing" }
+                        dao.insertCallTypeEvent(CallTypeEventEntity(id, change.from, change.to, wallTime(change.atMs)))
+                    }
                     is CallEvent.Transition -> Unit
                 }
             }

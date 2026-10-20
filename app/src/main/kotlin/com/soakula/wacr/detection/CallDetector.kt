@@ -50,6 +50,7 @@ sealed interface CallEvent {
     data class Suspended(val call: DetectedCall, val atMs: Long, val reason: CallSuspension) : CallEvent
     data class Resumed(val call: DetectedCall, val atMs: Long) : CallEvent
     data class Ended(val call: DetectedCall, val endedAtMs: Long) : CallEvent
+    data class TypeChanged(val call: DetectedCall, val change: CallTypeChange) : CallEvent
 }
 
 class CallDetector(
@@ -205,6 +206,7 @@ class CallDetector(
             held[identity] = restored
             events.add(CallEvent.Suspended(restored, nowMs, CallSuspension.HOLD))
         }
+        updateTypes(nowMs, events)
         val candidate = if (communication) notifications.values.lastOrNull {
             connected(it.notification) && it.notification.onHold != true && it.generation > cellularBoundary
         } else null
@@ -262,6 +264,23 @@ class CallDetector(
             val ringing = notifications.values.any { !connected(it.notification) && it.notification.onHold != true }
             if (ringing) transition(CallState.RINGING, events)
             else if (state == CallState.RINGING) transition(CallState.IDLE, events)
+        }
+    }
+
+    private fun updateTypes(nowMs: Long, events: MutableList<CallEvent>) {
+        for ((key, observed) in notifications) {
+            val notification = observed.notification
+            if (!connected(notification) && notification.onHold != true) continue
+            val instance = notification.instance ?: continue
+            fun classify(call: DetectedCall): DetectedCall {
+                if (!sameCall(call, notification)) return call
+                val change = CallTypeClassifier.change(call.callType, notification.callType, nowMs) ?: return call
+                return call.copy(callType = change.to).also { events.add(CallEvent.TypeChanged(it, change)) }
+            }
+            activeCall = activeCall?.let(::classify)
+            val identity = key to instance
+            held[identity]?.let { held[identity] = classify(it) }
+            closed[identity]?.let { closed[identity] = it.copy(call = classify(it.call)) }
         }
     }
 

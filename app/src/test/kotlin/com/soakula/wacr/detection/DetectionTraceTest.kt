@@ -2,6 +2,7 @@ package com.soakula.wacr.detection
 
 import android.app.Application
 import com.soakula.wacr.data.CallDirection
+import com.soakula.wacr.data.CallType
 import com.soakula.wacr.health.exportDiagnostics
 import com.soakula.wacr.util.AppLog
 import kotlinx.coroutines.runBlocking
@@ -46,7 +47,8 @@ class DetectionTraceTest {
                 CallEvent.Transition(CallState.IDLE, CallState.RINGING),
                 CallEvent.Started(call), CallEvent.Suspended(call, 3, CallSuspension.HOLD),
                 CallEvent.Suspended(call, 4, CallSuspension.RECONNECTING),
-                CallEvent.Resumed(call, 5), CallEvent.Ended(call, 6)
+                CallEvent.Resumed(call, 5), CallEvent.Ended(call, 6),
+                CallEvent.TypeChanged(call.copy(callType = CallType.VIDEO), CallTypeChange(CallType.VOICE, CallType.VIDEO, 7))
             ).forEach(trace::event)
             val raw = File(directory, "app.log").readText()
             assertEquals(mirrored.joinToString("\n", postfix = "\n"), raw)
@@ -57,7 +59,7 @@ class DetectionTraceTest {
             assertEquals(listOf(
                 "rules_loaded", "signal_posted", "signal_removed", "signal_window", "signal_audio_mode",
                 "signal_tick", "signal_unavailable", "state_idle_ringing", "call_detected", "call_suspended_hold",
-                "call_suspended_reconnecting", "call_resumed", "call_ended"
+                "call_suspended_reconnecting", "call_resumed", "call_ended", "call_type_changed"
             ), events)
             val destination = ByteArrayOutputStream()
             exportDiagnostics(app, log, destination)

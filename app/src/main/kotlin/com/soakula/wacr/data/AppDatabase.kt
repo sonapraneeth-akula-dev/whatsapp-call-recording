@@ -18,9 +18,9 @@ import java.util.UUID
 @Database(
     entities = [
         CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
-        ContactRuleEntity::class, PendingRecordingDeletion::class
+        ContactRuleEntity::class, PendingRecordingDeletion::class, CallTypeEventEntity::class
     ],
-    version = 4, exportSchema = true
+    version = 5, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -57,6 +57,18 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("UPDATE call_session SET group_known = 1 WHERE is_group = 1")
             }
         }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS call_type_event (
+                        session_id INTEGER NOT NULL, from_type TEXT NOT NULL, to_type TEXT NOT NULL,
+                        at_ms INTEGER NOT NULL, id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        FOREIGN KEY(session_id) REFERENCES call_session(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_call_type_event_session_id_at_ms ON call_type_event (session_id, at_ms)")
+            }
+        }
 
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
@@ -67,7 +79,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true

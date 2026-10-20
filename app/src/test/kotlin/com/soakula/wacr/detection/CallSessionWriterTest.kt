@@ -123,4 +123,42 @@ class CallSessionWriterTest {
         assertEquals(id, writer.apply(events, setOf(1)).values.single())
         assertEquals(1, count())
     }
+
+    @Test fun typeSwitchesPersistExactTimelineAndFinalTypeWithoutCreatingAnotherSession() = runBlocking {
+        apply(CallSignal.AudioMode(true), 100)
+        val voice = notification().copy(notification = notification().notification.copy(callType = CallType.VOICE))
+        val id = apply(voice, 101).values.single()
+        val video = voice.copy(notification = voice.notification.copy(callType = CallType.VIDEO))
+        assertEquals(id, apply(video, 200).values.single())
+        apply(video, 201)
+        apply(video.copy(notification = video.notification.copy(callType = null)), 202)
+        apply(voice, 300)
+        val events = database.recordings().sessionTypeEvents(id)
+        assertEquals(listOf(CallType.VOICE, CallType.VIDEO), events.map { it.from })
+        assertEquals(listOf(CallType.VIDEO, CallType.VOICE), events.map { it.to })
+        assertEquals(listOf(10_100L, 10_200L), events.map { it.atMs })
+        assertEquals(CallType.VOICE, database.recordings().session(id)?.callType)
+        assertEquals(10_001L, database.recordings().session(id)?.connectedAt)
+        assertEquals(1, count())
+        apply(CallSignal.Unavailable, 400)
+        writer.closeAll(500)
+        assertEquals(10_300L, database.recordings().session(id)?.endedAt)
+        assertEquals(events, database.recordings().sessionTypeEvents(id))
+    }
+
+    @Test fun failedTypeBatchRollsBackBothFinalTypeAndHistory() = runBlocking {
+        apply(CallSignal.AudioMode(true), 100)
+        val voice = notification().copy(notification = notification().notification.copy(callType = CallType.VOICE))
+        val id = apply(voice, 101).values.single()
+        val changed = detector.accept(voice.copy(notification = voice.notification.copy(callType = CallType.VIDEO)), 200)
+        val call = changed.filterIsInstance<CallEvent.TypeChanged>().single().call
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { writer.apply(changed + CallEvent.Ended(call.copy(sequence = 99), 201), setOf(call.sequence)) }
+        }
+        assertEquals(CallType.VOICE, database.recordings().session(id)?.callType)
+        assertTrue(database.recordings().sessionTypeEvents(id).isEmpty())
+        writer.apply(changed, detector.retainedSequences)
+        assertEquals(CallType.VIDEO, database.recordings().session(id)?.callType)
+        assertEquals(1, database.recordings().sessionTypeEvents(id).size)
+    }
 }

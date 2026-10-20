@@ -33,6 +33,22 @@ data class CallSessionEntity(
 )
 
 @Entity(
+    tableName = "call_type_event",
+    foreignKeys = [ForeignKey(
+        entity = CallSessionEntity::class, parentColumns = ["id"], childColumns = ["session_id"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["session_id", "at_ms"])]
+)
+data class CallTypeEventEntity(
+    @ColumnInfo(name = "session_id") val sessionId: Long,
+    @ColumnInfo(name = "from_type") val from: CallType,
+    @ColumnInfo(name = "to_type") val to: CallType,
+    @ColumnInfo(name = "at_ms") val atMs: Long,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0
+)
+
+@Entity(
     tableName = "recording",
     foreignKeys = [ForeignKey(
         entity = CallSessionEntity::class, parentColumns = ["id"], childColumns = ["session_id"],

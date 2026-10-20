@@ -11,6 +11,7 @@ import java.util.UUID
 @Dao
 interface RecordingDao {
     @Insert suspend fun insertSession(session: CallSessionEntity): Long
+    @Insert suspend fun insertCallTypeEvent(event: CallTypeEventEntity): Long
     @Insert suspend fun insertRecording(recording: RecordingEntity)
     @Insert suspend fun insertSegment(segment: SegmentEntity)
     @Insert suspend fun insertRoute(event: RouteEventEntity)
@@ -43,6 +44,12 @@ interface RecordingDao {
 
     @Query("UPDATE call_session SET ended_at = :endedAt WHERE id = :id AND ended_at IS NULL")
     suspend fun closeOpenSession(id: Long, endedAt: Long): Int
+
+    @Query("UPDATE call_session SET call_type = :type WHERE id = :id")
+    suspend fun setSessionType(id: Long, type: CallType): Int
+
+    @Query("SELECT * FROM call_type_event WHERE session_id = :id ORDER BY at_ms, id")
+    suspend fun sessionTypeEvents(id: Long): List<CallTypeEventEntity>
 
     @Query("""
         UPDATE recording SET title = :title WHERE id = :id AND NOT EXISTS
