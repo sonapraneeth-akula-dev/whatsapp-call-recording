@@ -537,6 +537,8 @@ whatsapp-call-recording/
 
 **Allowlist persistence (2026-10-20, task 4.1.1.1.1)**: Room v2 adds the approved `contact_rule` table with unique `(kind, match_key)` and nullable future mode override; contact operations reuse `NameExtractor`, reject unreadable names and never silently replace normalized duplicates. Remove returns the original rule for undo; conflicting undo fails without overwriting a new selection. An explicit 1→2 migration preserves all recording/session/segment/route rows. Local `MigrationTestHelper` validates the exported schema and retained metadata; its Windows-only basename mismatch is handled by resolving the test helper's reported path, not by modifying production storage. Public schema JSON is included only in debug assets for local migration tests; release excludes it. UI/contact picking, auto-record policy and group rules are separate tasks.
 
+**Recording policy (2026-10-20, task 4.1.2.1.1)**: the pure `RecordingPolicy.decide()` returns AUTO only for a readable normalized caller matching a CONTACT rule; it also checks display names against supplied keys to prevent inconsistent identity data from auto-recording the wrong caller. Missing/unknown names, no rule, mismatched keys and all group calls return ASK. This follows the approved manual-only v1 group default; v1.1 group auto-recording and mode overrides remain separate. The decision does not mean recording has started; detector/controller wiring and phone end-to-end cases are still pending.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

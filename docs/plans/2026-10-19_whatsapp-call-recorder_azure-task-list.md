@@ -396,7 +396,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 4.1.2.1.1 | Task | `RecordingPolicy.decide()` → `Auto` for allowlisted `match_key`, else `Ask` — `app/…/recording/RecordingPolicy.kt` | 01:30 | 00:20 | Policy unit tests pass |  |
+| 4.1.2.1.1 | Task | `RecordingPolicy.decide()` → `Auto` for allowlisted `match_key`, else `Ask` — `app/…/recording/RecordingPolicy.kt` | 01:30 | 00:20 | Policy unit tests pass | **2026-10-20: pure decision component implemented.** AUTO requires a readable matching contact rule and consistent normalized caller/rule identities; all other cases ASK. Unknown/emoji-only names never auto-match the "Unknown" fallback. All groups remain manual in v1, including matching contact/group keys; v1.1 group rules separate. Detector/controller integration remains pending. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: name matching (case, emoji, duplicates) tests pass (FEAT-004.1.1, FEAT-004.1.2)
