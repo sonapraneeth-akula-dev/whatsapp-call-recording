@@ -5,6 +5,9 @@ import com.soakula.wacr.logging.Redactor
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 
 class AppLog(
     private val directory: File,
@@ -36,6 +39,43 @@ class AppLog(
         } finally {
             previous.uncaughtException(thread, error)
         }
+    }
+
+    fun redactedSnapshot(): ByteArray {
+        val bytes = synchronized(this) {
+            val file = File(directory, "app.log")
+            if (!file.exists()) return byteArrayOf()
+            file.inputStream().use { it.readNBytes(MAX_BYTES + 1) }
+        }
+        if (bytes.size > MAX_BYTES) throw IOException("Diagnostic log exceeds its bounded size")
+        if (bytes.isEmpty()) return byteArrayOf()
+        val lines = bytes.toString(Charsets.UTF_8).lineSequence().filter(String::isNotBlank).mapIndexed { index, line ->
+            val entry = try {
+                val source = JSONObject(line)
+                val tag = source.getString("tag")
+                val event = source.getString("event")
+                if (!IDENTIFIER.matches(tag) || !IDENTIFIER.matches(event)) throw JSONException("Invalid log identifiers")
+                mapOf(
+                    "ts" to source.getLong("ts"), "tag" to tag, "event" to event,
+                    "data" to diagnosticValue(source.opt("data")),
+                    "data_truncated" to source.optBoolean("data_truncated", false)
+                )
+            } catch (error: JSONException) {
+                mapOf("tag" to "diagnostics", "event" to "invalid_log_record", "line" to index + 1)
+            }
+            Json.encode(entry)
+        }
+        return lines.joinToString(separator = "\n", postfix = "\n").toByteArray(Charsets.UTF_8)
+    }
+
+    private fun diagnosticValue(value: Any?): Any? = when (value) {
+        null, JSONObject.NULL -> null
+        is Number, is Boolean -> value
+        is JSONObject -> value.keys().asSequence().associate { key ->
+            Redactor.tag("field", key) to diagnosticValue(value.get(key))
+        }
+        is JSONArray -> (0 until value.length()).map { diagnosticValue(value.get(it)) }
+        else -> Redactor.tag("value", value.toString())
     }
 
     @Synchronized
