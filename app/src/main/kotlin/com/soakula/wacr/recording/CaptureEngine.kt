@@ -11,6 +11,8 @@ import com.soakula.wacr.util.AppLog
 import java.io.Closeable
 import java.io.IOException
 
+class CaptureUnavailableException : IOException("No configured audio source is available")
+
 /** Single recording worker owns this engine; no audio focus, mode or device selection is changed. */
 class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) internal constructor(
     profile: CaptureProfile,
@@ -107,7 +109,7 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
                 unavailable(candidate, error)
             }
         }
-        throw IOException("No configured audio source is available")
+        throw CaptureUnavailableException()
     }
 
     private fun unavailable(source: CaptureSource, error: Exception) {
