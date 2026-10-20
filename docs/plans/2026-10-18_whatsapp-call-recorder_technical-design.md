@@ -539,6 +539,8 @@ whatsapp-call-recording/
 
 **Recording policy (2026-10-20, task 4.1.2.1.1)**: the pure `RecordingPolicy.decide()` returns AUTO only for a readable normalized caller matching a CONTACT rule; it also checks display names against supplied keys to prevent inconsistent identity data from auto-recording the wrong caller. Missing/unknown names, no rule, mismatched keys and all group calls return ASK. This follows the approved manual-only v1 group default; v1.1 group auto-recording and mode overrides remain separate. The decision does not mean recording has started; detector/controller wiring and phone end-to-end cases are still pending.
 
+**Encrypted playback source (2026-10-20, task 5.2.1.2.1)**: `DecryptingDataSource` adapts the existing seekable Tink channel to Media3's local `DataSource` contract. It accepts only canonical `wacr://recording/<UUID>/audio.aac.enc` URIs; no external file/content/network sources, pending segments or plaintext caches. Reads authenticate requested blocks, propagate failures and require close before retry after a read error. Local tests use real Tink ciphertext for cross-block 50% byte seeks, explicit/oversized ranges, EOF, invalid inputs, tampering and balanced transfer callbacks; these do not prove audible decoder playback. Only `media3-datasource` is added; ExoPlayer/UI remain separate. Opening/seeking does not authenticate unrequested blocks or prove remote audio was captured.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

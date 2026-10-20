@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.datastore.preferences)
     implementation(libs.sqlcipher)
+    implementation(libs.media3.datasource)
     kapt(libs.room.compiler)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.tooling.preview)

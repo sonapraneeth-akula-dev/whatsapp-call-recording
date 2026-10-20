@@ -493,7 +493,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 5.2.1.2.1 | Task | `DecryptingDataSource` for Media3 over Tink seekable channel — `app/…/playback/DecryptingDataSource.kt` | 02:30 | 00:20 | Seek to 50% plays correctly; no plaintext files created |  |
+| 5.2.1.2.1 | Task | `DecryptingDataSource` for Media3 over Tink seekable channel — `app/…/playback/DecryptingDataSource.kt` | 02:30 | 00:20 | Seek to 50% plays correctly; no plaintext files created | **2026-10-20: data-source component implemented; local real-Tink read/seek/range/lifecycle/tamper checks pass.** Only canonical private finalized-audio URIs accepted; external URIs, segments/pending artifacts and non-read requests rejected. Handles byte ranges across encrypted blocks, EOF, out-of-range positions and authentication failures without plaintext files. Media3 datasource dependency only (no player/UI yet); actual audible seek/playback remains phone UAT after player wiring. |
 | 5.2.1.2.2 | Task | Gradle dependency verification + dependency scan — `gradle/verification-metadata.xml` | 01:00 | 00:10 | No high/critical findings |  |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):

@@ -10,6 +10,7 @@ room = "2.8.4"
 robolectric = "4.16.1"
 datastore = "1.2.1"
 sqlcipher = "4.19.1"
+media3 = "1.11.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -27,6 +28,7 @@ room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 sqlcipher = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
+media3-datasource = { module = "androidx.media3:media3-datasource", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
