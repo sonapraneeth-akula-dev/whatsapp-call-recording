@@ -203,7 +203,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 2.1.1.2.1 | Task | `NameExtractor`: name from call screen/notification per rules; NFKC + lower-case `match_key`; "Unknown" fallback — `app/…/detection/NameExtractor.kt` | 02:00 | 00:20 | Tests: saved name, unsaved number, emoji, unreadable |  |
+| 2.1.1.2.1 | Task | `NameExtractor`: name from call screen/notification per rules; NFKC + lower-case `match_key`; "Unknown" fallback — `app/…/detection/NameExtractor.kt` | 02:00 | 00:20 | Tests: saved name, unsaved number, emoji, unreadable | **2026-10-20: normalization implementation + JVM checks complete.** Candidate inputs must already be identified as caller-name fields by detection rules; no arbitrary node/chat text accepted by adapters. Unicode/control/emoji/phone cases checked; unreadable/emoji-only names have no allowlist key. Signal-adapter wiring remains in 2.1.1.1.3. |
 | 2.1.1.2.2 | Task | Golden tests per captured WhatsApp build — `app/src/test/…/detection/GoldenTest.kt` | 01:00 | 00:10 | Golden tests pass | Re-run after every WhatsApp update |
 
 #### Feature 2.1.2 (FEAT-002.1.2): Detector resilience
