@@ -30,7 +30,7 @@ class AppLogTest {
     @Test fun ringRetainsCompleteUtf8LinesAndNewestEventAcrossRestart() {
         val directory = temporary.newFolder()
         val log = AppLog(directory, false, {}) { throw it }
-        repeat(700) { log.log("capture", "level", mapOf("sample" to "\u0c30".repeat(1500), "index" to it)) }
+        repeat(700) { log.log("capture", "level", mapOf("sample" to "\u0c30".repeat(1000), "index" to it)) }
         AppLog(directory, false, {}) { throw it }.log("app", "restarted")
         val file = File(directory, "app.log")
         assertTrue(file.length() <= AppLog.MAX_BYTES)
@@ -38,6 +38,8 @@ class AppLogTest {
         assertFalse(text.contains('\uFFFD'))
         assertTrue(text.lineSequence().filter(String::isNotEmpty).all { it.startsWith("{") && it.endsWith("}") })
         assertTrue(text.contains("\"event\":\"restarted\""))
+        assertTrue(text.contains("\"index\":699"))
+        assertFalse(text.contains("\"data_truncated\""))
         assertFalse(text.contains("\"index\":0}"))
     }
 
