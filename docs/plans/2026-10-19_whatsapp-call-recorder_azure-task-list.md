@@ -504,6 +504,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 **2026-10-20 build maintenance (5.2.1.2.2)**: AGP 8.13.2 patch update builds both applications and app variants with local tests/lint on the existing Gradle/Kotlin/JDK baseline. Checksums updated, no forced transitive versions or major migration. Tooling scan acceptance remains open; independent application work continues.
 
+**2026-10-20 refreshed local delivery evidence (through `2fa9ecf`)**: strict app debug/release + retained-spike debug builds and all 120 app / 10 spike unit tests pass; app debug/release lint and packaged offline/privacy/service checks pass. No measured coverage percentage or phone acceptance claim. Verification metadata now contains 707 component versions / 1,254 SHA-256 entries, including historical/candidate/tool versions. Fresh coordinate-only scan matched no advisories in selected release runtime (129), debug runtime (138) or debug unit-test runtime (188). Build-plugin graph remains 154 selected versions / 12 affected / seven high-critical; tooling gate stays unmet. Raw scan/inventory and refreshed debug APKs copied to ignored `dist`; production launcher remains a placeholder. M-008.1 owner approval and missing phone signal/capture evidence remain critical-path gates; local backend components do not close their UI/UAT tasks.
+
 ## Requirement 6 (REQ-006): Dashboard and library — Must Have
 - **Outcome**: Owner sees recorder status and can play any recording within 2 taps.
 - **Est. Manual**: 08:40 | **Est. AI**: 01:40
