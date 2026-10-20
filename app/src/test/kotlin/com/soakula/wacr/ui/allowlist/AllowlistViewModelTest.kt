@@ -104,11 +104,14 @@ class AllowlistViewModelTest {
         model.remove(rules().single().id)
         await { model.actions.value.removed != null && !model.actions.value.busy && rules().isEmpty() }
         val removed = checkNotNull(model.actions.value.removed)
+        model.expireUndo()
+        assertEquals(removed, model.actions.value.removed)
         ShadowSystemClock.advanceBy(Duration.ofMillis(removed.deadlineMs - SystemClock.elapsedRealtime()))
+        model.expireUndo()
+        assertNull(model.actions.value.removed)
         model.undo(removed)
         await { model.actions.value.error == R.string.allowlist_undo_error && !model.actions.value.busy }
         assertTrue(rules().isEmpty())
-        model.dismissUndo(removed)
         assertNull(model.actions.value.removed)
     }
 

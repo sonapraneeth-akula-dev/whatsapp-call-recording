@@ -83,6 +83,13 @@ class AllowlistViewModel(application: Application) : AndroidViewModel(applicatio
         mutableActions.update { if (it.removed == ticket) it.copy(removed = null) else it }
     }
 
+    fun expireUndo() {
+        val now = SystemClock.elapsedRealtime()
+        mutableActions.update {
+            if (it.removed?.let { ticket -> now >= ticket.deadlineMs } == true) it.copy(removed = null) else it
+        }
+    }
+
     fun dismissError() { mutableActions.update { it.copy(error = null) } }
 
     fun pickerFailed(error: Exception) {

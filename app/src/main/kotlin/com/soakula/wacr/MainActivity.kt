@@ -177,6 +177,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         home.refresh()
         library.restoreUndo()
+        allowlist.expireUndo()
         if (startWhenResumed) startRecording()
     }
 
