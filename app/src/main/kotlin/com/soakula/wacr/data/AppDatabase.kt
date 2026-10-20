@@ -19,14 +19,15 @@ import java.util.UUID
     entities = [
         CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
         ContactRuleEntity::class, PendingRecordingDeletion::class, CallTypeEventEntity::class,
-        RecordingWaveformEntity::class
+        RecordingWaveformEntity::class, CapabilityResult::class
     ],
-    version = 6, exportSchema = true
+    version = 7, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recordings(): RecordingDao
     abstract fun contactRules(): ContactRuleDao
+    abstract fun capabilities(): CapabilityDao
 
     companion object {
         const val NAME = "wacr.db"
@@ -83,6 +84,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS capability_result (
+                        run_id TEXT NOT NULL, device_model TEXT NOT NULL, os_build TEXT NOT NULL,
+                        wa_package TEXT NOT NULL, wa_version TEXT NOT NULL, wa_version_code INTEGER NOT NULL, route TEXT NOT NULL,
+                        source TEXT NOT NULL, status TEXT NOT NULL, tested_at INTEGER NOT NULL,
+                        recording_id TEXT, sample_frames INTEGER NOT NULL, own_rms_db REAL,
+                        remote_rms_db REAL, zero_pct REAL, client_silenced INTEGER,
+                        own_ok INTEGER, remote_ok INTEGER, id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        FOREIGN KEY(recording_id) REFERENCES recording(id) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_capability_result_run_id_source ON capability_result (run_id, source)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_capability_result_route_source ON capability_result (route, source)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_capability_result_recording_id ON capability_result (recording_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_capability_result_tested_at ON capability_result (tested_at)")
+            }
+        }
+
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
             val password = DatabaseSecret.open(application, application.getDatabasePath(NAME), encryption).load()
@@ -92,7 +113,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true
@@ -111,6 +132,6 @@ abstract class AppDatabase : RoomDatabase() {
 }
 
 class StorageConverters {
-    @TypeConverter fun uuidToString(value: UUID): String = value.toString()
-    @TypeConverter fun stringToUuid(value: String): UUID = UUID.fromString(value)
+    @TypeConverter fun uuidToString(value: UUID?): String? = value?.toString()
+    @TypeConverter fun stringToUuid(value: String?): UUID? = value?.let(UUID::fromString)
 }

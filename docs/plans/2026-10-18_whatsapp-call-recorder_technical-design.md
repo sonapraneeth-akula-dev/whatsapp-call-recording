@@ -325,10 +325,15 @@ SQLite via Room + SQLCipher. Times are epoch ms (`INTEGER`). Enums stored as `TE
 | | size_bytes | INTEGER | N | | |
 | | active | INTEGER(bool) | N | | exactly one active (enforced in repo) |
 | capability_result | id | INTEGER PK | N | | M-001.1 / FR-022 |
-| | device_model / os_build / wa_version | TEXT | N | | |
+| | device_model / os_build / wa_package / wa_version | TEXT | N | | Device/build and WhatsApp package/version provenance |
+| | wa_version_code | INTEGER | N | | Distinguishes APK builds with the same version name |
 | | route / source | TEXT | N | idx(route, source) | |
-| | own_rms_db / remote_rms_db | REAL | Y | | |
-| | own_ok / remote_ok | INTEGER(bool) | N | | threshold −50 dBFS |
+| | run_id / status | TEXT | N | unique(run_id, source) | Complete/unavailable/cancelled/route-changed/low-storage/timed-out |
+| | recording_id | TEXT(UUID) | Y | FK→recording, SET NULL | Encrypted test clip; result retained when clip deleted |
+| | sample_frames | INTEGER | N | | At most 480,000 mono frames: 30 s at 16 kHz |
+| | own_rms_db / remote_rms_db | REAL | Y | | p95 of cued mixed-mono windows, not speaker attribution |
+| | zero_pct / client_silenced | REAL / INTEGER(bool) | Y | | Digital-zero ratio / observed framework silencing |
+| | own_ok / remote_ok | INTEGER(bool) | Y | | Explicit owner listening verdicts; NULL until reviewed, never inferred from −50 dBFS |
 | | tested_at | INTEGER | N | | |
 
 **Derived, not stored**: `CaptureProfile` (best source per route) = computed from latest `capability_result` rows, cached in DataStore.
@@ -707,6 +712,12 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 **Open app-lock behavior decision (2026-10-20, tasks 11.3.1.1.1/.2)**: before enabling the persisted optional lock, owner must choose whether the 60-second background relock stops already-started playback, or permits it to continue until paused while requiring authentication for further playback/selection/seek. UI route gating, strong biometric/device credential, open onboarding, FLAG_SECURE and continued recording while locked are already specified; no playback-lifetime choice was silently made. Owner was unavailable for the question; both usable gate/toggle remain blocked while independent implementation proceeds.
 
 **Shared group capture verification (2026-10-20, task 3.2.2.1.1)**: the existing recording-to-session FK is the group tag; no second encoder/pipeline or guessed recording-level group flag is needed. A synthetic, explicitly verified three-party session is preserved unchanged through the real capture/segmentation/encryption/finalization/repository orchestration, leaving one authenticated AAC artifact even when audio crosses the segment boundary. The test checks group name/participants/decision retention, recording identity, segment cleanup and released microphone, while remoteCaptured remains unknown. A separate unknown-session test proves capture cannot promote group confidence, invent participants or manufacture remote audibility. These are pipeline tests, not captured WhatsApp group evidence; the positive adapter/golden and native three-party phone acceptance remain separate.
+
+**Capability measurement backend (2026-10-20, task 12.1.1.1.1)**: `capability/CapabilityTest` ports the unprivileged source sweep onto the existing encrypted recording worker, not spike WAV output. Each selected source receives at most 30 s of 16 kHz mono PCM: 15 s "You", then 15 s "Other", skipping the first two seconds of each window before computing the shared 100 ms p95 RMS. Digital-zero percentage and available framework silencing observations are retained. These are cued signal measurements, not isolated speakers, speech recognition, proof of a WhatsApp call, or an audibility verdict; own/remote verdicts remain NULL even above the spike energy threshold.
+
+The caller must own the exclusive foreground microphone lease, close playback and finish recovery first. The worker verifies the requested active communication route, stops on a detected route mismatch, and never changes focus, audio mode or routing. Each probe uses only its selected source; unsupported/silenced sources receive explicit unavailable rows rather than borrowing a fallback source under the wrong name. Cancellation, route changes, disk stops and acquisition timeouts finalize available encrypted audio but cannot become complete measurements or continue a sweep. A 35 s monotonic acquisition deadline allows five seconds of delivery tolerance for 30 s of PCM and prevents tiny but nonempty reads from retaining the microphone indefinitely; encoder/finalizer work retains its existing safeguards. Other storage/crypto/foreground failures propagate; unavailable-source recovery must succeed before another probe. Results bind device model/build and WhatsApp package/version name/code, with one indexed SQLCipher `capability_result` row per run/source and nullable references to normal authenticated encrypted clips. No plaintext audio or extra keys are introduced.
+
+Room schema 7 migrates existing rows without manufacturing capability evidence. Nullable recording UUIDs now round-trip through the shared converters, including after deletion sets a clip reference to NULL; malformed UUIDs still throw. Local tests cover all five permitted sources, encrypted finalization/cleanup, bounded/cued RMS, retained unknown verdicts, source refusal/silencing, partial stops, failure propagation and migrations. App debug/release and instrumentation APKs build; actual microphone/AAC decoding, source/route parity with the spike matrix and either person's audibility remain phone acceptance. Foreground-service/UI integration and manually reviewed profile derivation are task 12.1.1.1.2; diagnostic export is task 12.1.1.1.3. This backend alone does not change the provisional recording profile or expose a new settings control.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |

@@ -28,7 +28,8 @@ class RecordingJob(
     private val profile: CaptureProfile = CaptureProfile(),
     private val routes: RouteWatcher? = null,
     private val now: () -> Long = System::currentTimeMillis,
-    private val elapsedMs: () -> Long = SystemClock::elapsedRealtime
+    private val elapsedMs: () -> Long = SystemClock::elapsedRealtime,
+    private val onPcm: (ShortArray, Int, Boolean?) -> Unit = { _, _, _ -> }
 ) {
     private val repository = RecordingRepository(database)
 
@@ -85,6 +86,7 @@ class RecordingJob(
                         val count = capture.read(pcm)
                         if (count > 0) {
                             waveform.append(pcm, count)
+                            onPcm(pcm, count, capture.clientSilenced)
                             encoder.encode(pcm, count)
                         } else Thread.sleep(10)
                     }

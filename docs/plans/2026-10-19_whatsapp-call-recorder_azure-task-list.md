@@ -866,7 +866,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 12.1.1.1.1 | Task | Port spike sweep + RMS into `app/…/capability/CapabilityTest.kt`; store `capability_result` | 02:00 | 00:20 | Results stored per route/source | Reuses spike code |
+| 12.1.1.1.1 | Task | Port spike sweep + RMS into `app/…/capability/CapabilityTest.kt`; store `capability_result` | 02:00 | 00:20 | Results stored per route/source | **2026-10-20: backend implemented and verified locally.** Reuses shared RMS and the encrypted recording pipeline, not spike plaintext WAVs. Thirty-second source probes retain device/build/package/version provenance, cued-window energy, zeros and observed silencing in SQLCipher schema 7; owner audibility verdicts stay unknown. Explicit unavailable/cancelled/route-changed/low-storage/timed-out states, no mislabeled fallback source, partial-audio recovery and deletion-safe nullable clip references covered by local tests. Debug/release and androidTest APKs build. Caller must own exclusive foreground capture and completed recovery; usable guided foreground service/UI/profile integration is 12.1.1.1.2, export is .3. Actual per-phone route/source parity and audibility remain owner UAT. |
 | 12.1.1.1.2 | Task | Guided per-route UI with You ✓/✗, Other ✓/✗; derive `CaptureProfile` | 02:00 | 00:15 | Results match spike matrix |  |
 | 12.1.1.1.3 | Task | Include capability results in diagnostics export | 00:30 | 00:10 | Present in zip |  |
 

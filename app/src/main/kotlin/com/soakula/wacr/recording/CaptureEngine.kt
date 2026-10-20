@@ -11,7 +11,7 @@ import com.soakula.wacr.util.AppLog
 import java.io.Closeable
 import java.io.IOException
 
-class CaptureUnavailableException : IOException("No configured audio source is available")
+class CaptureUnavailableException(val clientSilenced: Boolean? = null) : IOException("No configured audio source is available")
 
 /** Single recording worker owns this engine; no audio focus, mode or device selection is changed. */
 class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) internal constructor(
@@ -32,6 +32,8 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
     lateinit var source: CaptureSource
         private set
     var rmsDbfs: Double? = null
+        private set
+    var clientSilenced: Boolean? = null
         private set
     val format = AacFormat(1)
 
@@ -61,7 +63,8 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
             val now = elapsedMs()
             if (now >= checkSilencingAt) {
                 checkSilencingAt = now + 1000
-                if (recorder.activeRecordingConfiguration?.isClientSilenced == true) {
+                clientSilenced = recorder.activeRecordingConfiguration?.isClientSilenced
+                if (clientSilenced == true) {
                     unavailable(source, IOException("Audio client was silenced"))
                     releaseInput()
                     openNext()
@@ -94,6 +97,7 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
     private fun openNext() {
         while (nextSource < sources.size) {
             val candidate = sources[nextSource++]
+            clientSilenced = null
             try {
                 val recorder = openInput(candidate)
                 var handedOff = false
@@ -123,7 +127,7 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
                 unavailable(candidate, error)
             }
         }
-        throw CaptureUnavailableException()
+        throw CaptureUnavailableException(clientSilenced)
     }
 
     private fun unavailable(source: CaptureSource, error: Exception) {

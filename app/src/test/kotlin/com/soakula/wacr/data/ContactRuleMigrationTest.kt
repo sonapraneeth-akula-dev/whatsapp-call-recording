@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -59,7 +60,7 @@ class ContactRuleMigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 3, true, AppDatabase.MIGRATION_2_3).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
             .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4,
-                AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6).build()
+                AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7).build()
         try {
             val recording = checkNotNull(db.recordings().recording(id))
             assertTrue(recording.starred)
@@ -97,7 +98,7 @@ class ContactRuleMigrationTest {
         }
         helper.runMigrationsAndValidate(TEST_DB, 4, true, AppDatabase.MIGRATION_3_4).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
-            .addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6).build()
+            .addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7).build()
         try {
             val legacy = checkNotNull(db.recordings().session(7))
             assertFalse(legacy.isGroup)
@@ -132,7 +133,7 @@ class ContactRuleMigrationTest {
         }
         helper.runMigrationsAndValidate(TEST_DB, 5, true, AppDatabase.MIGRATION_4_5).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
-            .addMigrations(AppDatabase.MIGRATION_5_6).build()
+            .addMigrations(AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7).build()
         try {
             assertEquals(CallType.VOICE, db.recordings().session(7)?.callType)
             assertTrue(checkNotNull(db.recordings().session(7)).isGroupKnown)
@@ -157,6 +158,7 @@ class ContactRuleMigrationTest {
             """.trimIndent(), arrayOf(id.toString()))
         }
         helper.runMigrationsAndValidate(TEST_DB, 6, true, AppDatabase.MIGRATION_5_6).close()
+        helper.runMigrationsAndValidate(TEST_DB, 7, true, AppDatabase.MIGRATION_6_7).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
         try {
             assertTrue(checkNotNull(db.recordings().recording(id)).starred)
@@ -167,6 +169,44 @@ class ContactRuleMigrationTest {
             db.recordings().deleteRecording(id)
             assertNull(db.recordings().waveform(id))
         } finally { db.close() }
+    }
+
+    @Test fun capabilityMigrationPreservesRecordingEvidenceAndStartsWithNoFabricatedResults() = runBlocking {
+        val id = UUID.randomUUID()
+        helper.createDatabase(TEST_DB, 6).use { db ->
+            db.execSQL("""
+                INSERT INTO recording (id, started_at, channels, capture_source, status, remote_captured, has_video, starred)
+                VALUES (?, 1000, 1, 'VOICE_RECOGNITION', 'FINALIZED', NULL, 0, 1)
+            """.trimIndent(), arrayOf(id.toString()))
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 7, true, AppDatabase.MIGRATION_6_7).close()
+        val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB).build()
+        try {
+            val recording = checkNotNull(db.recordings().recording(id))
+            assertTrue(recording.starred)
+            assertNull(recording.remoteCaptured)
+            assertEquals("VOICE_RECOGNITION", recording.captureSource)
+            assertTrue(db.capabilities().observeRecent().first().isEmpty())
+            val runId = UUID.randomUUID()
+            db.capabilities().insert(CapabilityResult(
+                runId, com.soakula.wacr.capability.CapabilityDevice("Synthetic", "Synthetic build", "com.whatsapp", "synthetic", 1),
+                AudioRoute.EARPIECE, com.soakula.wacr.recording.CaptureSource.MIC, CapabilityStatus.UNAVAILABLE, 1000
+            ))
+            val result = db.capabilities().run(runId).single()
+            assertNull(result.ownOk)
+            assertNull(result.remoteOk)
+            assertNull(result.ownRmsDb)
+            assertNull(result.remoteRmsDb)
+        } finally { db.close() }
+    }
+
+    @Test fun nullableClipReferencesRoundTripWithoutWeakeningMalformedUuidFailures() {
+        val converters = StorageConverters()
+        assertNull(converters.uuidToString(null))
+        assertNull(converters.stringToUuid(null))
+        val id = UUID.randomUUID()
+        assertEquals(id, converters.stringToUuid(converters.uuidToString(id)))
+        assertThrows(IllegalArgumentException::class.java) { converters.stringToUuid("synthetic invalid ID") }
     }
 
     private companion object { const val TEST_DB = "synthetic-contact-rule-migration.db" }
