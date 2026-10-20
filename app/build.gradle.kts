@@ -14,6 +14,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -46,9 +48,13 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+room { schemaDirectory("$projectDir/schemas") }
 
 abstract class VerifyNoInternet : DefaultTask() {
     @get:InputFile
@@ -94,7 +100,7 @@ androidComponents.onVariants { variant ->
 }
 tasks.named("check") { dependsOn(verifyNoInternet) }
 
-// ponytail: add Navigation, persistence and DI when a feature consumes them.
+// ponytail: add Navigation and DI when a feature consumes them.
 dependencies {
     implementation(project(":logging"))
     implementation(libs.androidx.activity.compose)
@@ -102,5 +108,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.tink.android)
+    implementation(libs.room.runtime)
+    kapt(libs.room.compiler)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }

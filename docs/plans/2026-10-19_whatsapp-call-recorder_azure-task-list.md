@@ -289,7 +289,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 3.1.1.3.1 | Task | Room v1: `call_session`, `recording`, `route_event` + DAOs + `RecordingRepository`; schema export — `app/…/data/`, `app/schemas/` | 02:00 | 00:10 | In-memory DAO tests pass; schema JSON committed |  |
+| 3.1.1.3.1 | Task | Room v1: `call_session`, `recording`, `route_event` + DAOs + `RecordingRepository`; schema export — `app/…/data/`, `app/schemas/` | 02:00 | 00:10 | In-memory DAO tests pass; schema JSON committed | **2026-10-20: core schema/repository implemented; local Robolectric in-memory DAO/transaction/FK tests + debug build/lint pass; schema JSON exported.** Includes segment duration for crash-safe retry and cleanup bookkeeping. No production DB opened until encrypted factory is added; only synthetic in-memory test DBs are plaintext. |
 | 3.1.1.3.2 | Task | Write metadata at start/stop: contact, direction, type, start, duration, capture source, routes | 00:45 | 00:10 | Instrumented 60 s test asserts full row |  |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
