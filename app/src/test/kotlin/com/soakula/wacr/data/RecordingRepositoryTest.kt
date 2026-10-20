@@ -56,6 +56,8 @@ class RecordingRepositoryTest {
             assertEquals(RecordingStatus.FINALIZED, finalized.recording.status)
             assertEquals(64L, finalized.recording.durationMs)
             assertNull(finalized.recording.remoteCaptured)
+            repository.rename(id, "  Renamed  ")
+            assertEquals(finalized.copy(recording = finalized.recording.copy(title = "Renamed")), next().single())
             database.recordings().deleteSession(checkNotNull(active.session?.id))
             val manual = next().single()
             assertEquals(id, manual.recording.id)
@@ -106,6 +108,31 @@ class RecordingRepositoryTest {
             observer.cancelAndJoin()
             updates.close()
         }
+    }
+
+    @Test fun renamingIsBoundedUnicodeTextAndChangesOnlyTheRequestedTitle() = runBlocking {
+        val id = UUID.randomUUID()
+        repository.start(RecordingEntity(id, 1000, 1, "MIC"), CallSessionEntity(waDisplayName = "Synthetic"))
+        repository.recordRoute(id, AudioRoute.EARPIECE, 0)
+        repository.finalize(id, FinalizedAudio(64_000, 20, 80))
+        val before = checkNotNull(database.recordings().recording(id))
+        for (invalid in listOf("", "   ", "x".repeat(201), "Invalid\nTitle", "Invalid\u0000Title")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                runBlocking { repository.rename(id, invalid) }
+            }
+            assertEquals(before, database.recordings().recording(id))
+        }
+        val title = String(Character.toChars(0x1F4DE)).repeat(200)
+        repository.rename(id, title)
+        assertEquals(before.copy(title = title), database.recordings().recording(id))
+        repository.rename(id, "Review ' OR 1 = 1 --")
+        assertEquals(before.copy(title = "Review ' OR 1 = 1 --"), database.recordings().recording(id))
+        assertEquals("Synthetic", database.recordings().session(checkNotNull(before.sessionId))?.waDisplayName)
+        assertEquals(AudioRoute.EARPIECE, database.recordings().routes(id).single().route)
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.rename(UUID.randomUUID(), "Missing") }
+        }
+        Unit
     }
 
     @Test fun storesMetadataAndKeepsCleanupRecoverableAcrossFinalization() = runBlocking {

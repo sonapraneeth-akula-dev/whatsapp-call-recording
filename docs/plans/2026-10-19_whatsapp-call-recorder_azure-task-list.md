@@ -543,7 +543,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 6.1.2.2.1 | Task | Rename dialog; delete with undo snackbar (files + rows) | 01:30 | 00:20 | UI tests rename/delete/undo |  |
+| 6.1.2.2.1 | Task | Rename dialog; delete with undo snackbar (files + rows) | 01:30 | 00:20 | UI tests rename/delete/undo | **2026-10-20: rename data operation implemented.** Atomic title-only SQL update, trimmed 1-200 Unicode code points, blank/control/oversized input rejected, missing row reported. Reactive metadata tests retain audio paths, capture/session/routes and accept bound Unicode/quoted text without interpolation. Dialog and persistent five-second delete/undo remain pending; UI gate unchanged. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: library view-model tests pass; ≥ 80% coverage (FEAT-006.1.1, FEAT-006.1.2)

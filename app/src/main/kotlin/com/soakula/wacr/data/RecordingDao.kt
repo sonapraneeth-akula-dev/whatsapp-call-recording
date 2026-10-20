@@ -30,6 +30,9 @@ interface RecordingDao {
     @Query("SELECT * FROM call_session WHERE id = :id")
     suspend fun session(id: Long): CallSessionEntity?
 
+    @Query("UPDATE recording SET title = :title WHERE id = :id")
+    suspend fun rename(id: UUID, title: String): Int
+
     @Query("SELECT * FROM segment WHERE recording_id = :id ORDER BY idx")
     suspend fun segments(id: UUID): List<SegmentEntity>
 
