@@ -25,12 +25,18 @@ fun SettingsScreen(
     onTheme: (ThemeChoice) -> Unit,
     onDynamicColor: (Boolean) -> Unit,
     onRetry: () -> Unit,
-    onDismissError: () -> Unit
+    onDismissError: () -> Unit,
+    onSetup: () -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text(stringResource(R.string.settings_privacy)) }
+            item {
+                OutlinedButton(onClick = onSetup, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.setup_title))
+                }
+            }
             if (actions.failed) item {
                 Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
                     Text(stringResource(R.string.settings_save_error), color = MaterialTheme.colorScheme.error)

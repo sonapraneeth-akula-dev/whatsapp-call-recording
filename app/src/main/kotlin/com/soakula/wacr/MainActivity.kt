@@ -2,9 +2,12 @@ package com.soakula.wacr
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.provider.Settings
+import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import android.widget.Toast
@@ -21,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.soakula.wacr.health.HealthIssue
+import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.allowlist.AllowlistScreen
@@ -34,6 +38,7 @@ import com.soakula.wacr.ui.settings.SettingsUiState
 import com.soakula.wacr.ui.settings.SettingsViewModel
 import com.soakula.wacr.ui.theme.WacrTheme
 import com.soakula.wacr.ui.theme.isDark
+import com.soakula.wacr.ui.onboarding.SetupChecklistScreen
 import com.soakula.wacr.data.Appearance
 import com.soakula.wacr.playback.createRecordingPlayer
 import androidx.media3.common.util.UnstableApi
@@ -97,6 +102,7 @@ class MainActivity : ComponentActivity() {
             val appearanceState by settings.state.collectAsStateWithLifecycle()
             val appearanceActions by settings.actions.collectAsStateWithLifecycle()
             val appearance = (appearanceState as? SettingsUiState.Ready)?.appearance ?: Appearance()
+            val firstRun = (appearanceState as? SettingsUiState.Ready)?.onboardingDone == false
             val dark = appearance.theme.isDark(isSystemInDarkTheme())
             LaunchedEffect(dark) {
                 val bars = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
@@ -115,10 +121,18 @@ class MainActivity : ComponentActivity() {
                     allowlistContent = {
                         AllowlistScreen(contactRules, contactActions, ::pickContact, allowlist::retry,
                             allowlist::remove, allowlist::undo, allowlist::dismissUndo, allowlist::dismissError)
-                    }, settingsContent = {
+                    }, settingsContent = { openSetup ->
                         SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
-                            settings::retry, settings::dismissError)
-                    }, appearanceError = appearanceState is SettingsUiState.Failed,
+                            settings::retry, settings::dismissError, onSetup = openSetup)
+                    }, setupContent = { closeSetup ->
+                        SetupChecklistScreen(state, appearanceActions.busy, appearanceActions.failed,
+                            home::refresh, ::openFix, ::grantSetupPermission,
+                            { openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", packageName, null))) },
+                            { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
+                            { if (firstRun) settings.completeOnboarding() else closeSetup() })
+                    }, forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
+                    appearanceError = appearanceState is SettingsUiState.Failed,
                     onRetryAppearance = settings::retry) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
@@ -187,6 +201,24 @@ class MainActivity : ComponentActivity() {
 
     private fun openFix(issue: HealthIssue) {
         val intent = issue.fixIntent ?: return
+        openSettings(intent)
+    }
+
+    private fun grantSetupPermission(issue: HealthIssue) {
+        val permission = when (issue.problem) {
+            HealthProblem.MICROPHONE_PERMISSION -> Manifest.permission.RECORD_AUDIO
+            HealthProblem.NOTIFICATIONS_DISABLED -> Manifest.permission.POST_NOTIFICATIONS
+            else -> return
+        }
+        if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
+            openFix(issue)
+        } else {
+            recordAfterPermission = false
+            permissions.launch(arrayOf(permission))
+        }
+    }
+
+    private fun openSettings(intent: Intent) {
         try {
             startActivity(intent)
         } catch (error: ActivityNotFoundException) {

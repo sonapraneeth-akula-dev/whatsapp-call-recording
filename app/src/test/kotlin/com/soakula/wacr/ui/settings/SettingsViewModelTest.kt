@@ -66,6 +66,9 @@ class SettingsViewModelTest {
         assertEquals(SettingsUiState.Ready(Appearance()), model.state.value)
         model.dismissError()
         assertFalse(model.actions.value.failed)
+        model.completeOnboarding()
+        await { model.actions.value.failed && !model.actions.value.busy }
+        assertFalse(checkNotNull(model.state.value as? SettingsUiState.Ready).onboardingDone)
     }
 
     private suspend fun await(condition: () -> Boolean) = withTimeout(10_000) {

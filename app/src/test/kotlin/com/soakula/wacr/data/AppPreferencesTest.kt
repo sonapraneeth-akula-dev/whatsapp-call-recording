@@ -22,16 +22,19 @@ class AppPreferencesTest {
         assertEquals(Appearance(), first.appearance.first())
         first.setTheme(ThemeChoice.DARK)
         first.setDynamicColor(false)
+        first.completeOnboarding()
         assertEquals(Appearance(ThemeChoice.DARK, false), first.appearance.first())
         scope.coroutineContext[Job]!!.cancelAndJoin()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val reopened = AppPreferences(PreferenceDataStoreFactory.create(scope = scope) { file })
         assertEquals(Appearance(ThemeChoice.DARK, false), reopened.appearance.first())
+        assertTrue(reopened.values.first().onboardingDone)
         reopened.setTheme(ThemeChoice.LIGHT)
         assertEquals(Appearance(ThemeChoice.LIGHT, false), reopened.appearance.first())
         reopened.setTheme(ThemeChoice.SYSTEM)
         reopened.setDynamicColor(true)
         assertEquals(Appearance(), reopened.appearance.first())
+        assertTrue(reopened.values.first().onboardingDone)
     }
 
     @Test fun unknownStoredChoiceFailsExplicitlyWithoutResettingOriginalValue() = runBlocking {

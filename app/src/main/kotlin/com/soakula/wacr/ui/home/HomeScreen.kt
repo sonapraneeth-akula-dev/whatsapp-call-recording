@@ -139,7 +139,7 @@ fun healthTitle(problem: HealthProblem): Int = when (problem) {
 }
 
 @StringRes
-private fun healthDetail(problem: HealthProblem): Int = when (problem) {
+internal fun healthDetail(problem: HealthProblem): Int = when (problem) {
     HealthProblem.MICROPHONE_PERMISSION -> R.string.health_microphone_detail
     HealthProblem.NOTIFICATIONS_DISABLED, HealthProblem.RECORDING_CHANNEL_DISABLED -> R.string.health_notifications_detail
     HealthProblem.DETECTION_UNAVAILABLE -> R.string.health_detector_detail

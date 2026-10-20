@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -45,12 +47,16 @@ fun AppScaffold(
     onDismissUndo: (PendingRecordingDeletion) -> Unit = {},
     onDismissError: () -> Unit = {},
     allowlistContent: @Composable () -> Unit = {},
-    settingsContent: @Composable () -> Unit = {},
+    settingsContent: @Composable (() -> Unit) -> Unit = {},
+    setupContent: @Composable (() -> Unit) -> Unit = {},
+    forceSetup: Boolean = false,
+    startupLoading: Boolean = false,
     appearanceError: Boolean = false,
     onRetryAppearance: () -> Unit = {},
     playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
+    var showSetup by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val undoMessage = stringResource(R.string.library_deleted)
     val undoLabel = stringResource(R.string.library_undo)
@@ -67,8 +73,10 @@ fun AppScaffold(
     LaunchedEffect(selectedId, library) {
         if (selectedId != null && library is LibraryUiState.Ready && selected == null) selectedId = null
     }
-    BackHandler(selectedId != null || destination != Destination.HOME) {
-        if (selectedId != null) selectedId = null else destination = Destination.HOME
+    BackHandler(!forceSetup && (showSetup || selectedId != null || destination != Destination.HOME)) {
+        if (showSetup) showSetup = false
+        else if (selectedId != null) selectedId = null
+        else destination = Destination.HOME
     }
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -90,7 +98,7 @@ fun AppScaffold(
             }
         },
         bottomBar = {
-            NavigationBar {
+            if (!forceSetup && !startupLoading) NavigationBar {
                 NavigationBarItem(
                     selected = destination == Destination.HOME, onClick = { selectedId = null; destination = Destination.HOME },
                     icon = { Icon(painterResource(R.drawable.ic_home), null) },
@@ -116,11 +124,13 @@ fun AppScaffold(
             }
         }
     ) { padding ->
-        Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
+        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             when {
+                startupLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                forceSetup || showSetup -> setupContent { showSetup = false }
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
                 destination == Destination.ALLOWLIST -> allowlistContent()
-                destination == Destination.SETTINGS -> settingsContent()
+                destination == Destination.SETTINGS -> settingsContent { showSetup = true }
                 destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
                 else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
                     selectedId = it.toString()

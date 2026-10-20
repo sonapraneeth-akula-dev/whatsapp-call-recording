@@ -5,7 +5,11 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.ContactsContract
+import com.soakula.wacr.health.HealthIssue
+import com.soakula.wacr.health.HealthProblem
 import android.view.WindowManager
+import androidx.lifecycle.ViewModelProvider
+import com.soakula.wacr.ui.home.HomeViewModel
 import com.soakula.wacr.recording.RecorderService
 import com.soakula.wacr.recording.RecorderState
 import org.junit.After
@@ -20,6 +24,10 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.experimental.LazyApplication
 import org.robolectric.util.ReflectionHelpers
+import org.robolectric.shadows.ShadowLooper
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = WacrApp::class)
@@ -82,6 +90,48 @@ class MainActivityTest {
             activity.pause().stop().destroy()
         }
 
+    }
+
+    @Test fun setupPermissionRequestNeverArmsOrStartsRecording() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try {
+            shadowOf(app).denyPermissions(Manifest.permission.RECORD_AUDIO)
+            val issue = HealthIssue(HealthProblem.MICROPHONE_PERMISSION, null)
+            ReflectionHelpers.callInstanceMethod<Unit>(activity.get(), "grantSetupPermission",
+                ReflectionHelpers.ClassParameter.from(HealthIssue::class.java, issue))
+            assertFalse(ReflectionHelpers.getField(activity.get(), "recordAfterPermission"))
+            assertArrayEquals(arrayOf(Manifest.permission.RECORD_AUDIO),
+                shadowOf(activity.get()).lastRequestedPermission.requestedPermissions)
+            assertEquals(RecorderState.Idle, app.recorder.state.value)
+            assertNull(shadowOf(app).nextStartedService)
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
+
+    @Test fun resumeRefreshesRealSetupStateAfterPermissionRevocationAndRestoration() = runBlocking {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val home = ViewModelProvider(activity.get())[HomeViewModel::class.java]
+        suspend fun await(missing: Boolean) = withTimeout(10_000) {
+            while (!home.state.value.loaded ||
+                home.state.value.issues.any { it.problem == HealthProblem.MICROPHONE_PERMISSION } != missing) {
+                ShadowLooper.idleMainLooper()
+                delay(10)
+            }
+        }
+        try {
+            await(false)
+            activity.pause().stop()
+            shadowOf(app).denyPermissions(Manifest.permission.RECORD_AUDIO)
+            activity.restart().start().resume()
+            await(true)
+            activity.pause().stop()
+            shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO)
+            activity.restart().start().resume()
+            await(false)
+        } finally {
+            activity.pause().stop().destroy()
+        }
     }
 
     @Test fun contactPickerUsesNativeActionPickAndCancellationNeedsNoContactsPermission() {

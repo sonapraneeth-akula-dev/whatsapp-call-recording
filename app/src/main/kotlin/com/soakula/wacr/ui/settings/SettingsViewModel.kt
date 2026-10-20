@@ -7,6 +7,7 @@ import com.soakula.wacr.WacrApp
 import com.soakula.wacr.data.AppPreferences
 import com.soakula.wacr.data.Appearance
 import com.soakula.wacr.data.ThemeChoice
+import com.soakula.wacr.data.UserPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,7 +21,7 @@ import java.io.IOException
 sealed interface SettingsUiState {
     data object Loading : SettingsUiState
     data object Failed : SettingsUiState
-    data class Ready(val appearance: Appearance) : SettingsUiState
+    data class Ready(val appearance: Appearance, val onboardingDone: Boolean = false) : SettingsUiState
 }
 data class SettingsActionsState(val busy: Boolean = false, val failed: Boolean = false)
 
@@ -37,7 +38,7 @@ class SettingsViewModel internal constructor(
     private val lock = Mutex()
     val actions = mutableActions.asStateFlow()
     val state = refresh.flatMapLatest {
-        preferences.appearance.map<Appearance, SettingsUiState> { SettingsUiState.Ready(it) }
+        preferences.values.map<UserPreferences, SettingsUiState> { SettingsUiState.Ready(it.appearance, it.onboardingDone) }
             .onStart { emit(SettingsUiState.Loading) }
             .catch { error ->
                 if (error is CancellationException) throw error
@@ -51,6 +52,7 @@ class SettingsViewModel internal constructor(
     fun dismissError() { mutableActions.update { it.copy(failed = false) } }
     fun setTheme(theme: ThemeChoice) = save { preferences.setTheme(theme) }
     fun setDynamicColor(enabled: Boolean) = save { preferences.setDynamicColor(enabled) }
+    fun completeOnboarding() = save { preferences.completeOnboarding() }
 
     private fun save(operation: suspend () -> Unit) {
         viewModelScope.launch {

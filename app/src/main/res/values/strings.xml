@@ -131,4 +131,27 @@
     <string name="settings_theme_detail">Turn off wallpaper colors to use the deep-teal palette. Theme changes do not affect recording or playback.</string>
     <string name="settings_read_error">Could not read saved appearance. Following the system temporarily; stored settings were not reset. Retry to restore your choice.</string>
     <string name="settings_save_error">Could not save this change. The previously saved choice remains in effect; retry.</string>
+    <string name="setup_title">Setup checklist</string>
+    <string name="setup_intro">Review why each access is needed before enabling it. Microphone records audio; notifications keep the recording indicator and Stop visible. Granting access never starts recording. Continue to Home for manual controls; completing this guide does not prove call capture or remote audio. Obtain participant consent before recording.</string>
+    <string name="setup_continue">Continue to Home</string>
+    <string name="setup_recheck">Recheck setup</string>
+    <string name="setup_unverified">Not verified</string>
+    <string name="setup_action_required">Action needed</string>
+    <string name="setup_checked">No issue reported by Android</string>
+    <string name="setup_grant">Grant permission</string>
+    <string name="setup_sideload_title">Sideloaded app: restricted settings</string>
+    <string name="setup_sideload_detail">If Android blocks accessibility or notification access, open App info and look for Allow restricted settings in its menu. Enable only for this trusted build, then return to the relevant access screen. Options vary by device; managed-device policies may forbid changes. Missing adapters in this build cannot be enabled through Settings.</string>
+    <string name="setup_app_info">Open App info</string>
+    <string name="setup_samsung_title">Samsung sleeping apps: manual review</string>
+    <string name="setup_samsung_detail">In Samsung Settings, find Background usage limits. Remove WACR from Sleeping and Deep sleeping apps, then add it to Never sleeping apps if offered. Menu paths vary by One UI. The Android battery list below does not open that Samsung list directly, and this app cannot verify Samsung sleeping-list membership. No generic battery result marks that manual step complete.</string>
+    <string name="setup_battery_list">Open Android battery list</string>
+    <string name="setup_microphone">Microphone access</string>
+    <string name="setup_notifications">Recording notifications</string>
+    <string name="setup_channel">Recording notification channel</string>
+    <string name="setup_detector">Call detector availability</string>
+    <string name="setup_accessibility">WhatsApp call-screen access</string>
+    <string name="setup_listener">Call notification access</string>
+    <string name="setup_battery">Android battery optimization</string>
+    <string name="setup_background">Background execution</string>
+    <string name="setup_detector_checked_detail">Call adapters are declared and enabled. This check does not prove detection accuracy, remote audio or recording reliability.</string>
 </resources>
