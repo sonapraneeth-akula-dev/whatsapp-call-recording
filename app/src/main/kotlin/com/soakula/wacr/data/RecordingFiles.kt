@@ -3,6 +3,7 @@ package com.soakula.wacr.data
 import com.soakula.wacr.recording.SegmentWriter
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.util.UUID
 
 class RecordingFiles(filesDir: File) {
@@ -28,6 +29,18 @@ class RecordingFiles(filesDir: File) {
             }
             index
         }.sorted()
+    }
+
+    fun deleteRecording(recordingId: UUID) {
+        val directory = file(recordingId, "audio.aac.enc").parentFile!!
+        if (!directory.exists()) return
+        val children = directory.listFiles() ?: throw IOException("Cannot list recording directory")
+        children.forEach {
+            file(recordingId, it.name)
+            if (!it.isFile) throw IOException("Recording directory contains a non-file artifact")
+        }
+        children.forEach { Files.deleteIfExists(file(recordingId, it.name).toPath()) }
+        Files.deleteIfExists(directory.toPath())
     }
 
     companion object {

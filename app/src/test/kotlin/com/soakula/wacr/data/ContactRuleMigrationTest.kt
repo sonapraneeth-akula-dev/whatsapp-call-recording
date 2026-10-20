@@ -50,9 +50,15 @@ class ContactRuleMigrationTest {
                 arrayOf(id.toString()))
             db.execSQL("INSERT INTO route_event (recording_id, at_ms, route) VALUES (?, 0, 'EARPIECE')", arrayOf(id.toString()))
         }
-        helper.runMigrationsAndValidate(TEST_DB, 2, true, AppDatabase.MIGRATION_1_2).close()
+        helper.runMigrationsAndValidate(TEST_DB, 2, true, AppDatabase.MIGRATION_1_2).use { db ->
+            db.execSQL("""
+                INSERT INTO contact_rule (id, display_name, match_key, kind, created_at)
+                VALUES (9, 'Existing', 'existing', 'CONTACT', 1500)
+            """.trimIndent())
+        }
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, AppDatabase.MIGRATION_2_3).close()
         val db = Room.databaseBuilder(application, AppDatabase::class.java, TEST_DB)
-            .addMigrations(AppDatabase.MIGRATION_1_2).build()
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
         try {
             val recording = checkNotNull(db.recordings().recording(id))
             assertTrue(recording.starred)
@@ -61,6 +67,8 @@ class ContactRuleMigrationTest {
             assertEquals(64_000L, db.recordings().segments(id).single().durationUs)
             assertEquals(AudioRoute.EARPIECE, db.recordings().routes(id).single().route)
             val rules = ContactRuleRepository(db)
+            assertEquals("Existing", rules.matchingContact("existing")?.displayName)
+            assertTrue(db.recordings().pendingDeletions().isEmpty())
             val added = rules.addContact("Demo", 2000)
             assertEquals(added, rules.matchingContact("demo"))
         } finally {

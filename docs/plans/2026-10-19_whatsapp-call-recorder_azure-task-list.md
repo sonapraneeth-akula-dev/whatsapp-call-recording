@@ -543,7 +543,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 6.1.2.2.1 | Task | Rename dialog; delete with undo snackbar (files + rows) | 01:30 | 00:20 | UI tests rename/delete/undo | **2026-10-20: rename data operation implemented.** Atomic title-only SQL update, trimmed 1-200 Unicode code points, blank/control/oversized input rejected, missing row reported. Reactive metadata tests retain audio paths, capture/session/routes and accept bound Unicode/quoted text without interpolation. Dialog and persistent five-second delete/undo remain pending; UI gate unchanged. |
+| 6.1.2.2.1 | Task | Rename dialog; delete with undo snackbar (files + rows) | 01:30 | 00:20 | UI tests rename/delete/undo | **2026-10-20: rename + persistent deletion data operations implemented.** Atomic validated title-only update. Room v3 deletion outbox hides entries from library/recent/recovery, permits Undo for exactly 5,000 monotonic ms in the same boot, then commits an irreversible claim before bounded private-file removal and child-metadata cleanup. Persisted offline job plus app/boot/update scheduling resumes interrupted cleanup; failed scheduling rolls back the request. Local reactive, 4,999/5,000 ms boundary, reopen, reboot, stale-token, partial-cleanup, concurrency, unsafe-path and migration tests pass. No plaintext staging or recursive root deletion. Rename dialog/snackbar/player lifecycle wiring and phone scheduling acceptance remain pending M-008.1. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: library view-model tests pass; ≥ 80% coverage (FEAT-006.1.1, FEAT-006.1.2)

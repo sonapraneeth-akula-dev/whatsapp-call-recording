@@ -27,6 +27,10 @@
             android:name=".recording.RecoveryJobService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name=".recording.DeletionJobService"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <receiver
             android:name=".health.BootReceiver"
             android:exported="false">

@@ -18,9 +18,9 @@ import java.util.UUID
 @Database(
     entities = [
         CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
-        ContactRuleEntity::class
+        ContactRuleEntity::class, PendingRecordingDeletion::class
     ],
-    version = 2, exportSchema = true
+    version = 3, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -40,6 +40,17 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_contact_rule_kind_match_key ON contact_rule (kind, match_key)")
             }
         }
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS recording_deletion (
+                        recording_id TEXT NOT NULL PRIMARY KEY, request_id TEXT NOT NULL,
+                        undo_until_elapsed_ms INTEGER NOT NULL, boot_count INTEGER NOT NULL,
+                        committed INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
 
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
@@ -50,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true

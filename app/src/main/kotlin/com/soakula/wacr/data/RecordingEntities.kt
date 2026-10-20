@@ -62,6 +62,15 @@ data class RecordingWithSession(
     @Relation(parentColumn = "session_id", entityColumn = "id") val session: CallSessionEntity?
 )
 
+@Entity(tableName = "recording_deletion")
+data class PendingRecordingDeletion(
+    @PrimaryKey @ColumnInfo(name = "recording_id") val recordingId: UUID,
+    @ColumnInfo(name = "request_id") val requestId: UUID,
+    @ColumnInfo(name = "undo_until_elapsed_ms") val undoUntilElapsedMs: Long,
+    @ColumnInfo(name = "boot_count") val bootCount: Int,
+    val committed: Boolean = false
+)
+
 @Entity(
     tableName = "segment", primaryKeys = ["recording_id", "idx"],
     foreignKeys = [ForeignKey(

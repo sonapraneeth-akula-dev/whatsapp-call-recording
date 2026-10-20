@@ -20,7 +20,7 @@ class RecordingRepository(private val database: AppDatabase) {
         val value = title.trim()
         require(value.isNotBlank() && value.codePointCount(0, value.length) <= 200 &&
             value.none(Char::isISOControl)) { "Recording title must contain 1-200 characters without controls" }
-        check(dao.rename(id, value) == 1) { "Recording does not exist" }
+        check(dao.rename(id, value) == 1) { "Recording does not exist or is pending deletion" }
     }
 
     suspend fun start(recording: RecordingEntity, session: CallSessionEntity? = null) {

@@ -1,0 +1,472 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "52c5bf554cfeb3c392f38255472c9493",
+    "entities": [
+      {
+        "tableName": "call_session",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `wa_display_name` TEXT, `match_key` TEXT, `is_group` INTEGER NOT NULL, `group_name` TEXT, `participants_json` TEXT, `direction` TEXT NOT NULL, `call_type` TEXT NOT NULL, `ringing_at` INTEGER, `connected_at` INTEGER, `ended_at` INTEGER, `decision` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "waDisplayName",
+            "columnName": "wa_display_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "matchKey",
+            "columnName": "match_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isGroup",
+            "columnName": "is_group",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupName",
+            "columnName": "group_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "participantsJson",
+            "columnName": "participants_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "direction",
+            "columnName": "direction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "callType",
+            "columnName": "call_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ringingAt",
+            "columnName": "ringing_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "connectedAt",
+            "columnName": "connected_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "ended_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "decision",
+            "columnName": "decision",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_call_session_wa_display_name",
+            "unique": false,
+            "columnNames": [
+              "wa_display_name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_session_wa_display_name` ON `${TABLE_NAME}` (`wa_display_name`)"
+          },
+          {
+            "name": "index_call_session_match_key",
+            "unique": false,
+            "columnNames": [
+              "match_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_session_match_key` ON `${TABLE_NAME}` (`match_key`)"
+          },
+          {
+            "name": "index_call_session_connected_at",
+            "unique": false,
+            "columnNames": [
+              "connected_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_call_session_connected_at` ON `${TABLE_NAME}` (`connected_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "recording",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `started_at` INTEGER NOT NULL, `channels` INTEGER NOT NULL, `capture_source` TEXT NOT NULL, `session_id` INTEGER, `title` TEXT, `status` TEXT NOT NULL, `duration_ms` INTEGER, `size_bytes` INTEGER, `remote_captured` INTEGER, `has_video` INTEGER NOT NULL, `fallback_reason` TEXT, `starred` INTEGER NOT NULL, `audio_path` TEXT, `video_path` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`session_id`) REFERENCES `call_session`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "started_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "channels",
+            "columnName": "channels",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "captureSource",
+            "columnName": "capture_source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "session_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "duration_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "size_bytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "remoteCaptured",
+            "columnName": "remote_captured",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hasVideo",
+            "columnName": "has_video",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fallbackReason",
+            "columnName": "fallback_reason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "starred",
+            "columnName": "starred",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audioPath",
+            "columnName": "audio_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "videoPath",
+            "columnName": "video_path",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_recording_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recording_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          },
+          {
+            "name": "index_recording_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recording_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_recording_started_at",
+            "unique": false,
+            "columnNames": [
+              "started_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recording_started_at` ON `${TABLE_NAME}` (`started_at`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "call_session",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "segment",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recording_id` TEXT NOT NULL, `idx` INTEGER NOT NULL, `duration_us` INTEGER NOT NULL, `plain_bytes` INTEGER NOT NULL, `written_at` INTEGER NOT NULL, PRIMARY KEY(`recording_id`, `idx`), FOREIGN KEY(`recording_id`) REFERENCES `recording`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "recordingId",
+            "columnName": "recording_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "index",
+            "columnName": "idx",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationUs",
+            "columnName": "duration_us",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "plainBytes",
+            "columnName": "plain_bytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "writtenAt",
+            "columnName": "written_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recording_id",
+            "idx"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "recording",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "recording_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "route_event",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recording_id` TEXT NOT NULL, `at_ms` INTEGER NOT NULL, `route` TEXT NOT NULL, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, FOREIGN KEY(`recording_id`) REFERENCES `recording`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "recordingId",
+            "columnName": "recording_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atMs",
+            "columnName": "at_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "route",
+            "columnName": "route",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_route_event_recording_id",
+            "unique": false,
+            "columnNames": [
+              "recording_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_route_event_recording_id` ON `${TABLE_NAME}` (`recording_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "recording",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "recording_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "contact_rule",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`display_name` TEXT NOT NULL, `match_key` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `mode_override` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "displayName",
+            "columnName": "display_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "matchKey",
+            "columnName": "match_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modeOverride",
+            "columnName": "mode_override",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_contact_rule_kind_match_key",
+            "unique": true,
+            "columnNames": [
+              "kind",
+              "match_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_contact_rule_kind_match_key` ON `${TABLE_NAME}` (`kind`, `match_key`)"
+          }
+        ]
+      },
+      {
+        "tableName": "recording_deletion",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recording_id` TEXT NOT NULL, `request_id` TEXT NOT NULL, `undo_until_elapsed_ms` INTEGER NOT NULL, `boot_count` INTEGER NOT NULL, `committed` INTEGER NOT NULL, PRIMARY KEY(`recording_id`))",
+        "fields": [
+          {
+            "fieldPath": "recordingId",
+            "columnName": "recording_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "requestId",
+            "columnName": "request_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "undoUntilElapsedMs",
+            "columnName": "undo_until_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bootCount",
+            "columnName": "boot_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "committed",
+            "columnName": "committed",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recording_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '52c5bf554cfeb3c392f38255472c9493')"
+    ]
+  }
+}

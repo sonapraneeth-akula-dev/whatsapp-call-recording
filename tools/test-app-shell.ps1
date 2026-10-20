@@ -56,11 +56,13 @@ foreach ($case in @(
                 throw "Recorder permission $permission missing in $apk"
             }
         }
-        $recovery = @($manifest.manifest.application.service) | Where-Object {
-            $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.recording.RecoveryJobService'
-        }
-        if (-not $recovery -or $recovery.GetAttribute('permission', $android) -ne 'android.permission.BIND_JOB_SERVICE') {
-            throw "Recovery job service is missing its binding protection in $apk"
+        foreach ($jobClass in @('RecoveryJobService', 'DeletionJobService')) {
+            $job = @($manifest.manifest.application.service) | Where-Object {
+                $_.GetAttribute('name', $android) -eq "com.soakula.wacr.recording.$jobClass"
+            }
+            if (-not $job -or $job.GetAttribute('permission', $android) -ne 'android.permission.BIND_JOB_SERVICE') {
+                throw "$jobClass is missing its binding protection in $apk"
+            }
         }
         $boot = @($manifest.manifest.application.receiver) | Where-Object {
             $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.health.BootReceiver'

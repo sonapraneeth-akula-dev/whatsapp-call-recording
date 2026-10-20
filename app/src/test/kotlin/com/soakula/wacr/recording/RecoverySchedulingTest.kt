@@ -15,7 +15,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = Application::class, manifest = Config.NONE)
 class RecoverySchedulingTest {
-    @Test fun bootAndUpgradeQueueOneOfflineJobWithoutStartingMicrophoneServices() {
+    @Test fun bootAndUpgradeQueueOfflineMaintenanceWithoutStartingMicrophoneServices() {
         val application = RuntimeEnvironment.getApplication()
         val scheduler = checkNotNull(application.getSystemService(JobScheduler::class.java))
         scheduler.cancelAll()
@@ -25,11 +25,17 @@ class RecoverySchedulingTest {
         receiver.onReceive(application, Intent(Intent.ACTION_BOOT_COMPLETED))
         receiver.onReceive(application, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
         assertTrue(RecoveryJobService.enqueue(application))
-        val job = scheduler.allPendingJobs.single()
+        assertEquals(setOf(RecoveryJobService.JOB_ID, DeletionJobService.JOB_ID), scheduler.allPendingJobs.map { it.id }.toSet())
+        val job = checkNotNull(scheduler.getPendingJob(RecoveryJobService.JOB_ID))
         assertEquals(RecoveryJobService.JOB_ID, job.id)
         assertEquals(RecoveryJobService::class.java.name, job.service.className)
         assertNull(job.requiredNetwork)
         assertEquals(JobInfo.BACKOFF_POLICY_EXPONENTIAL, job.backoffPolicy)
         assertEquals(60_000L, job.initialBackoffMillis)
+        val deletion = checkNotNull(scheduler.getPendingJob(DeletionJobService.JOB_ID))
+        assertEquals(DeletionJobService::class.java.name, deletion.service.className)
+        assertTrue(deletion.isPersisted)
+        assertNull(deletion.requiredNetwork)
+        assertEquals(10_000L, deletion.initialBackoffMillis)
     }
 }

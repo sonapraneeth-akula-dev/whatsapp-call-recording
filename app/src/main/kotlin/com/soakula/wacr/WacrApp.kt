@@ -6,11 +6,13 @@ import com.soakula.wacr.crypto.KeyManager
 import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.RecordingFiles
 import com.soakula.wacr.data.AppDatabase
+import com.soakula.wacr.data.RecordingDeletion
 import com.soakula.wacr.util.AppLog
 import com.soakula.wacr.recording.Recovery
 import com.soakula.wacr.recording.RecoveryJobService
 import com.soakula.wacr.recording.RecoveryReport
 import com.soakula.wacr.recording.RecorderController
+import com.soakula.wacr.recording.DeletionJobService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -33,6 +35,8 @@ class WacrApp : Application() {
     suspend fun database(): AppDatabase = databaseLock.withLock {
         openDatabase ?: AppDatabase.open(this, keys.aead).also { openDatabase = it }
     }
+
+    suspend fun deletions(): RecordingDeletion = RecordingDeletion(this, database(), recordingFiles)
 
     suspend fun ensureRecovered(): RecoveryReport = withContext(Dispatchers.IO) {
         recoveryLock.withLock {
@@ -59,5 +63,6 @@ class WacrApp : Application() {
         )
         log.log("app", "created")
         if (!RecoveryJobService.enqueue(this)) log.log("recovery", "schedule_failed")
+        if (!DeletionJobService.enqueue(this)) log.log("deletion", "schedule_failed")
     }
 }

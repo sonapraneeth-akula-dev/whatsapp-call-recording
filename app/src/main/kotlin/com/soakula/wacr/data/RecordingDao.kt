@@ -20,18 +20,43 @@ interface RecordingDao {
     suspend fun recording(id: UUID): RecordingEntity?
 
     @Transaction
-    @Query("SELECT * FROM recording ORDER BY started_at DESC, id")
+    @Query("""
+        SELECT * FROM recording WHERE NOT EXISTS
+        (SELECT 1 FROM recording_deletion WHERE recording_id = recording.id)
+        ORDER BY started_at DESC, id
+    """)
     fun observeAll(): Flow<List<RecordingWithSession>>
 
     @Transaction
-    @Query("SELECT * FROM recording ORDER BY started_at DESC, id LIMIT 5")
+    @Query("""
+        SELECT * FROM recording WHERE NOT EXISTS
+        (SELECT 1 FROM recording_deletion WHERE recording_id = recording.id)
+        ORDER BY started_at DESC, id LIMIT 5
+    """)
     fun observeRecent(): Flow<List<RecordingWithSession>>
 
     @Query("SELECT * FROM call_session WHERE id = :id")
     suspend fun session(id: Long): CallSessionEntity?
 
-    @Query("UPDATE recording SET title = :title WHERE id = :id")
+    @Query("""
+        UPDATE recording SET title = :title WHERE id = :id AND NOT EXISTS
+        (SELECT 1 FROM recording_deletion WHERE recording_id = recording.id)
+    """)
     suspend fun rename(id: UUID, title: String): Int
+
+    @Insert suspend fun insertDeletion(deletion: PendingRecordingDeletion)
+
+    @Query("SELECT * FROM recording_deletion WHERE recording_id = :id")
+    suspend fun deletion(id: UUID): PendingRecordingDeletion?
+
+    @Query("SELECT * FROM recording_deletion ORDER BY undo_until_elapsed_ms, recording_id")
+    suspend fun pendingDeletions(): List<PendingRecordingDeletion>
+
+    @Query("UPDATE recording_deletion SET committed = 1 WHERE recording_id = :id AND request_id = :request")
+    suspend fun commitDeletion(id: UUID, request: UUID): Int
+
+    @Query("DELETE FROM recording_deletion WHERE recording_id = :id AND request_id = :request")
+    suspend fun removeDeletion(id: UUID, request: UUID): Int
 
     @Query("SELECT * FROM segment WHERE recording_id = :id ORDER BY idx")
     suspend fun segments(id: UUID): List<SegmentEntity>
@@ -46,9 +71,10 @@ interface RecordingDao {
     suspend fun lastSegmentIndex(id: UUID): Int?
 
     @Query("""
-        SELECT * FROM recording WHERE status = 'RECORDING'
+        SELECT * FROM recording WHERE (status = 'RECORDING'
         OR (status IN ('FINALIZED', 'RECOVERED') AND
-            EXISTS (SELECT 1 FROM segment WHERE recording_id = recording.id))
+            EXISTS (SELECT 1 FROM segment WHERE recording_id = recording.id)))
+        AND NOT EXISTS (SELECT 1 FROM recording_deletion WHERE recording_id = recording.id)
         ORDER BY started_at, id
     """)
     suspend fun needsRecovery(): List<RecordingEntity>
