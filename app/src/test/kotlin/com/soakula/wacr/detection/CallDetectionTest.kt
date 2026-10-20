@@ -14,6 +14,7 @@ import com.soakula.wacr.data.AppDatabase
 import com.soakula.wacr.data.CallType
 import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.health.exportDiagnostics
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -22,12 +23,16 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.json.JSONObject
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.experimental.LazyApplication
 import org.robolectric.util.ReflectionHelpers
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipInputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], application = WacrApp::class)
@@ -91,6 +96,19 @@ class CallDetectionTest {
         assertFalse(row.isGroupKnown)
         assertNull(row.matchKey)
         assertNull(row.waDisplayName)
+        assertEquals("2026-10-20-a73-v1", connected.rulesVersion)
+        val output = ByteArrayOutputStream()
+        exportDiagnostics(app, app.log, output)
+        var metadata: JSONObject? = null
+        ZipInputStream(ByteArrayInputStream(output.toByteArray())).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.name == "device.json") metadata = JSONObject(zip.readBytes().toString(Charsets.UTF_8))
+            }
+        }
+        assertEquals(connected.rulesVersion, checkNotNull(metadata).getString("detection_rules_version"))
+        assertTrue(checkNotNull(metadata).getBoolean("detection_ready"))
+        assertFalse(checkNotNull(metadata).getBoolean("detection_failed"))
         assertEquals(RecorderState.Idle, app.recorder.state.value)
         assertNull(shadowOf(app).nextStartedService)
         app.detection.listenerDisconnected(listener)

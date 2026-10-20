@@ -18,6 +18,7 @@ suspend fun exportDiagnostics(context: Context, log: AppLog, output: OutputStrea
         val snapshot = log.redactedSnapshot()
         val application = context.applicationContext
         val info = application.packageManager.getPackageInfo(application.packageName, PackageManager.PackageInfoFlags.of(0))
+        val detection = (application as? WacrApp)?.detection?.state?.value
         val metadata = Json.encode(mapOf(
             "schema_version" to 1,
             "exported_at" to System.currentTimeMillis(),
@@ -30,6 +31,9 @@ suspend fun exportDiagnostics(context: Context, log: AppLog, output: OutputStrea
             "sdk_int" to Build.VERSION.SDK_INT,
             "security_patch" to Build.VERSION.SECURITY_PATCH,
             "health_issues" to ((application as? WacrApp)?.health ?: HealthMonitor(application)).check().map { it.problem.name },
+            "detection_rules_version" to detection?.rulesVersion,
+            "detection_ready" to detection?.ready,
+            "detection_failed" to detection?.failed,
             "capability_results" to null,
             "capability_status" to "not_available_in_this_build",
             "scope" to "redacted_ring_log_and_technical_status_only"

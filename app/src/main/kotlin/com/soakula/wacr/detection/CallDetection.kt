@@ -26,7 +26,8 @@ data class CallDetectionState(
     val failed: Boolean = false,
     val call: DetectedCall? = null,
     val sessionId: Long? = null,
-    val suspension: CallSuspension? = null
+    val suspension: CallSuspension? = null,
+    val rulesVersion: String? = null
 )
 
 class CallDetection internal constructor(private val app: WacrApp) {
@@ -49,6 +50,7 @@ class CallDetection internal constructor(private val app: WacrApp) {
     private var snapshot: (() -> Array<StatusBarNotification>?)? = null
     private var watcher: AudioModeWatcher? = null
     private var core: CallDetector? = null
+    private var trace: DetectionTrace? = null
     private var writer: CallSessionWriter? = null
     private var ids: Map<Long, Long> = emptyMap()
     private var operational = false
@@ -61,7 +63,8 @@ class CallDetection internal constructor(private val app: WacrApp) {
             val detector = CallDetector(rules.packages, rules.connection, rules.endDebounceMs, rules.reconnectWindowMs)
             core = detector
             val reader = CallNotificationReader(rules)
-            app.log.log("detection", "rules_loaded", mapOf("version" to rules.version))
+            trace = DetectionTrace(app.log, rules)
+            mutableState.update { it.copy(rulesVersion = rules.version) }
             while (!mutableState.value.failed) {
                 val delay = detector.nextDeadlineMs?.let { (it - SystemClock.elapsedRealtime()).coerceAtLeast(0) }
                 val input = if (delay == null) inputs.receive() else withTimeoutOrNull(delay) { inputs.receive() }
@@ -78,7 +81,10 @@ class CallDetection internal constructor(private val app: WacrApp) {
             mutableState.update { it.copy(ready = false, call = null, sessionId = null, suspension = null) }
             try {
                 stopWatching()
-                writer?.closeAll(SystemClock.elapsedRealtime())
+                val now = SystemClock.elapsedRealtime()
+                trace?.signal(CallSignal.Unavailable, now)
+                core?.accept(CallSignal.Unavailable, now)?.forEach { trace?.event(it) }
+                writer?.closeAll(now)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 fail(error)
@@ -217,7 +223,10 @@ class CallDetection internal constructor(private val app: WacrApp) {
 
     private suspend fun accept(signal: CallSignal) {
         val detector = checkNotNull(core)
-        val events = detector.accept(signal, SystemClock.elapsedRealtime())
+        val now = SystemClock.elapsedRealtime()
+        trace?.signal(signal, now)
+        val events = detector.accept(signal, now)
+        events.forEach { trace?.event(it) }
         if (writer == null && events.any { it is CallEvent.Started }) {
             writer = CallSessionWriter(app.database(), elapsedOriginMs, wallOriginMs)
         }
@@ -231,14 +240,15 @@ class CallDetection internal constructor(private val app: WacrApp) {
             ready = operational,
             call = detector?.activeCall,
             sessionId = detector?.activeCall?.sequence?.let(ids::get),
-            suspension = detector?.suspension
+            suspension = detector?.suspension,
+            rulesVersion = mutableState.value.rulesVersion
         )
         mutableState.update { if (it.failed) it else updated }
     }
 
     private fun fail(error: Exception) {
         app.log.log("detection", "failed", mapOf("error_type" to error.javaClass.simpleName))
-        mutableState.value = CallDetectionState(failed = true)
+        mutableState.update { CallDetectionState(failed = true, rulesVersion = it.rulesVersion) }
     }
 
     companion object {

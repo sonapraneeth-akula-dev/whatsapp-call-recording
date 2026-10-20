@@ -51,6 +51,8 @@ class DiagnosticExporterTest {
         assertEquals(1, metadata.getInt("schema_version"))
         assertEquals("not_available_in_this_build", metadata.getString("capability_status"))
         assertTrue(metadata.isNull("capability_results"))
+        assertTrue(metadata.isNull("detection_rules_version"))
+        assertTrue(metadata.isNull("detection_ready"))
         assertTrue(metadata.getJSONArray("health_issues").toString().contains("ACCESSIBILITY_DISABLED"))
         assertTrue(metadata.getJSONArray("health_issues").toString().contains("NOTIFICATION_ACCESS_DISABLED"))
         val text = checkNotNull(entries["app.jsonl"])
