@@ -15,13 +15,14 @@ class CaptureUnavailableException : IOException("No configured audio source is a
 
 /** Single recording worker owns this engine; no audio focus, mode or device selection is changed. */
 class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) internal constructor(
-    profile: CaptureProfile,
+    private val profile: CaptureProfile,
     route: AudioRoute?,
     private val log: AppLog,
     private val openInput: (CaptureSource) -> AudioRecord = ::buildInput,
     private val elapsedMs: () -> Long = SystemClock::elapsedRealtime
 ) : Closeable {
-    private val sources = profile.sourcesFor(route)
+    private var route = route
+    private var sources = profile.sourcesFor(route)
     private var nextSource = 0
     private var input: AudioRecord? = null
     private var closed = false
@@ -35,6 +36,19 @@ class CaptureEngine @RequiresPermission(Manifest.permission.RECORD_AUDIO) intern
     val format = AacFormat(1)
 
     init { openNext() }
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    fun changeRoute(next: AudioRoute?) {
+        check(!closed && !failed) { "Capture engine is closed or failed" }
+        if (next == route) return
+        failed = true
+        route = next
+        sources = profile.sourcesFor(next)
+        nextSource = 0
+        releaseInput()
+        openNext()
+        failed = false
+    }
 
     /** Nonblocking PCM16 mono; the worker must wait before retrying a zero-length read. */
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)

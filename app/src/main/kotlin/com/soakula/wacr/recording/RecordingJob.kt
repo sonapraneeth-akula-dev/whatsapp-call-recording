@@ -1,10 +1,10 @@
 package com.soakula.wacr.recording
 
 import android.Manifest
+import android.os.SystemClock
 import androidx.annotation.RequiresPermission
 import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.AppDatabase
-import com.soakula.wacr.data.AudioRoute
 import com.soakula.wacr.data.RecordingEntity
 import com.soakula.wacr.data.RecordingFiles
 import com.soakula.wacr.data.RecordingRepository
@@ -26,8 +26,9 @@ class RecordingJob(
     private val log: AppLog,
     private val storage: StorageGuard,
     private val profile: CaptureProfile = CaptureProfile(),
-    private val route: AudioRoute? = null,
-    private val now: () -> Long = System::currentTimeMillis
+    private val routes: RouteWatcher? = null,
+    private val now: () -> Long = System::currentTimeMillis,
+    private val elapsedMs: () -> Long = SystemClock::elapsedRealtime
 ) {
     private val repository = RecordingRepository(database)
 
@@ -45,10 +46,13 @@ class RecordingJob(
         if (shouldStop()) return null
         val segments = mutableListOf<CommittedSegment>()
         var reason = RecordingStopReason.REQUESTED
-        CaptureEngine(profile, route, log).use { capture ->
+        val initialRoute = routes?.takeInitialRoute()
+        CaptureEngine(profile, initialRoute, log).use { capture ->
             if (shouldStop()) return null
             val startedAt = now()
+            val startedElapsed = elapsedMs()
             runBlocking { repository.start(RecordingEntity(id, startedAt, 1, capture.source.name, sessionId = sessionId)) }
+            if (initialRoute != null) runBlocking { repository.recordRoute(id, initialRoute, 0) }
             SegmentWriter(id, crypto, capture.format) { segment ->
                 runBlocking { repository.commitSegment(id, segment, now()) }
                 segments += segment
@@ -67,6 +71,12 @@ class RecordingJob(
                         if ((level == StorageLevel.WARN) != warning) {
                             warning = level == StorageLevel.WARN
                             onRecording(startedAt, warning)
+                        }
+                        for (change in routes?.changes().orEmpty()) {
+                            if (change.route != null) runBlocking {
+                                repository.recordRoute(id, change.route, maxOf(0, change.elapsedMs - startedElapsed))
+                            }
+                            capture.changeRoute(change.route)
                         }
                         val count = capture.read(pcm)
                         if (count > 0) encoder.encode(pcm, count) else Thread.sleep(10)

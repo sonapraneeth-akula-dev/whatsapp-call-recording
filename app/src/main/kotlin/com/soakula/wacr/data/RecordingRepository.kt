@@ -33,6 +33,16 @@ class RecordingRepository(private val database: AppDatabase) {
         }
     }
 
+    suspend fun recordRoute(id: UUID, route: AudioRoute, atMs: Long) {
+        require(atMs >= 0) { "Route time must be nonnegative" }
+        database.withTransaction {
+            check(dao.recording(id)?.status == RecordingStatus.RECORDING) { "Recording is not active" }
+            val previous = dao.lastRoute(id)
+            require(previous == null || atMs >= previous.atMs) { "Route time must not go backwards" }
+            if (previous?.route != route) dao.insertRoute(RouteEventEntity(id, atMs, route))
+        }
+    }
+
     suspend fun finalize(id: UUID, audio: FinalizedAudio, recovered: Boolean = false) {
         require(audio.durationUs > 0 && audio.durationUs % AacFormat.FRAME_DURATION_US == 0L)
         require(audio.plainBytes > 0 && audio.encryptedBytes > audio.plainBytes)

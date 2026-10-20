@@ -1,6 +1,9 @@
 package com.soakula.wacr.recording
 
 import android.app.Application
+import android.annotation.SuppressLint
+import android.media.AudioManager
+import android.media.AudioDeviceInfo
 import android.media.AudioRecord
 import androidx.room.Room
 import com.google.crypto.tink.KeysetHandle
@@ -21,8 +24,11 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAudioRecord
+import org.robolectric.shadows.AudioDeviceInfoBuilder
+import org.robolectric.shadows.ShadowLooper
 import java.io.IOException
 import java.nio.channels.Channels
 import java.util.UUID
@@ -148,5 +154,44 @@ class RecordingJobTest {
         assertEquals(0, reads)
         assertEquals(RecordingStatus.FAILED, database.recordings().recording(id)?.status)
         assertFalse(files.file(id, "audio.aac.enc").exists())
+    }
+
+    @Test fun routeChangesReopenCapturePersistRelativeTimesAndKeepOneRecording() = runBlocking {
+        val context: Application = RuntimeEnvironment.getApplication()
+        selectRoute(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+        val id = UUID.randomUUID()
+        RouteWatcher(context, log, { elapsed }).use { watcher ->
+            val worker = RecordingJob(
+                database, files, crypto, log, StorageGuard({ bytes }, { elapsed }),
+                routes = watcher, now = { 1000L }, elapsedMs = { elapsed }
+            )
+            var switched = false
+            val result = checkNotNull(worker.run(id, null, {
+                if (reads == 1 && !switched) {
+                    switched = true
+                    elapsed = 64
+                    selectRoute(AudioDeviceInfo.TYPE_BLUETOOTH_SCO)
+                }
+                reads >= 3
+            }, { _, _ -> }, {}))
+            assertEquals(RecordingStopReason.REQUESTED, result.reason)
+        }
+        val routes = database.recordings().routes(id)
+        assertEquals(listOf(AudioRoute.EARPIECE, AudioRoute.BLUETOOTH), routes.map { it.route })
+        assertEquals(listOf(0L, 64L), routes.map { it.atMs })
+        assertEquals(2, inputs.distinct().size)
+        assertTrue(inputs.all { it.state == AudioRecord.STATE_UNINITIALIZED })
+        assertEquals(RecordingStatus.FINALIZED, database.recordings().recording(id)?.status)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun selectRoute(type: Int) {
+        val context: Application = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(AudioManager::class.java)
+        val device = AudioDeviceInfoBuilder.newBuilder().setType(type).build()
+        shadowOf(manager).addAvailableCommunicationDevice(device, false)
+        assertTrue(manager.setCommunicationDevice(device))
+        shadowOf(manager).callOnCommunicationDeviceChangedListeners(device)
+        ShadowLooper.idleMainLooper()
     }
 }

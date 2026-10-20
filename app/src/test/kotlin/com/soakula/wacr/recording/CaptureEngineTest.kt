@@ -139,6 +139,25 @@ class CaptureEngineTest {
         assertTrue(opened.all { it.state == AudioRecord.STATE_UNINITIALIZED })
     }
 
+    @Test fun selectedRouteChangesReopenOnlyOurInputUsingTheConfiguredProfile() {
+        val inputs = mutableListOf<AudioRecord>()
+        val profile = CaptureProfile(routeSources = mapOf(AudioRoute.USB to listOf(CaptureSource.MIC)))
+        CaptureEngine(profile, AudioRoute.EARPIECE, log, {
+            CaptureEngine.buildInput(it).also(inputs::add)
+        }).use { engine ->
+            engine.changeRoute(AudioRoute.EARPIECE)
+            assertEquals(1, inputs.size)
+            engine.changeRoute(AudioRoute.USB)
+            assertEquals(CaptureSource.MIC, engine.source)
+            assertEquals(AudioRecord.STATE_UNINITIALIZED, inputs.first().state)
+            assertEquals(320, engine.read(ShortArray(320)))
+            engine.changeRoute(null)
+            assertEquals(CaptureSource.VOICE_RECOGNITION, engine.source)
+            assertEquals(3, inputs.size)
+        }
+        assertTrue(inputs.all { it.state == AudioRecord.STATE_UNINITIALIZED })
+    }
+
     @Implements(className = "android.media.AudioRecordingMonitorImpl", isInAndroidSdk = false)
     class RecordingMonitorShadow {
 

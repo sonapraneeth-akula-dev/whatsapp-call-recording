@@ -84,4 +84,18 @@ class RecordingRepositoryTest {
         assertTrue(dao.segments(id).isEmpty())
         assertTrue(dao.routes(id).isEmpty())
     }
+
+    @Test fun routeTimelineIsOrderedDeduplicatedAndWritableOnlyWhileRecording() = runBlocking {
+        val id = UUID.randomUUID()
+        repository.start(RecordingEntity(id, 1000, 1, "VOICE_RECOGNITION"))
+        repository.recordRoute(id, AudioRoute.EARPIECE, 0)
+        repository.recordRoute(id, AudioRoute.EARPIECE, 10)
+        repository.recordRoute(id, AudioRoute.BLUETOOTH, 20)
+        assertEquals(listOf(0L, 20L), database.recordings().routes(id).map { it.atMs })
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repository.recordRoute(id, AudioRoute.USB, -1) } }
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repository.recordRoute(id, AudioRoute.USB, 19) } }
+        repository.finalize(id, FinalizedAudio(64_000, 20, 80))
+        assertThrows(IllegalStateException::class.java) { runBlocking { repository.recordRoute(id, AudioRoute.USB, 30) } }
+        assertEquals(2, database.recordings().routes(id).size)
+    }
 }

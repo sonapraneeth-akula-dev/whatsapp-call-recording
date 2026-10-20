@@ -290,7 +290,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 3.1.1.3.1 | Task | Room v1: `call_session`, `recording`, `route_event` + DAOs + `RecordingRepository`; schema export — `app/…/data/`, `app/schemas/` | 02:00 | 00:10 | In-memory DAO tests pass; schema JSON committed | **2026-10-20: core schema/repository implemented; local Robolectric in-memory DAO/transaction/FK tests + debug build/lint pass; schema JSON exported.** Includes segment duration for crash-safe retry and cleanup bookkeeping. No production DB opened until encrypted factory is added; only synthetic in-memory test DBs are plaintext. |
-| 3.1.1.3.2 | Task | Write metadata at start/stop: contact, direction, type, start, duration, capture source, routes | 00:45 | 00:10 | Instrumented 60 s test asserts full row |  |
+| 3.1.1.3.2 | Task | Write metadata at start/stop: contact, direction, type, start, duration, capture source, routes | 00:45 | 00:10 | Instrumented 60 s test asserts full row | **2026-10-20: pipeline metadata wiring + local checks complete.** Start time/initial source/session reference, final authenticated duration/encrypted size/path and ordered known-route timeline persisted. Remote capture remains unknown, not fabricated. Detector-provided contact/direction/type and the 60 s native phone test remain pending. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Unit tests**: encoder config and metadata repository tests pass; ≥ 80% coverage (FEAT-003.1.1)
@@ -312,8 +312,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 3.2.1.1.1 | Task | `RouteWatcher`: `AudioDeviceCallback` → re-open sources with the route's profile ≤ 1 s; log `route_event` — `app/…/recording/RouteWatcher.kt` | 03:00 | 00:25 | Instrumented route-change test: gap ≤ 1 s |  |
-| 3.2.1.1.2 | Task | Bluetooth (SCO/LE), wired, USB handling; never change WhatsApp's chosen device | 02:00 | 00:20 | Manual: earpiece→BT→wired→speaker call, no gap > 1 s |  |
+| 3.2.1.1.1 | Task | `RouteWatcher`: `AudioDeviceCallback` → re-open sources with the route's profile ≤ 1 s; log `route_event` — `app/…/recording/RouteWatcher.kt` | 03:00 | 00:25 | Instrumented route-change test: gap ≤ 1 s | **2026-10-20: observer/capture/repository wiring + local checks complete.** Active communication-device listener plus inventory callbacks, deduplicated initial snapshot/changes, monotonic recording-relative route rows and worker-confined source reopen using the selected route profile. Keeps one AAC stream and recording. Unknown routes logged without guessing; no native gap/continuity acceptance claimed. |
+| 3.2.1.1.2 | Task | Bluetooth (SCO/LE), wired, USB handling; never change WhatsApp's chosen device | 02:00 | 00:20 | Manual: earpiece→BT→wired→speaker call, no gap > 1 s | **2026-10-20: route classification/observation implemented.** SCO/LE/Bluetooth, analog wired and USB remain distinct; connected devices alone never determine the route. No focus/mode/speaker/device writes or new routing permissions. Default capture still uses only provisional `VOICE_RECOGNITION`; per-route calibration, native microphone behavior and ≤1 s phone gaps remain owner UAT. |
 
 #### Feature 3.2.2 (FEAT-003.2.2): Group call capture
 - **Est. Manual**: 02:00 | **Est. AI**: 00:20

@@ -84,15 +84,18 @@ class RecorderService : Service() {
                     if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                         throw SecurityException("Microphone permission revoked")
                     }
-                    RecordingJob(
-                        database, app.recordingFiles, app.crypto, app.log, StorageGuard.forDirectory(filesDir)
-                    ).run(request.id, request.sessionId, request.stopRequested::get, { at, warning ->
-                        post(notifications.recording(at, stopAction(request.id), warning))
-                        controller.recording(request, at, warning)
-                    }, {
-                        post(notifications.saving())
-                        controller.saving(request)
-                    })
+                    RouteWatcher(this@RecorderService, app.log).use { routes ->
+                        RecordingJob(
+                            database, app.recordingFiles, app.crypto, app.log,
+                            StorageGuard.forDirectory(filesDir), routes = routes
+                        ).run(request.id, request.sessionId, request.stopRequested::get, { at, warning ->
+                            post(notifications.recording(at, stopAction(request.id), warning))
+                            controller.recording(request, at, warning)
+                        }, {
+                            post(notifications.saving())
+                            controller.saving(request)
+                        })
+                    }
                 }
             }
         } catch (error: CancellationException) {

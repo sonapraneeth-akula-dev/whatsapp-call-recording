@@ -26,6 +26,9 @@ interface RecordingDao {
     @Query("SELECT * FROM route_event WHERE recording_id = :id ORDER BY at_ms, id")
     suspend fun routes(id: UUID): List<RouteEventEntity>
 
+    @Query("SELECT * FROM route_event WHERE recording_id = :id ORDER BY at_ms DESC, id DESC LIMIT 1")
+    suspend fun lastRoute(id: UUID): RouteEventEntity?
+
     @Query("SELECT MAX(idx) FROM segment WHERE recording_id = :id")
     suspend fun lastSegmentIndex(id: UUID): Int?
 
