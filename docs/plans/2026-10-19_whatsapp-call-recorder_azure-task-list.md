@@ -654,8 +654,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 8.2.1.1.1 | Task | `ui/theme`: dynamic color, teal fallback, type scale, shapes — `app/…/ui/theme/` | 02:00 | 00:20 | Previews in both schemes |  |
-| 8.2.1.1.2 | Task | Theme picker (system/light/dark) in Settings, DataStore-backed | 00:45 | 00:10 | Choice persists across restart |  |
+| 8.2.1.1.1 | Task | `ui/theme`: dynamic color, teal fallback, type scale, shapes — `app/…/ui/theme/` | 02:00 | 00:20 | Previews in both schemes | **2026-10-20: implemented using the provisional gallery tokens.** Shared WacrTheme supplies Material You or deep-teal light/dark colors, native M3 system-font type scale and 16 dp medium shapes; debug gallery now reuses it. Explicit modes override the system, including system-bar icon contrast; system mode follows changes without recreating player/recorder state. Local palette/theme/preview checks cover both fallback schemes and >=4.5:1 primary/secondary/container/surface text pairs. Dynamic-color/phone rendering and final accessibility acceptance remain UAT. |
+| 8.2.1.1.2 | Task | Theme picker (system/light/dark) in Settings, DataStore-backed | 00:45 | 00:10 | Choice persists across restart | **2026-10-20: implemented with real Settings navigation and Preferences DataStore.** Follow system/Light/Dark plus wallpaper-color toggle; async atomic independent-key writes, serialized operations, no optimistic saved-state claim. File-backed reopen tests retain choices. Read/unknown-value failures never reset storage: an app-wide Retry banner explicitly identifies temporary system-theme fallback. Failed writes preserve the previous loaded selection and display an error. Native selectable radio/switch rows retain >=48 dp targets; local controls/navigation/failure tests pass. |
 
 #### Feature 8.2.2 (FEAT-008.2.2): Polish and accessibility
 - **Est. Manual**: 08:00 | **Est. AI**: 01:00

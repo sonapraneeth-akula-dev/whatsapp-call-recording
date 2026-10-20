@@ -6,6 +6,7 @@ import com.soakula.wacr.crypto.KeyManager
 import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.RecordingFiles
 import com.soakula.wacr.data.AppDatabase
+import com.soakula.wacr.data.AppPreferences
 import com.soakula.wacr.data.RecordingDeletion
 import com.soakula.wacr.util.AppLog
 import com.soakula.wacr.recording.Recovery
@@ -31,6 +32,7 @@ class WacrApp : Application() {
     private var recovered: RecoveryReport? = null
     val recorder by lazy { RecorderController(this, log) }
     val health by lazy { HealthMonitor(this) }
+    val preferences by lazy { AppPreferences.open(this) }
 
     internal suspend fun requireRecovery() = recoveryLock.withLock { recovered = null }
 

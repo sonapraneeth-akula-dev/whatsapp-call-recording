@@ -3,6 +3,7 @@ package com.soakula.wacr
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
@@ -10,12 +11,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +29,12 @@ import com.soakula.wacr.ui.home.HomeViewModel
 import com.soakula.wacr.ui.library.LibraryViewModel
 import com.soakula.wacr.ui.library.RecordingActions
 import com.soakula.wacr.ui.player.PlayerRoute
+import com.soakula.wacr.ui.settings.SettingsScreen
+import com.soakula.wacr.ui.settings.SettingsUiState
+import com.soakula.wacr.ui.settings.SettingsViewModel
+import com.soakula.wacr.ui.theme.WacrTheme
+import com.soakula.wacr.ui.theme.isDark
+import com.soakula.wacr.data.Appearance
 import com.soakula.wacr.playback.createRecordingPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private val home: HomeViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
     private val allowlist: AllowlistViewModel by viewModels()
+    private val settings: SettingsViewModel by viewModels()
     private val contactPicker = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
         if (uri != null) allowlist.addPickedContact(uri)
     }
@@ -87,10 +94,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         setContent {
-            MaterialTheme(
-                colorScheme = if (isSystemInDarkTheme()) dynamicDarkColorScheme(this)
-                else dynamicLightColorScheme(this)
-            ) {
+            val appearanceState by settings.state.collectAsStateWithLifecycle()
+            val appearanceActions by settings.actions.collectAsStateWithLifecycle()
+            val appearance = (appearanceState as? SettingsUiState.Ready)?.appearance ?: Appearance()
+            val dark = appearance.theme.isDark(isSystemInDarkTheme())
+            LaunchedEffect(dark) {
+                val bars = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+            }
+            WacrTheme(appearance) {
                 val state by home.state.collectAsStateWithLifecycle()
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
@@ -103,7 +115,11 @@ class MainActivity : ComponentActivity() {
                     allowlistContent = {
                         AllowlistScreen(contactRules, contactActions, ::pickContact, allowlist::retry,
                             allowlist::remove, allowlist::undo, allowlist::dismissUndo, allowlist::dismissError)
-                    }) { entry, back ->
+                    }, settingsContent = {
+                        SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
+                            settings::retry, settings::dismissError)
+                    }, appearanceError = appearanceState is SettingsUiState.Failed,
+                    onRetryAppearance = settings::retry) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
                         onBack = back,

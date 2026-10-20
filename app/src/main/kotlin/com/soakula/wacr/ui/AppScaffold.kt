@@ -29,7 +29,7 @@ import com.soakula.wacr.data.PendingRecordingDeletion
 import com.soakula.wacr.ui.library.RecordingActionsState
 import kotlinx.coroutines.withTimeoutOrNull
 
-private enum class Destination { HOME, LIBRARY, ALLOWLIST }
+private enum class Destination { HOME, LIBRARY, ALLOWLIST, SETTINGS }
 
 @Composable
 fun AppScaffold(
@@ -45,6 +45,9 @@ fun AppScaffold(
     onDismissUndo: (PendingRecordingDeletion) -> Unit = {},
     onDismissError: () -> Unit = {},
     allowlistContent: @Composable () -> Unit = {},
+    settingsContent: @Composable () -> Unit = {},
+    appearanceError: Boolean = false,
+    onRetryAppearance: () -> Unit = {},
     playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
@@ -71,11 +74,17 @@ fun AppScaffold(
         contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            actions.error?.let { message ->
+            if (appearanceError || actions.error != null) {
                 Surface(color = MaterialTheme.colorScheme.errorContainer) {
                     Column(Modifier.statusBarsPadding().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
-                        Text(stringResource(message))
-                        TextButton(onClick = onDismissError) { Text(stringResource(R.string.library_dismiss)) }
+                        if (appearanceError) {
+                            Text(stringResource(R.string.settings_read_error))
+                            TextButton(onClick = onRetryAppearance) { Text(stringResource(R.string.library_retry)) }
+                        }
+                        actions.error?.let { message ->
+                            Text(stringResource(message))
+                            TextButton(onClick = onDismissError) { Text(stringResource(R.string.library_dismiss)) }
+                        }
                     }
                 }
             }
@@ -98,6 +107,12 @@ fun AppScaffold(
                     icon = { Icon(painterResource(R.drawable.ic_allowlist), null) },
                     label = { Text(stringResource(R.string.nav_allowlist)) }
                 )
+                NavigationBarItem(
+                    selected = destination == Destination.SETTINGS,
+                    onClick = { selectedId = null; destination = Destination.SETTINGS },
+                    icon = { Icon(painterResource(R.drawable.ic_settings), null) },
+                    label = { Text(stringResource(R.string.nav_settings)) }
+                )
             }
         }
     ) { padding ->
@@ -105,6 +120,7 @@ fun AppScaffold(
             when {
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
                 destination == Destination.ALLOWLIST -> allowlistContent()
+                destination == Destination.SETTINGS -> settingsContent()
                 destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
                 else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
                     selectedId = it.toString()

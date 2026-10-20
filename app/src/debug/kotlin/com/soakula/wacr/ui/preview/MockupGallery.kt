@@ -3,11 +3,9 @@ package com.soakula.wacr.ui.preview
 import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,13 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import com.soakula.wacr.data.Appearance
+import com.soakula.wacr.ui.theme.WacrTheme
 
 enum class MockupScreen(val title: String) {
     ONBOARDING("Get ready"),
@@ -46,18 +45,7 @@ class MockupScreens : PreviewParameterProvider<MockupScreen> {
 @Preview(name = "Landscape", group = "Proposals", widthDp = 852, heightDp = 393)
 @Composable
 fun MockupGallery(@PreviewParameter(MockupScreens::class) screen: MockupScreen) {
-    val colors = if (isSystemInDarkTheme()) darkColorScheme(
-        primary = Color(0xFF80D5BF), onPrimary = Color(0xFF00382D),
-        primaryContainer = Color(0xFF005141), onPrimaryContainer = Color(0xFF9CF2DA),
-        secondary = Color(0xFFB1CCC0), onSecondary = Color(0xFF1D352C),
-        secondaryContainer = Color(0xFF334B41), onSecondaryContainer = Color(0xFFCDE8DD)
-    ) else lightColorScheme(
-        primary = Color(0xFF006B57), onPrimary = Color.White,
-        primaryContainer = Color(0xFF9CF2DA), onPrimaryContainer = Color(0xFF002118),
-        secondary = Color(0xFF4A635B), onSecondary = Color.White,
-        secondaryContainer = Color(0xFFCDE8DD), onSecondaryContainer = Color(0xFF062018)
-    )
-    MaterialTheme(colorScheme = colors, shapes = Shapes(medium = RoundedCornerShape(16.dp))) { ProposalFrame(screen) }
+    WacrTheme(Appearance(dynamicColor = false)) { ProposalFrame(screen) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
