@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "version": "2026-10-20-a73-v1",
+  "packages": ["com.whatsapp", "com.whatsapp.w4b"],
+  "connection": {
+    "category": "call",
+    "template": "CallStyle",
+    "ongoingCallType": 2,
+    "requireOngoing": true,
+    "requireChronometer": true,
+    "requireCommunicationMode": true
+  },
+  "endDebounceMs": 2000,
+  "reconnectWindowMs": 30000,
+  "profiles": [
+    {
+      "packageName": "com.whatsapp",
+      "versionName": "2.26.40.76",
+      "callWindowClasses": ["com.whatsapp.calling.ui.VoipActivityV2"],
+      "callerField": "notification_title",
+      "evidence": {
+        "deviceModel": "SM-A736B",
+        "sdkInt": 36,
+        "capturedOn": "2026-10-19",
+        "verifiedScenarios": ["outgoing_voice"],
+        "limitations": [
+          "incoming_unverified",
+          "missed_declined_unverified",
+          "video_unverified",
+          "group_classification_unverified",
+          "hold_reconnect_unverified",
+          "screen_off_unverified",
+          "business_unverified",
+          "f42_unverified",
+          "display_names_not_unique",
+          "video_extra_presence_not_captured"
+        ]
+      }
+    }
+  ]
+}
