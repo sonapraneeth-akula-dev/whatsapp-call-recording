@@ -191,6 +191,17 @@ User runs the desktop companion; it detects a WhatsApp Desktop call and records 
 
 ## 11. Suggestions & Opportunities
 - **Feasibility spike first** (no speakerphone, no root): on Galaxy A73 5G (Android 16) and Galaxy F42 5G (Android 13), with an accessibility-service prototype, test each audio source (`VOICE_COMMUNICATION`, `VOICE_RECOGNITION`, `MIC`, `CAMCORDER`, `VOICE_CALL`/`VOICE_DOWNLINK` in case Samsung allows) × each route (earpiece, wired, Bluetooth). Record which sides are audible. Also dump the accessibility tree during a group call to check whether WhatsApp exposes the active-speaker highlight (FR-050). Also test Samsung Screen recorder as baseline. **Realistic expectation**: own voice ✓; other side likely silent on earpiece/Bluetooth. If so, options: (a) accept own-voice-only on Android, (b) make Windows primary (both sides cleanly), (c) speakerphone mode as opt-in per call (FR-005). Decide after results.
+- **Capture decision — PROVISIONAL (2026-10-20, A73 only; owner blocked from further tests)**
+  - **Evidence** (spike run `WACR-logs_SM-A736B_20261019-140122`; A73, Android 16 / One UI 8.0, WhatsApp 2.26.40.76; outgoing voice, earpiece, 2 calls):
+    - Call start/end detected immediately (`audio/mode` IN_COMMUNICATION + call-category notification; `VoipActivityV2` window); FGS started from background on call detect.
+    - `VOICE_CALL` / `VOICE_UPLINK` / `VOICE_DOWNLINK` → refused (uninitialized), as expected without system privilege.
+    - In call, `MIC`, `CAMCORDER`, `UNPROCESSED`, `VOICE_COMMUNICATION` → digital silence (concurrent-capture policy).
+    - In call, `VOICE_RECOGNITION` (app holds an enabled accessibility service) → owner's voice clear (≈ −20 to −30 dBFS; exact-zero gaps only in speech pauses, likely Samsung noise gate).
+    - Remote side under `VOICE_RECOGNITION` → inconclusive (call 1 audible, call 2 silent; other person's location unknown, may have been heard acoustically).
+  - **Decision**: record with accessibility service + `VOICE_RECOGNITION`. Remote side is acoustic only → speakerphone is the expected way to capture it; earpiece/Bluetooth likely own-voice-only. Audio source stays configurable (ordered fallback list) so pending results change a setting, not the design.
+  - **Debug mode retained**: spike APK stays installable side-by-side; the real app keeps a Diagnostics screen (REQ-012) with the same logging and Save/Share logs.
+  - **Pending to finalize** (test plan T1–T7): remote side on speaker vs. earpiece with the other person out of earshot; incoming call; route change mid-call; video call; group call; headset; repeat T1–T3 on F42 (Android 13).
+  - **If speaker test confirms remote audio**: consider promoting REQ-017 (speakerphone fallback) from Could to Should via the PRD. **If not**: v1 = own voice + faint remote, stated plainly in the UI; revisit Windows-first (option b).
 - **No `INTERNET` permission**: strongest, verifiable guarantee of "never shared".
 - **Exclude from device backups** (`allowBackup=false`) — otherwise Google backup could upload recordings, violating the no-sharing requirement.
 - **Identify contacts by WhatsApp display name**, not phone number; allowlist entries should be picked from contacts and matched by name — handle duplicate names and renamed contacts.
@@ -206,7 +217,7 @@ User runs the desktop companion; it detects a WhatsApp Desktop call and records 
 - **Live transcription effort (FR-051)**: no true streaming model handles Hindi+Telugu+English code-mixing offline today; practical approach is "near-live" — voice-activity detection cuts 3–8 s chunks → Whisper/IndicConformer per chunk → text appears 5–10 s behind speech. Phone fit: A73 (Snapdragon 778G) can likely keep pace with a small/quantized model; F42 (Dimensity 700) likely cannot without dropping to tiny models (poor hi/te accuracy) → post-call only on F42. Costs: CPU contention with the live call (risk of call-audio glitches), heat, battery ~10–20%/hr extra, lower accuracy than post-call (less context). Effort ≈ 3–5 weeks on top of post-call transcription, mostly tuning and device testing. Recommend: post-call first; add live later on A73 only if wanted.
 
 ## 12. Risks & Open Questions
-- [ ] **Biggest risk**: on unrooted Samsung, the other side is likely silent without speakerphone. Owner: build the spike, decide from results (own-voice-only / Windows-first / opt-in speakerphone).
+- [ ] **Biggest risk**: on unrooted Samsung, the other side is likely silent without speakerphone. Owner: build the spike, decide from results (own-voice-only / Windows-first / opt-in speakerphone). **Status 2026-10-20**: provisional decision recorded in §11 (accessibility + `VOICE_RECOGNITION`; remote via speaker); remote-side tests pending.
 - [x] Target phones — Galaxy A73 5G, Android 16 (primary); Galaxy F42 5G, Android 13 (minimum supported).
 - [x] Distribution — local APK only, no Play Store.
 - [x] Default mode — audio only, both/all sides.
