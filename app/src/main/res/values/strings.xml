@@ -56,4 +56,24 @@
     <string name="recording_error_interrupted">Recording was interrupted. Encrypted audio will be checked for recovery.</string>
     <string name="recording_error_state">The recorder could not continue. Recoverable files were retained.</string>
     <string name="recording_low_storage_saved">Recording saved. Stopped because storage fell below 100 MB.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="library_title">Recordings</string>
+    <string name="library_recent">Recent recordings</string>
+    <string name="library_empty">No recordings yet. Start one from Home.</string>
+    <string name="library_error">Encrypted recordings could not be loaded. Original files are retained. Retry or review diagnostics.</string>
+    <string name="library_retry">Retry loading</string>
+    <string name="library_manual">Manual recording</string>
+    <string name="library_voice">Voice call</string>
+    <string name="library_video">Video call</string>
+    <string name="library_incoming">Incoming</string>
+    <string name="library_outgoing">Outgoing</string>
+    <string name="library_unknown_direction">Direction unknown</string>
+    <string name="library_recovered">Recovered after interruption</string>
+    <string name="library_failed">No playable audio recovered</string>
+    <string name="library_remote_yes">Remote audio confirmed in metadata</string>
+    <string name="library_remote_no">Remote audio not captured</string>
+    <string name="library_remote_unknown">Remote audio unverified</string>
+    <string name="library_storage_used">Saved encrypted audio: %1$s</string>
+    <string name="library_storage_detail">Finalized audio sizes only. Active segments, metadata, logs and pending deletion files also use storage.</string>
 </resources>

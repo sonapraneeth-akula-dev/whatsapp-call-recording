@@ -20,6 +20,9 @@ import com.soakula.wacr.R
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.ui.library.LibraryUiState
+import com.soakula.wacr.ui.library.LibraryFailure
+import com.soakula.wacr.ui.library.RecordingRow
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,7 +32,9 @@ fun HomeScreen(
     recorder: RecorderState,
     onRecord: () -> Unit,
     onStop: () -> Unit,
-    onFix: (HealthIssue) -> Unit
+    onFix: (HealthIssue) -> Unit,
+    library: LibraryUiState? = null,
+    onRetryLibrary: () -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) }) { padding ->
         Column(
@@ -72,6 +77,21 @@ fun HomeScreen(
                     } else if (recorder !is RecorderState.Saving) {
                         Button(onClick = onRecord, enabled = state.loaded && state.error == null,
                             modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.home_record)) }
+                    }
+                }
+            }
+            if (library != null) {
+                Text(stringResource(R.string.library_recent), style = MaterialTheme.typography.titleLarge)
+                when (library) {
+                    LibraryUiState.Loading -> CircularProgressIndicator()
+                    LibraryUiState.Failed -> LibraryFailure(onRetryLibrary)
+                    is LibraryUiState.Ready -> {
+                        if (library.entries.isEmpty()) Text(stringResource(R.string.library_empty))
+                        for (entry in library.entries.take(5)) RecordingRow(entry)
+                        Text(stringResource(R.string.library_storage_used, Formatter.formatShortFileSize(
+                            LocalContext.current, library.entries.sumOf { it.recording.sizeBytes ?: 0 }
+                        )))
+                        Text(stringResource(R.string.library_storage_detail), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

@@ -16,21 +16,23 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.recording.RecorderState
-import com.soakula.wacr.ui.home.HomeScreen
+import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.home.HomeViewModel
+import com.soakula.wacr.ui.library.LibraryViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private val app: WacrApp get() = checkNotNull(application as? WacrApp)
     private val home: HomeViewModel by viewModels()
+    private val library: LibraryViewModel by viewModels()
     private var recordAfterPermission = false
     private var startWhenResumed = false
     private var manualConfirmation: UUID? = null
@@ -76,9 +78,10 @@ class MainActivity : ComponentActivity() {
                 colorScheme = if (isSystemInDarkTheme()) dynamicDarkColorScheme(this)
                 else dynamicLightColorScheme(this)
             ) {
-                val state by home.state.collectAsState()
-                val recorder by app.recorder.state.collectAsState()
-                HomeScreen(state, recorder, ::requestRecording, ::stopRecording, ::openFix)
+                val state by home.state.collectAsStateWithLifecycle()
+                val recorder by app.recorder.state.collectAsStateWithLifecycle()
+                val recordings by library.state.collectAsStateWithLifecycle()
+                AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry)
             }
         }
     }
