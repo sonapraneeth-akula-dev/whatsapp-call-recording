@@ -14,7 +14,11 @@ import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.util.AppLog
 
 @UnstableApi
-fun createRecordingPlayer(context: Context, store: CryptoStore, log: AppLog): ExoPlayer {
+fun createRecordingPlayer(context: Context, store: CryptoStore, log: AppLog): ExoPlayer =
+    createRecordingPlayer(context, { store }, log)
+
+@UnstableApi
+fun createRecordingPlayer(context: Context, store: () -> CryptoStore, log: AppLog): ExoPlayer {
     val sources = ProgressiveMediaSource.Factory(
         DataSource.Factory { DecryptingDataSource(store) },
         DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
@@ -36,4 +40,21 @@ fun createRecordingPlayer(context: Context, store: CryptoStore, log: AppLog): Ex
                 }
             })
         }
+}
+
+internal class PlaybackReleaseException(cause: Throwable? = null) :
+    IllegalStateException("Playback release failed; restart required", cause)
+
+@UnstableApi
+internal fun releasePlayback(player: Player) {
+    var timedOut = false
+    player.addListener(object : Player.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+            if (error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) timedOut = true
+        }
+    })
+    try { player.release() }
+    catch (error: IllegalStateException) { throw PlaybackReleaseException(error) }
+    catch (error: SecurityException) { throw PlaybackReleaseException(error) }
+    if (timedOut) throw PlaybackReleaseException()
 }

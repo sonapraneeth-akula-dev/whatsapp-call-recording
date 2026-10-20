@@ -97,6 +97,17 @@ class RecorderServiceTest {
         assertNull(ReflectionHelpers.getField<RecoveryReport?>(app, "recovered"))
     }
 
+    @Test fun playbackReleaseFailureBlocksCaptureBeforeOpeningDatabaseKeysOrMicrophone() {
+        app.playbackReleaseFailed = true
+        val id = checkNotNull(app.recorder.start())
+        val service = Robolectric.buildService(RecorderService::class.java).create()
+        try {
+            service.get().onStartCommand(start(id), 0, 1)
+            assertEquals(RecorderState.Failed(id, RecorderFailure.PLAYBACK_RELEASE), app.recorder.state.value)
+            assertNull(ReflectionHelpers.getField<Any?>(app, "openDatabase"))
+        } finally { service.destroy() }
+    }
+
     private fun start(id: UUID) = Intent(app, RecorderService::class.java).setAction(RecorderService.ACTION_START)
         .putExtra(RecorderService.EXTRA_ID, id.toString())
 }

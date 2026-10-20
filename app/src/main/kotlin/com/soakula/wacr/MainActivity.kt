@@ -51,7 +51,9 @@ import com.soakula.wacr.ui.theme.WacrTheme
 import com.soakula.wacr.ui.theme.isDark
 import com.soakula.wacr.ui.onboarding.SetupChecklistScreen
 import com.soakula.wacr.data.Appearance
-import com.soakula.wacr.playback.createRecordingPlayer
+import com.soakula.wacr.playback.createPlaybackController
+import com.soakula.wacr.playback.PlaybackEntry
+import com.soakula.wacr.playback.PlaybackReleaseException
 import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +85,7 @@ class MainActivity : ComponentActivity() {
     private var requestedSession: Long? = null
     private var requestedDecision = RecordingDecision.MANUAL
     private var setupRequest by mutableStateOf(0)
+    private var playbackRequest by mutableStateOf<Pair<UUID, Int>?>(null)
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
             recordAfterPermission = false
@@ -103,6 +106,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             consumeSetupEntry(intent)
             consumeRecordingEntry(intent)
+            consumePlaybackEntry(intent)
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -164,16 +168,14 @@ class MainActivity : ComponentActivity() {
                                 Uri.fromParts("package", packageName, null))) },
                             { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
                             { if (firstRun) settings.completeOnboarding() else closeSetup() })
-                    }, setupRequest = setupRequest, forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
+                    }, setupRequest = setupRequest, playbackRequest = playbackRequest,
+                    forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
                     appearanceError = appearanceState is SettingsUiState.Failed,
                     onRetryAppearance = settings::retry) { entry, back ->
                     PlayerRoute(entry,
                         blocked = recorder is RecorderState.Preparing || recorder is RecorderState.Recording || recorder is RecorderState.Saving,
                         onBack = back,
-                        createPlayer = {
-                            val crypto = withContext(Dispatchers.IO) { app.crypto }
-                            createRecordingPlayer(this, crypto, app.log)
-                        },
+                        createPlayer = { createPlaybackController(this) },
                         reportFailure = { error ->
                             app.log.log("playback", "open_failed", mapOf("error_type" to error.javaClass.simpleName))
                         },
@@ -186,7 +188,13 @@ class MainActivity : ComponentActivity() {
                         actions = { pause ->
                             RecordingActions(entry, actions, { title -> library.rename(entry.recording.id, title) }) {
                                 pause()
-                                library.delete(entry.recording.id)
+                                try {
+                                    app.stopPlaybackForDeletion(entry.recording.id)
+                                    library.delete(entry.recording.id)
+                                } catch (_: PlaybackReleaseException) {
+                                    app.log.log("playback", "delete_blocked_restart_required")
+                                    Toast.makeText(this, R.string.recording_error_playback, Toast.LENGTH_LONG).show()
+                                }
                             }
                         })
                 }
@@ -207,6 +215,14 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         consumeSetupEntry(intent)
         consumeRecordingEntry(intent)
+        consumePlaybackEntry(intent)
+    }
+
+    private fun consumePlaybackEntry(intent: Intent) {
+        if (intent.action != PlaybackEntry.ACTION) return
+        val id = PlaybackEntry.consume(this, intent)
+        if (id == null) app.log.log("playback", "entry_rejected")
+        else playbackRequest = id to ((playbackRequest?.second ?: 0) + 1)
     }
 
     private fun consumeSetupEntry(intent: Intent) {

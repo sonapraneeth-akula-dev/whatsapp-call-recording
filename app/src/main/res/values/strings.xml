@@ -135,7 +135,11 @@
     <string name="player_pause">Pause</string>
     <string name="player_seek">Playback position</string>
     <string name="player_times">%1$s / %2$s</string>
-    <string name="player_error">Playback failed. Reopen this recording to retry. Encrypted files have not been changed.</string>
+    <string name="player_error">Playback failed. Encrypted files have not been changed.</string>
+    <string name="playback_channel">Private playback controls</string>
+    <string name="playback_private_title">Private recording</string>
+    <string name="playback_retry">Retry playback</string>
+    <string name="recording_error_playback">Playback could not stop safely. Restart the app process before recording.</string>
     <string name="player_unavailable">Audio is not available while recording or when recovery found no playable audio.</string>
     <string name="player_capture_active">Playback is paused during recording to avoid competing with call audio.</string>
     <string name="library_rename">Rename</string>

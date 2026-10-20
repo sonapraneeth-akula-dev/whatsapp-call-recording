@@ -51,7 +51,7 @@ class PlayerRouteTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val temporary = TemporaryFolder()
 
-    @Test fun nativeControlsSeekAndPauseOnStopThenReleaseOnDisposal() {
+    @Test fun nativeControlsSeekAndContinueOnStopThenReleaseUiOnDisposal() {
         StreamingAeadConfig.register()
         val encryption = KeysetHandle.generateNew(PredefinedStreamingAeadParameters.AES256_GCM_HKDF_4KB)
             .getPrimitive(RegistryConfiguration.get(), StreamingAead::class.java)
@@ -117,9 +117,9 @@ class PlayerRouteTest {
         compose.runOnIdle { assertFalse(engine.playWhenReady); blocked.value = false }
         compose.onNodeWithText(text(R.string.player_play)).performClick()
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
-        assertFalse(engine.playWhenReady)
+        assertTrue(engine.playWhenReady)
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-        compose.runOnIdle { assertFalse(engine.playWhenReady); shown.value = false }
+        compose.runOnIdle { assertTrue(engine.playWhenReady); shown.value = false }
         compose.runOnIdle { assertTrue(engine.isReleased) }
     }
 
@@ -134,6 +134,23 @@ class PlayerRouteTest {
         compose.onNodeWithText(text(R.string.player_error)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.player_play)).assertIsNotEnabled()
         compose.runOnIdle { assertTrue(reported is IOException) }
+    }
+
+    @Test fun connectionFailureCanRetryWithoutAutoplayOrReusingTheFailedPlayer() {
+        var opens = 0
+        val entry = entry()
+        compose.setContent {
+            MaterialTheme {
+                PlayerRoute(entry, false, {}, {
+                    opens++
+                    throw IOException("Synthetic connection failure")
+                }, {})
+            }
+        }
+        compose.onNodeWithText(text(R.string.player_error)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.playback_retry)).performClick()
+        compose.runOnIdle { assertEquals(2, opens) }
+        compose.onNodeWithText(text(R.string.player_play)).assertIsNotEnabled()
     }
 
     @Test fun activeOrFailedMetadataNeverOpensAPlayer() {

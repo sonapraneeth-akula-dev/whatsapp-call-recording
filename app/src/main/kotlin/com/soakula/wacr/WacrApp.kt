@@ -18,13 +18,17 @@ import com.soakula.wacr.health.HealthMonitor
 import com.soakula.wacr.health.HealthNotification
 import com.soakula.wacr.health.HealthJobService
 import com.soakula.wacr.detection.CallDetection
+import com.soakula.wacr.playback.PlaybackService
+import com.soakula.wacr.playback.PlaybackReleaseException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
+import java.util.UUID
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class WacrApp : Application() {
     val recordingFiles by lazy { RecordingFiles(filesDir) }
     val keys by lazy { KeyManager.open(this) }
@@ -39,6 +43,18 @@ class WacrApp : Application() {
     private val healthNotification by lazy { HealthNotification(this, log) }
     private val healthLock = Mutex()
     val preferences by lazy { AppPreferences.open(this) }
+    internal var playbackService: PlaybackService? = null
+    internal var playbackReleaseFailed = false
+
+    internal fun stopPlaybackForCapture() {
+        if (playbackReleaseFailed) throw PlaybackReleaseException()
+        playbackService?.closePlayback()
+    }
+
+    internal fun stopPlaybackForDeletion(id: UUID) {
+        if (playbackReleaseFailed) throw PlaybackReleaseException()
+        playbackService?.closeRecording(id)
+    }
 
     internal suspend fun refreshHealth() = withContext(Dispatchers.IO) {
         healthLock.withLock {

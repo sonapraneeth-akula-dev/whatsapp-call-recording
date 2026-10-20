@@ -41,6 +41,7 @@ fun PlayerScreen(
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
     onSpeed: (Float) -> Unit = {},
+    onRetry: () -> Unit = {},
     waveform: @Composable () -> Unit = {},
     actions: @Composable () -> Unit = {}
 ) {
@@ -59,7 +60,10 @@ fun PlayerScreen(
             when {
                 !playable -> Text(stringResource(R.string.player_unavailable))
                 blocked -> Text(stringResource(R.string.player_capture_active))
-                state.failed -> Text(stringResource(R.string.player_error), color = MaterialTheme.colorScheme.error)
+                state.failed -> {
+                    Text(stringResource(R.string.player_error), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.playback_retry)) }
+                }
                 !state.ready || state.buffering -> LinearProgressIndicator(Modifier.fillMaxWidth())
             }
             waveform()

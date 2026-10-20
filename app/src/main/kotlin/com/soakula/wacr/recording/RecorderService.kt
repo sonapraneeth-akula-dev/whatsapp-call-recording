@@ -13,11 +13,13 @@ import android.media.MediaCodec
 import android.net.Uri
 import android.os.IBinder
 import com.soakula.wacr.WacrApp
+import com.soakula.wacr.playback.PlaybackReleaseException
 import kotlinx.coroutines.*
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.UUID
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class RecorderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val app get() = application as WacrApp
@@ -74,6 +76,7 @@ class RecorderService : Service() {
         var failure: RecorderFailure? = null
         var recovered = false
         try {
+            app.stopPlaybackForCapture()
             result = withContext(Dispatchers.IO) {
                 if (request.stopRequested.get()) return@withContext null
                 app.ensureRecovered()
@@ -101,6 +104,9 @@ class RecorderService : Service() {
         } catch (error: CancellationException) {
             failure = RecorderFailure.INTERRUPTED
             throw error
+        } catch (error: PlaybackReleaseException) {
+            failure = RecorderFailure.PLAYBACK_RELEASE
+            app.log.log("recorder", "playback_release_failed_restart_required")
         } catch (error: RecorderReadinessException) {
             failure = error.failure
         } catch (error: CaptureUnavailableException) {

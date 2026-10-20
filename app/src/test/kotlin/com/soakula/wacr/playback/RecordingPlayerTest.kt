@@ -29,6 +29,7 @@ import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.security.GeneralSecurityException
 
 @UnstableApi
 @RunWith(RobolectricTestRunner::class)
@@ -85,6 +86,20 @@ class RecordingPlayerTest {
         } finally {
             player.release()
         }
+    }
+
+    @Test fun deferredKeyFailureIsAnExplicitPlayerErrorNotAnUncaughtPlaybackThreadException() {
+        val player = createRecordingPlayer(RuntimeEnvironment.getApplication(),
+            { throw GeneralSecurityException("Synthetic private key failure") }, log)
+        try {
+            player.setMediaItem(MediaItem.fromUri(DecryptingDataSource.uri(UUID.randomUUID())))
+            player.prepare()
+            val error = awaitError(player)
+            assertTrue(generateSequence<Throwable>(error) { it.cause }.any {
+                it is java.io.IOException && it.message == "Private playback key unavailable"
+            })
+            assertTrue(messages.none { it.contains("Synthetic private key failure") })
+        } finally { releasePlayback(player) }
     }
 
     @Test fun actualPlayerPropagatesAuthenticationFailureAndRetainsOnlyCiphertext() {

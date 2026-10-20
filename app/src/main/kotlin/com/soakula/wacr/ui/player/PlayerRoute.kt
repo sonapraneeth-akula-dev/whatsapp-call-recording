@@ -2,7 +2,6 @@ package com.soakula.wacr.ui.player
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -32,6 +31,7 @@ fun PlayerRoute(
     var engine by remember { mutableStateOf<Player?>(null) }
     var state by remember { mutableStateOf(PlaybackUiState()) }
     var openFailed by remember { mutableStateOf(false) }
+    var attempt by remember { mutableIntStateOf(0) }
     fun failed(error: Throwable) {
         reportFailure(error)
         openFailed = true
@@ -40,16 +40,20 @@ fun PlayerRoute(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val playable = entry.recording.hasPlayableAudio()
     DisposableEffect(Unit) { onDispose { engine?.release() } }
-    LaunchedEffect(entry.recording.id, playable) {
-        if (!playable) {
+    LaunchedEffect(entry.recording.id, playable, blocked, attempt) {
+        if (!playable || blocked) {
             engine?.pause()
             return@LaunchedEffect
         }
+        openFailed = false
         try {
-            val created = createPlayer()
+            val created = engine?.takeIf { it.playerError == null } ?: createPlayer().also { engine?.release() }
             engine = created
-            created.setMediaItem(MediaItem.fromUri(DecryptingDataSource.uri(entry.recording.id)))
-            created.prepare()
+            if (created.currentMediaItem?.mediaId != entry.recording.id.toString() || created.playerError != null) {
+                created.setMediaItem(MediaItem.Builder().setMediaId(entry.recording.id.toString())
+                    .setUri(DecryptingDataSource.uri(entry.recording.id)).build())
+                created.prepare()
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: IOException) {
@@ -74,15 +78,10 @@ fun PlayerRoute(
                 state = playbackState(player, entry.recording.durationMs)
             }
         }
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) player.pause()
-        }
         player.addListener(listener)
-        lifecycle.addObserver(observer)
         state = playbackState(player, entry.recording.durationMs)
         onDispose {
             player.removeListener(listener)
-            lifecycle.removeObserver(observer)
         }
     }
     LaunchedEffect(player, blocked) { if (blocked) player?.pause() }
@@ -95,7 +94,7 @@ fun PlayerRoute(
     }
     PlayerScreen(entry, state.copy(failed = state.failed || openFailed), blocked, onBack, onPlayPause = {
         if (player != null && !blocked && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            if (player.playWhenReady) player.pause() else {
+            if (player.playWhenReady && player.playbackState != Player.STATE_ENDED) player.pause() else {
                 if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
                 player.play()
             }
@@ -105,6 +104,12 @@ fun PlayerRoute(
             require(speed in PLAYBACK_SPEEDS) { "Unsupported playback speed" }
             if (!blocked && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
                 player?.playbackParameters = PlaybackParameters(speed, 1f)
+        },
+        onRetry = {
+            engine?.release()
+            engine = null
+            state = PlaybackUiState()
+            attempt++
         },
         waveform = {
             if (playable) WaveformPanel(entry.recording.id,
@@ -116,7 +121,7 @@ fun PlayerRoute(
 
 private fun playbackState(player: Player, metadataDuration: Long?) = PlaybackUiState(
     ready = player.playbackState != Player.STATE_IDLE && player.playerError == null,
-    playRequested = player.playWhenReady,
+    playRequested = player.playWhenReady && player.playbackState != Player.STATE_ENDED,
     buffering = player.playbackState == Player.STATE_BUFFERING,
     positionMs = player.currentPosition.coerceAtLeast(0),
     durationMs = player.duration.takeIf { it > 0 } ?: metadataDuration ?: 0,

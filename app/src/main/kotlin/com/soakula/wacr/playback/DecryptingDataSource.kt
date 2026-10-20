@@ -12,10 +12,13 @@ import java.io.EOFException
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
+import java.security.GeneralSecurityException
+import java.security.ProviderException
 import java.util.UUID
 
 @UnstableApi
-class DecryptingDataSource(private val store: CryptoStore) : BaseDataSource(false) {
+class DecryptingDataSource(private val store: () -> CryptoStore) : BaseDataSource(false) {
+    constructor(store: CryptoStore) : this({ store })
     private var input: SeekableByteChannel? = null
     private var openedUri: Uri? = null
     private var remaining = 0L
@@ -28,7 +31,9 @@ class DecryptingDataSource(private val store: CryptoStore) : BaseDataSource(fals
         if (dataSpec.httpMethod != DataSpec.HTTP_METHOD_GET || dataSpec.httpBody != null) {
             throw IOException("Only local recording reads are supported")
         }
-        val reader = store.openReader(id, "audio.aac.enc")
+        val reader = try { store().openReader(id, "audio.aac.enc") }
+        catch (error: GeneralSecurityException) { throw IOException("Private playback key unavailable", error) }
+        catch (error: ProviderException) { throw IOException("Private playback provider unavailable", error) }
         var handedOff = false
         try {
             val size = reader.size()

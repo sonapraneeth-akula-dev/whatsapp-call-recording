@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <queries>
         <package android:name="com.whatsapp" />
@@ -49,6 +50,14 @@
             android:name=".recording.RecorderService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <service
+            android:name=".playback.PlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
         <service
             android:name=".recording.RecordTileService"
             android:exported="true"
@@ -93,6 +102,10 @@
         </activity>
         <activity-alias
             android:name=".recording.RecordingEntry"
+            android:exported="false"
+            android:targetActivity=".MainActivity" />
+        <activity-alias
+            android:name=".playback.PlaybackEntry"
             android:exported="false"
             android:targetActivity=".MainActivity" />
     </application>

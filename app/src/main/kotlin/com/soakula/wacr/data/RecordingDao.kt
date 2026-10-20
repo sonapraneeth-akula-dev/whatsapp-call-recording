@@ -22,6 +22,14 @@ interface RecordingDao {
     @Query("SELECT * FROM recording WHERE id = :id")
     suspend fun recording(id: UUID): RecordingEntity?
 
+    @Query("""
+        SELECT EXISTS(SELECT 1 FROM recording WHERE id = :id
+        AND status IN ('FINALIZED', 'RECOVERED') AND duration_ms > 0
+        AND audio_path = CAST(id AS TEXT) || '/audio.aac.enc'
+        AND NOT EXISTS (SELECT 1 FROM recording_deletion WHERE recording_id = :id))
+    """)
+    fun observePlayable(id: UUID): Flow<Boolean>
+
     @Query("SELECT * FROM recording_waveform WHERE recording_id = :id")
     suspend fun waveform(id: UUID): RecordingWaveformEntity?
 

@@ -38,7 +38,8 @@ enum class RecorderFailure(@param:StringRes val message: Int) {
     RECOVERY(R.string.recording_error_recovery),
     NATIVE_UNAVAILABLE(R.string.recording_error_native),
     INTERRUPTED(R.string.recording_error_interrupted),
-    INVALID_STATE(R.string.recording_error_state)
+    INVALID_STATE(R.string.recording_error_state),
+    PLAYBACK_RELEASE(R.string.recording_error_playback)
 }
 
 internal class RecordingRequest(val id: UUID, val sessionId: Long?) {

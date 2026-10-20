@@ -31,6 +31,7 @@ import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.data.PendingRecordingDeletion
 import com.soakula.wacr.ui.library.RecordingActionsState
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.UUID
 
 private enum class Destination { HOME, LIBRARY, ALLOWLIST, SETTINGS }
 
@@ -51,6 +52,7 @@ fun AppScaffold(
     settingsContent: @Composable (() -> Unit) -> Unit = {},
     setupContent: @Composable (() -> Unit) -> Unit = {},
     setupRequest: Int = 0,
+    playbackRequest: Pair<UUID, Int>? = null,
     forceSetup: Boolean = false,
     startupLoading: Boolean = false,
     appearanceError: Boolean = false,
@@ -78,6 +80,12 @@ fun AppScaffold(
         if (setupRequest != 0) {
             selectedId = null
             showSetup = true
+        }
+    }
+    LaunchedEffect(playbackRequest) {
+        if (playbackRequest != null) {
+            selectedId = playbackRequest.first.toString()
+            showSetup = false
         }
     }
     LaunchedEffect(selectedId, library) {
