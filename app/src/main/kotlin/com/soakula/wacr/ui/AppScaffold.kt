@@ -25,6 +25,7 @@ import com.soakula.wacr.recording.RecorderState
 import com.soakula.wacr.ui.home.HomeScreen
 import com.soakula.wacr.ui.home.HomeUiState
 import com.soakula.wacr.ui.library.LibraryScreen
+import com.soakula.wacr.ui.library.LibraryRoute
 import com.soakula.wacr.ui.library.LibraryUiState
 import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.data.PendingRecordingDeletion
@@ -70,6 +71,8 @@ fun AppScaffold(
         if (result == SnackbarResult.ActionPerformed) onUndo(pending) else onDismissUndo(pending)
     }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var libraryRoute by rememberSaveable { mutableStateOf(LibraryRoute().encode()) }
+    val contactRoute = remember(libraryRoute) { LibraryRoute.parse(libraryRoute) }
     val selected = (library as? LibraryUiState.Ready)?.entries?.firstOrNull { it.recording.id.toString() == selectedId }
     LaunchedEffect(setupRequest) {
         if (setupRequest != 0) {
@@ -83,6 +86,7 @@ fun AppScaffold(
     BackHandler(!forceSetup && (showSetup || selectedId != null || destination != Destination.HOME)) {
         if (showSetup) showSetup = false
         else if (selectedId != null) selectedId = null
+        else if (destination == Destination.LIBRARY && contactRoute.contact != null) libraryRoute = LibraryRoute().encode()
         else destination = Destination.HOME
     }
     Scaffold(
@@ -138,7 +142,9 @@ fun AppScaffold(
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
                 destination == Destination.ALLOWLIST -> allowlistContent()
                 destination == Destination.SETTINGS -> settingsContent { showSetup = true }
-                destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(library, onRetryLibrary) { selectedId = it.toString() }
+                destination == Destination.LIBRARY || selectedId != null -> LibraryScreen(
+                    library, onRetryLibrary, contactRoute, { libraryRoute = it.encode() }
+                ) { selectedId = it.toString() }
                 else -> HomeScreen(home, recorder, onRecord, onStop, onFix, library, onRetryLibrary) {
                     selectedId = it.toString()
                 }

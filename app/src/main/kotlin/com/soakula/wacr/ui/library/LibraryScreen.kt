@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -31,21 +32,33 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit, onOpen: (UUID) -> Unit = {}) {
+fun LibraryScreen(
+    state: LibraryUiState, onRetry: () -> Unit,
+    route: LibraryRoute = LibraryRoute(), onRoute: (LibraryRoute) -> Unit = {},
+    onOpen: (UUID) -> Unit = {}
+) {
     val entries = (state as? LibraryUiState.Ready)?.entries.orEmpty()
     val groups = remember(entries) { groupRecordings(entries) }
+    val visible = remember(groups, route.contact) { groups.filter { route.contact == null || it.key == route.contact } }
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.library_title)) }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (route.contact != null) item {
+                TextButton(onClick = { onRoute(LibraryRoute()) }) { Text(stringResource(R.string.library_all_contacts)) }
+            }
             when (state) {
                 LibraryUiState.Loading -> item { CircularProgressIndicator() }
                 LibraryUiState.Failed -> item { LibraryFailure(onRetry) }
                 is LibraryUiState.Ready -> {
-                    if (state.entries.isEmpty()) item { Text(stringResource(R.string.library_empty)) }
-                    groups.forEach { group ->
-                        item(key = "contact:${group.key}") { ContactHeader(group) }
+                    if (visible.isEmpty()) item { Text(stringResource(
+                        if (route.contact == null) R.string.library_empty else R.string.library_contact_empty
+                    )) }
+                    visible.forEach { group ->
+                        item(key = "contact:${group.key}") {
+                            ContactHeader(group, if (route.contact == null) { { onRoute(LibraryRoute(group.key)) } } else null)
+                        }
                         items(group.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
                     }
                 }
@@ -55,13 +68,14 @@ fun LibraryScreen(state: LibraryUiState, onRetry: () -> Unit, onOpen: (UUID) -> 
 }
 
 @Composable
-private fun ContactHeader(group: RecordingGroup) {
+private fun ContactHeader(group: RecordingGroup, onContact: (() -> Unit)? = null) {
     val name = when (group.kind) {
         LibraryContactKind.MANUAL -> stringResource(R.string.library_manual_calls)
         LibraryContactKind.UNKNOWN -> stringResource(R.string.library_unknown_calls)
         else -> checkNotNull(group.name)
     }
     val initials = remember(name) { contactInitials(name) }
+    val actionLabel = stringResource(R.string.library_view_contact_description, name)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(
             color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape,
@@ -79,6 +93,9 @@ private fun ContactHeader(group: RecordingGroup) {
                 style = MaterialTheme.typography.bodySmall)
             if (group.kind == LibraryContactKind.GROUP) Text(stringResource(R.string.library_group_calls),
                 style = MaterialTheme.typography.bodySmall)
+            if (onContact != null) TextButton(
+                onClick = onContact, modifier = Modifier.semantics { contentDescription = actionLabel }
+            ) { Text(stringResource(R.string.library_view_contact)) }
         }
     }
 }

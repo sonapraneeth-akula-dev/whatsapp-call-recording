@@ -3,6 +3,10 @@
     <string name="library_unknown_calls">Unidentified calls</string>
     <string name="library_group_calls">Group calls</string>
     <string name="library_group_unverified">Group classification unverified</string>
+    <string name="library_view_contact">View calls</string>
+    <string name="library_view_contact_description">View recordings for %1$s</string>
+    <string name="library_all_contacts">All contacts</string>
+    <string name="library_contact_empty">No recordings for this contact.</string>
     <plurals name="library_group_count">
         <item quantity="one">%d recording</item>
         <item quantity="other">%d recordings</item>
