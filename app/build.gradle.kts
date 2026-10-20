@@ -118,7 +118,9 @@ dependencies {
     kapt(libs.room.compiler)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.test.manifest)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.room.testing)
+    testImplementation(libs.compose.ui.test.junit4)
 }
