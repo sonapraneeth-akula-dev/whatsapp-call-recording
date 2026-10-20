@@ -281,7 +281,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 3.1.1.2.1 | Task | Ongoing notification: chronometer, Stop action (immutable `PendingIntent`), private on lock screen; `CONFIRM` haptic on start/stop — `app/…/recording/RecorderNotification.kt` | 01:30 | 00:20 | Manual: elapsed time shown, Stop works, haptic felt |  |
+| 3.1.1.2.1 | Task | Ongoing notification: chronometer, Stop action (immutable `PendingIntent`), private on lock screen; `CONFIRM` haptic on start/stop — `app/…/recording/RecorderNotification.kt` | 01:30 | 00:20 | Manual: elapsed time shown, Stop works, haptic felt | **2026-10-20: notification component + local checks complete.** Low-importance local-only channel; immediate ongoing preparing/recording/saving states, chronometer, app-owned immutable Stop and generic private/public lock-screen content. No caller names. Service posting/Stop delivery remain in 3.1.1.1.3. Exact `View.performHapticFeedback(CONFIRM)` awaits approved UI wiring; no substitute vibration or phone acceptance claimed. |
 
 ##### User Story 3.1.1.3 (US-013): Each file saved with metadata
 - **So that**: I can find it later

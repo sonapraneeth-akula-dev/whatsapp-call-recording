@@ -1,3 +1,15 @@
 <resources>
     <string name="foundation_message">Recording is not implemented yet. Use WACR Spike for capture tests.</string>
+    <string name="recording_channel">Recording status</string>
+    <string name="recording_channel_description">Status and Stop control while recording call audio.</string>
+    <string name="recording_preparing">Preparing recording</string>
+    <string name="recording_preparing_detail">Checking private storage and microphone access.</string>
+    <string name="recording_active">Recording WhatsApp audio</string>
+    <string name="recording_active_detail">Microphone audio. The other side may be missing.</string>
+    <string name="recording_storage_warning">Storage below 500 MB. Microphone audio; the other side may be missing.</string>
+    <string name="recording_saving">Saving recording</string>
+    <string name="recording_saving_detail">Finalizing encrypted audio on this device.</string>
+    <string name="recording_public_title">Recording</string>
+    <string name="recording_public_detail">WACR recording activity</string>
+    <string name="recording_stop">Stop</string>
 </resources>
