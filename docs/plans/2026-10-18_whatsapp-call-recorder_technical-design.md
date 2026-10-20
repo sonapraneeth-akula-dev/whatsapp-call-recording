@@ -527,6 +527,8 @@ whatsapp-call-recording/
 
 **Recovery implementation (2026-10-20, task 3.3.1.1.3)**: app startup and the non-exported boot/package-replaced receiver enqueue one offline native JobScheduler job (no WorkManager dependency or auxiliary plaintext work DB). Job I/O is cancellable; stopped jobs request rescheduling, I/O failures use exponential retry. Capture must first await the serialized `WacrApp.ensureRecovered()` gate. Recovery authenticates complete segment snapshots bounded to 1 MiB (valid five-second segments fit below this), distinguishing failed disk reads from invalid encrypted tails. Only an invalid final segment may be dropped, after the complete prefix is authenticated; corrupt middle/missing files and metadata mismatches retain originals and report errors. A fully closed segment whose metadata callback was interrupted is adopted before publishing. Already-committed finals resume cleanup without changing status. Empty interrupted recordings become FAILED with no invented audio. Real-phone kill/reboot acceptance remains pending.
 
+**Storage guard implementation (2026-10-20, task 3.3.2.1.1)**: MB thresholds are decimal: warn below 500,000,000 available bytes and stop below 100,000,000. The recording worker must force a fresh check before each start and call `poll()` while capturing; filesystem reads occur no more often than every 30 monotonic seconds. `StatFs` samples the app-private partition. Failed/negative samples throw rather than caching READY; recorder notification/stop wiring belongs to the service task.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

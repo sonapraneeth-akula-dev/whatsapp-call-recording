@@ -358,7 +358,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 3.3.2.1.1 | Task | `StorageGuard`: check before start and every 30 s; warn < 500 MB, clean stop + finalize < 100 MB — `app/…/recording/StorageGuard.kt` | 02:00 | 00:20 | Tests with fake free-space source; warning shown |  |
+| 3.3.2.1.1 | Task | `StorageGuard`: check before start and every 30 s; warn < 500 MB, clean stop + finalize < 100 MB — `app/…/recording/StorageGuard.kt` | 02:00 | 00:20 | Tests with fake free-space source; warning shown | **2026-10-20: guard component implemented; exact boundary/timing/failure tests + debug build/lint pass.** Decimal MB thresholds, fresh pre-start reading, monotonic 30 s polling, native private-partition `StatFs`. Notification and clean-stop/finalization integration awaits recorder service; errors never become cached READY. |
 | 3.3.2.1.2 | Task | Instrumented low-storage simulation | 01:00 | 00:10 | Clean stop; file valid |  |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
