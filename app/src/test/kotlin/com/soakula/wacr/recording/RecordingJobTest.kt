@@ -15,6 +15,7 @@ import com.soakula.wacr.crypto.CryptoStore
 import com.soakula.wacr.data.*
 import com.soakula.wacr.util.AppLog
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -173,6 +174,43 @@ class RecordingJobTest {
         assertEquals(0, reads)
         assertEquals(RecordingStatus.FAILED, database.recordings().recording(id)?.status)
         assertFalse(files.file(id, "audio.aac.enc").exists())
+    }
+
+    @Test fun verifiedThreePartyGroupUsesSharedEncryptedPipelineAndKeepsItsSessionTag() = runBlocking {
+        val group = CallSessionEntity(waDisplayName = "Synthetic group", matchKey = "synthetic group",
+            isGroup = true, groupName = "Synthetic group",
+            participantsJson = """["Synthetic owner","Synthetic member A","Synthetic member B"]""",
+            direction = CallDirection.OUTGOING, callType = CallType.VOICE, connectedAt = 1000,
+            decision = RecordingDecision.ASKED)
+        val sessionId = database.recordings().insertSession(group)
+        val id = UUID.randomUUID()
+        val result = checkNotNull(job().run(id, sessionId, { reads >= 90 }, { _, _ -> }, {}))
+        val entry = database.recordings().observeAll().first().single()
+        assertEquals(id, entry.recording.id)
+        assertEquals(sessionId, entry.recording.sessionId)
+        assertEquals(group.copy(id = sessionId), entry.session)
+        assertEquals(RecordingStatus.FINALIZED, entry.recording.status)
+        assertNull(entry.recording.remoteCaptured)
+        assertEquals(listOf("audio.aac.enc"), files.file(id, "audio.aac.enc").parentFile!!.listFiles()!!.map { it.name })
+        assertTrue(files.segmentIndices(id).isEmpty())
+        assertTrue(database.recordings().segments(id).isEmpty())
+        val inspected = Channels.newInputStream(crypto.openReader(id, "audio.aac.enc")).use { AacFormat(1).inspect(it) }
+        assertEquals(result.audio.durationUs, inspected.durationUs)
+        assertTrue(inspected.durationUs > SegmentWriter.MAX_DURATION_US)
+        assertTrue(inputs.all { it.state == AudioRecord.STATE_UNINITIALIZED })
+    }
+
+    @Test fun sharedCaptureNeverPromotesUnknownGroupEvidenceOrInventsParticipantMetadata() = runBlocking {
+        val unknown = CallSessionEntity(waDisplayName = "Synthetic unknown", callType = CallType.UNKNOWN)
+        val sessionId = database.recordings().insertSession(unknown)
+        val id = UUID.randomUUID()
+        assertNotNull(job().run(id, sessionId, { reads >= 3 }, { _, _ -> }, {}))
+        val entry = database.recordings().observeAll().first().single()
+        assertEquals(unknown.copy(id = sessionId), entry.session)
+        assertEquals(false, entry.session?.isGroupKnown)
+        assertNull(entry.session?.groupName)
+        assertNull(entry.session?.participantsJson)
+        assertNull(entry.recording.remoteCaptured)
     }
 
     @Test fun routeChangesReopenCapturePersistRelativeTimesAndKeepOneRecording() = runBlocking {

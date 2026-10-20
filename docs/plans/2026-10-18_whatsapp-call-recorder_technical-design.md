@@ -706,6 +706,8 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 
 **Open app-lock behavior decision (2026-10-20, tasks 11.3.1.1.1/.2)**: before enabling the persisted optional lock, owner must choose whether the 60-second background relock stops already-started playback, or permits it to continue until paused while requiring authentication for further playback/selection/seek. UI route gating, strong biometric/device credential, open onboarding, FLAG_SECURE and continued recording while locked are already specified; no playback-lifetime choice was silently made. Owner was unavailable for the question; both usable gate/toggle remain blocked while independent implementation proceeds.
 
+**Shared group capture verification (2026-10-20, task 3.2.2.1.1)**: the existing recording-to-session FK is the group tag; no second encoder/pipeline or guessed recording-level group flag is needed. A synthetic, explicitly verified three-party session is preserved unchanged through the real capture/segmentation/encryption/finalization/repository orchestration, leaving one authenticated AAC artifact even when audio crosses the segment boundary. The test checks group name/participants/decision retention, recording identity, segment cleanup and released microphone, while remoteCaptured remains unknown. A separate unknown-session test proves capture cannot promote group confidence, invent participants or manufacture remote audibility. These are pipeline tests, not captured WhatsApp group evidence; the positive adapter/golden and native three-party phone acceptance remain separate.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|
