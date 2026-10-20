@@ -642,6 +642,8 @@ Schema 5 adds indexed, cascading call_type_event rows and a preserving 4->5 migr
 
 Independent implementation continues under the owner's standing instruction; missing group-call evidence blocks only the two group adapter/golden tasks, not the remaining backlog. Unknown group confidence is preserved. RecordingPolicy accepts nullable group evidence directly and requires explicit false before contact rules can authorize AUTO; unknown is ASK even with an otherwise matching contact.
 
+**Ask notification component (2026-10-20, task 4.2.1.2.1 prerequisite)**: a dedicated high-importance recording_requests channel provides a private, local-only, dismissible "Record this call?" notification with no full-screen intent, timer or caller content. Its immutable activity PendingIntent targets the private recording alias and uses canonical per-session URI identity, so creation for another call cannot retarget an older token. A separate consumeCall parser rejects malformed, overflowing, noncanonical or exported-launcher entries and consumes accepted action/data exactly once. Permission/global/channel denial returns unavailable with content-free logging; repeated show for the same session does not alert again, and cancel removes the prompt. Component tests establish flags, redacted public form, immutable token separation, parsing and blocked posting. Detector publication, end cancellation and resumed-activity session validation are subsequent integration, not yet claimed.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

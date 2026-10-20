@@ -4,6 +4,13 @@
     <string name="tile_recording">Recording</string>
     <string name="tile_tap_start">Tap to open recording controls</string>
     <string name="recording_entry_error">Could not open recording controls. Open WACR to start manually.</string>
+    <string name="ask_channel">Call recording requests</string>
+    <string name="ask_title">Record this call?</string>
+    <string name="ask_detail">Tap to open WACR and start audio recording.</string>
+    <string name="ask_public_title">Call detected</string>
+    <string name="ask_public_detail">Unlock to choose whether to record.</string>
+    <string name="recording_call_expired">This call is no longer connected. No recording started.</string>
+    <string name="recording_busy">Another recording is active or saving. Try again after it finishes.</string>
     <string name="home_manual_recording">Manual recording</string>
     <string name="home_record">Record now</string>
     <string name="home_saved">Recording saved</string>
