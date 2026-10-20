@@ -577,7 +577,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 7.1.1.2.1 | Task | Re-check all states on `ON_RESUME` | 00:45 | 00:15 | UI test per permission combination |  |
+| 7.1.1.2.1 | Task | Re-check all states on `ON_RESUME` | 00:45 | 00:15 | UI test per permission combination | **2026-10-20: fresh native status reader available through `WacrApp.health.check()`.** Local revocation/reenablement tests pass; lifecycle/checklist wiring remains pending M-008.1. Samsung sleeping/restricted-setting guidance still requires owner checks; not inferred from generic battery APIs. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **UI tests**: checklist states render for each permission combination (US-029, US-030)
@@ -597,7 +597,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 7.2.1.1.1 | Task | `HealthMonitor`: a11y, notification access, battery, mic, notifications → issues with fix intents; banner + notification — `app/…/health/HealthMonitor.kt` | 02:00 | 00:20 | Disabling a11y / battery Optimized triggers alert |  |
+| 7.2.1.1.1 | Task | `HealthMonitor`: a11y, notification access, battery, mic, notifications → issues with fix intents; banner + notification — `app/…/health/HealthMonitor.kt` | 02:00 | 00:20 | Disabling a11y / battery Optimized triggers alert | **2026-10-20: native check/fix-intent component implemented.** Reads mic/notification grants, global/channel blocking, actual own-package declared/enabled a11y and listener components, Doze exemption and background restriction. Missing production detector services explicitly report unavailable, not Ready or a fake settings remedy. Startup/boot/update maintenance logs a private health snapshot. Local combination/revocation/identity tests and app builds pass; continuous alerts, banner, localized checklist/fix launching and phone settings acceptance remain pending. |
 | 7.2.1.1.2 | Task | Diagnostics screen + "Export diagnostics" zip (redacted ring log, detection trace, device info, capability results) via SAF — `app/…/ui/settings/DiagnosticsScreen.kt` | 01:30 | 00:15 | Zip opens on PC; release build shows no names | Owner ask: shareable logs in v1 too |
 
 ##### User Story 7.2.1.2 (US-032): The recorder ready again after a reboot or app update

@@ -21,6 +21,7 @@ class RecoveryJobService : JobService() {
         running = scope.launch {
             var retry = false
             try {
+                app.log.log("health", "checked", mapOf("issues" to app.health.check().map { it.problem.name }))
                 app.ensureRecovered()
             } catch (error: CancellationException) {
                 throw error
