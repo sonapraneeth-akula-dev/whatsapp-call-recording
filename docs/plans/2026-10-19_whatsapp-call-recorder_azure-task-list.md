@@ -522,7 +522,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 6.1.1.1.1 | Task | Home: `RecorderStatusCard`, recent 5, `StorageMeter` + `HomeViewModel` — `app/…/ui/home/` | 02:30 | 00:20 | ViewModel tests with fakes |  |
+| 6.1.1.1.1 | Task | Home: `RecorderStatusCard`, recent 5, `StorageMeter` + `HomeViewModel` — `app/…/ui/home/` | 02:30 | 00:20 | ViewModel tests with fakes | **2026-10-20: recent-five data component implemented.** Transactional Room Flow includes optional call identity and observes new recordings/finalization/removal; stable newest-first ordering and five-row bound tested. Home UI/ViewModel/storage display remain pending M-008.1 approval. |
 | 6.1.1.1.2 | Task | `AppScaffold` + nav host — `app/…/ui/AppScaffold.kt` | 01:00 | 00:10 | Navigation smoke UI test |  |
 
 #### Feature 6.1.2 (FEAT-006.1.2): Library and basic playback
@@ -534,7 +534,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 6.1.2.1.1 | Task | Library list newest-first + `LibraryViewModel` — `app/…/ui/library/` | 01:30 | 00:15 | VM + UI tests |  |
+| 6.1.2.1.1 | Task | Library list newest-first + `LibraryViewModel` — `app/…/ui/library/` | 01:30 | 00:15 | VM + UI tests | **2026-10-20: live library data component implemented.** `RecordingRepository.observeAll()` keeps manual/sessionless, active, recovered and failed entries; no fabricated playable path or remote-audio claim. Recording/session snapshots are transactional, identical snapshots deduplicated. Local reactive/order/relationship tests and both app builds pass; product list/ViewModel remain pending M-008.1. |
 | 6.1.2.1.2 | Task | Basic player (play/pause/seek) on ExoPlayer — `app/…/ui/player/` | 01:30 | 00:15 | UI test play/seek | Uses US-025 |
 
 ##### User Story 6.1.2.2 (US-028): To rename and delete recordings

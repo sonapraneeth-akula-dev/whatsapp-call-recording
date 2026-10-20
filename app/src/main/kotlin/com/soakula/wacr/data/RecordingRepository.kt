@@ -5,10 +5,16 @@ import com.soakula.wacr.recording.AacFormat
 import com.soakula.wacr.recording.CommittedSegment
 import com.soakula.wacr.recording.FinalizedAudio
 import com.soakula.wacr.recording.SegmentWriter
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.UUID
 
 class RecordingRepository(private val database: AppDatabase) {
     private val dao = database.recordings()
+
+    fun observeAll(): Flow<List<RecordingWithSession>> = dao.observeAll().distinctUntilChanged()
+
+    fun observeRecent(): Flow<List<RecordingWithSession>> = dao.observeRecent().distinctUntilChanged()
 
     suspend fun start(recording: RecordingEntity, session: CallSessionEntity? = null) {
         require(recording.status == RecordingStatus.RECORDING && recording.channels in 1..2)

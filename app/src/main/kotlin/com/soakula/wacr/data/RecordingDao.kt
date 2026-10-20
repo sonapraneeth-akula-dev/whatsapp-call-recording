@@ -3,7 +3,9 @@ package com.soakula.wacr.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 @Dao
@@ -16,6 +18,14 @@ interface RecordingDao {
 
     @Query("SELECT * FROM recording WHERE id = :id")
     suspend fun recording(id: UUID): RecordingEntity?
+
+    @Transaction
+    @Query("SELECT * FROM recording ORDER BY started_at DESC, id")
+    fun observeAll(): Flow<List<RecordingWithSession>>
+
+    @Transaction
+    @Query("SELECT * FROM recording ORDER BY started_at DESC, id LIMIT 5")
+    fun observeRecent(): Flow<List<RecordingWithSession>>
 
     @Query("SELECT * FROM call_session WHERE id = :id")
     suspend fun session(id: Long): CallSessionEntity?

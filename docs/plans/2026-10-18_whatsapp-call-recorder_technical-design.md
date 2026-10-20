@@ -559,6 +559,8 @@ OSV-Scanner 2.7.0 (official Windows binary verified against its release SHA-256)
 
 **Compatible build-tool maintenance (2026-10-20)**: update AGP 8.13.0 → 8.13.2 within the existing Gradle 8.14.3/Kotlin 2.2.20/JDK 17 stack. Both app variants and the retained spike build, both unit suites and app debug/release lint pass. New build/lint artifacts receive explicit SHA-256 entries; strict verification remains enabled. No major plugin/Kotlin migration, blanket dependency forcing or clean-scan claim. Remaining tooling remediation stays tracked separately and does not prevent independent application implementation.
 
+**Live library metadata (2026-10-20, tasks 6.1.1.1.1 / 6.1.2.1.1 components)**: existing Room/SQLCipher repository exposes transactional recording-with-optional-session Flows for all entries and the newest five. Sort is `started_at DESC, id ASC`; timestamps tied to one millisecond remain deterministic. No schema change or new dependency. Manual/sessionless records survive absent/deleted session metadata; active, recovered and failed states remain explicit instead of being silently hidden or described as playable. Room invalidation observes metadata/session changes, and repository deduplication avoids identical snapshots. Tests exercise a standing subscriber through insertion/finalization/session deletion/record deletion, ties and recent-five rollover. UI/ViewModels and actual playback remain separate; no mockup approval is implied.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

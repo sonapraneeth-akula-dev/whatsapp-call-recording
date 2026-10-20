@@ -1,10 +1,12 @@
 package com.soakula.wacr.data
 
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 import java.util.UUID
 
 enum class CallDirection { INCOMING, OUTGOING, UNKNOWN }
@@ -53,6 +55,11 @@ data class RecordingEntity(
     val starred: Boolean = false,
     @ColumnInfo(name = "audio_path") val audioPath: String? = null,
     @ColumnInfo(name = "video_path") val videoPath: String? = null
+)
+
+data class RecordingWithSession(
+    @Embedded val recording: RecordingEntity,
+    @Relation(parentColumn = "session_id", entityColumn = "id") val session: CallSessionEntity?
 )
 
 @Entity(
