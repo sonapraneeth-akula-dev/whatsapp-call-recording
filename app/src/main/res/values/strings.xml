@@ -64,8 +64,10 @@
     <string name="library_error">Encrypted recordings could not be loaded. Original files are retained. Retry or review diagnostics.</string>
     <string name="library_retry">Retry loading</string>
     <string name="library_manual">Manual recording</string>
+    <string name="library_unknown_caller">Unknown caller</string>
     <string name="library_voice">Voice call</string>
     <string name="library_video">Video call</string>
+    <string name="library_unknown_type">Call type unverified</string>
     <string name="library_incoming">Incoming</string>
     <string name="library_outgoing">Outgoing</string>
     <string name="library_unknown_direction">Direction unknown</string>

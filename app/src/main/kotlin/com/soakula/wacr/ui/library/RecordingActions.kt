@@ -46,7 +46,9 @@ fun RecordingActions(
         if (state.undo != null) Text(stringResource(R.string.library_delete_wait))
     }
     if (renaming) RenameDialog(
-        entry.recording.title ?: entry.session?.waDisplayName ?: stringResource(R.string.library_manual),
+        entry.recording.title ?: entry.session?.waDisplayName ?: stringResource(
+            if (entry.session == null) R.string.library_manual else R.string.library_unknown_caller
+        ),
         state, onRename, { renaming = false }
     )
     if (confirmingDelete) AlertDialog(

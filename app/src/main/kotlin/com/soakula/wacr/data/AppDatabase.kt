@@ -20,7 +20,7 @@ import java.util.UUID
         CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
         ContactRuleEntity::class, PendingRecordingDeletion::class
     ],
-    version = 3, exportSchema = true
+    version = 4, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -51,6 +51,12 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
             }
         }
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE call_session ADD COLUMN group_known INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE call_session SET group_known = 1 WHERE is_group = 1")
+            }
+        }
 
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
@@ -61,7 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true

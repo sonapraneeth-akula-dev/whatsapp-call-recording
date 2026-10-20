@@ -53,12 +53,18 @@ fun RecordingRow(entry: RecordingWithSession, onOpen: ((UUID) -> Unit)? = null) 
     val recording = entry.recording
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(recording.title ?: entry.session?.waDisplayName ?: stringResource(R.string.library_manual),
+            Text(recording.title ?: entry.session?.waDisplayName ?: stringResource(
+                if (entry.session == null) R.string.library_manual else R.string.library_unknown_caller
+            ),
                 style = MaterialTheme.typography.titleMedium)
             Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(recording.startedAt)))
             entry.session?.let { session ->
                 Text(stringResource(
-                    if (session.callType == CallType.VIDEO) R.string.library_video else R.string.library_voice
+                    when (session.callType) {
+                        CallType.VIDEO -> R.string.library_video
+                        CallType.VOICE -> R.string.library_voice
+                        CallType.UNKNOWN -> R.string.library_unknown_type
+                    }
                 ) + " / " + stringResource(when (session.direction) {
                     CallDirection.INCOMING -> R.string.library_incoming
                     CallDirection.OUTGOING -> R.string.library_outgoing

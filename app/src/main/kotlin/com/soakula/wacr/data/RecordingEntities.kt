@@ -10,7 +10,7 @@ import androidx.room.Relation
 import java.util.UUID
 
 enum class CallDirection { INCOMING, OUTGOING, UNKNOWN }
-enum class CallType { VOICE, VIDEO }
+enum class CallType { VOICE, VIDEO, UNKNOWN }
 enum class RecordingDecision { AUTO, ASKED, MANUAL, IGNORED }
 enum class RecordingStatus { RECORDING, FINALIZED, RECOVERED, FAILED }
 enum class AudioRoute { EARPIECE, SPEAKER, WIRED, BLUETOOTH, USB }
@@ -21,10 +21,11 @@ data class CallSessionEntity(
     @ColumnInfo(name = "wa_display_name") val waDisplayName: String? = null,
     @ColumnInfo(name = "match_key") val matchKey: String? = null,
     @ColumnInfo(name = "is_group") val isGroup: Boolean = false,
+    @ColumnInfo(name = "group_known", defaultValue = "0") val isGroupKnown: Boolean = isGroup,
     @ColumnInfo(name = "group_name") val groupName: String? = null,
     @ColumnInfo(name = "participants_json") val participantsJson: String? = null,
     val direction: CallDirection = CallDirection.UNKNOWN,
-    @ColumnInfo(name = "call_type") val callType: CallType = CallType.VOICE,
+    @ColumnInfo(name = "call_type") val callType: CallType = CallType.UNKNOWN,
     @ColumnInfo(name = "ringing_at") val ringingAt: Long? = null,
     @ColumnInfo(name = "connected_at") val connectedAt: Long? = null,
     @ColumnInfo(name = "ended_at") val endedAt: Long? = null,

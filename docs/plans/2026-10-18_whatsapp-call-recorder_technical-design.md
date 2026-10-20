@@ -258,10 +258,11 @@ SQLite via Room + SQLCipher. Times are epoch ms (`INTEGER`). Enums stored as `TE
 | | wa_display_name | TEXT | Y | idx | null → "Unknown" |
 | | match_key | TEXT | Y | idx | for allowlist lookup |
 | | is_group | INTEGER(bool) | N | | |
+| | group_known | INTEGER(bool) | N | | Default 0; false `is_group` does not prove one-to-one identity |
 | | group_name | TEXT | Y | | |
 | | participants_json | TEXT | Y | | names visible on call screen |
 | | direction | TEXT | N | | `INCOMING` \| `OUTGOING` \| `UNKNOWN` |
-| | call_type | TEXT | N | | `VOICE` \| `VIDEO` (initial) |
+| | call_type | TEXT | N | | `VOICE` \| `VIDEO` \| `UNKNOWN`; new sessions default to unverified |
 | | ringing_at / connected_at / ended_at | INTEGER | Y | idx(connected_at) | |
 | | decision | TEXT | N | | `AUTO` \| `ASKED` \| `MANUAL` \| `IGNORED` |
 | recording | id | TEXT PK (UUIDv4) | N | PK | also directory name |
@@ -608,6 +609,8 @@ One retained, already-redacted A73 run supplies an identity-free fixture of sixt
 **Reconnect and hold semantics (2026-10-20, task 2.1.2.1.1)**: the core now emits Suspended immediately when connection evidence disappears, allowing the later native coordinator to stop capture without waiting for the two-second session-end debounce. A provisional Ended retains a bounded same-package/key/instance ticket until thirty seconds after the original loss, not thirty seconds after finalization. Fresh corroborated evidence strictly before that deadline emits Resumed with the original session sequence/connected time; it must reopen/update the same database session, never insert another Started row. Exact deadline, changed call-instance marker and conflicting readable caller keys create new sessions. Missing metadata on resume is not promoted into verified group/type/caller information. This is session continuity; no recording-file append or native pause operation is claimed by the pure core.
 
 Positive hold evidence keeps a session suspended without a thirty-second hold-duration limit. Separate held-session identities allow another connected call to start its own session and the original to resume later, including reuse of one notification key across both calls and a long second-call dialing phase. A late positive hold cue can retain a recently provisionally ended session without emitting a capture-resume event. Unknown snapshots cannot clear an explicit hold. Cellular-mode interruption suspends capture eligibility immediately; the return of generic communication mode alone cannot resume it without a newer WhatsApp notification cue. Source unavailability closes every current/held session and clears reconnect history. State is bounded, input/mode validation precedes timeout consumption, and delayed timers cannot issue already-expired reconnect tickets. Synthetic boundary, waiting/hold/caller-conflict/cellular/revocation cases supplement the unchanged identity-free captured fixture. The asset still correctly marks actual phone hold/reconnect classification unverified; native adapters, database/recording effects and device acceptance remain open.
+
+**Unverified native call metadata (2026-10-20, task 2.1.1.1.3 prerequisite)**: schema 4 adds group_known independently of the historical is_group default, so false is never sufficient to certify a one-to-one call. The non-destructive 3->4 migration preserves all session/recording/contact/deletion relationships, defaults legacy non-group rows to unknown and retains explicitly positive group classification. New call-session objects default to CallType.UNKNOWN rather than inventing voice evidence; existing stored voice/video values remain unchanged. Library/details and rename defaults distinguish an unidentified call session from a manual recording and display unverified type explicitly. Native adapters must populate group_known only from positive classification and preserve unknown video-extra presence. Migration and native Compose tests cover these boundaries; this prerequisite does not activate adapters or automatic recording.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |

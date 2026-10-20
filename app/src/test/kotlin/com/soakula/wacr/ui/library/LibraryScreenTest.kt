@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.soakula.wacr.R
+import com.soakula.wacr.data.CallSessionEntity
 import com.soakula.wacr.data.RecordingEntity
 import com.soakula.wacr.data.RecordingWithSession
 import com.soakula.wacr.recording.RecorderState
@@ -83,6 +84,18 @@ class LibraryScreenTest {
         compose.runOnIdle { state.value = LibraryUiState.Ready(emptyList()) }
         compose.onNodeWithText("Synthetic player destination").assertDoesNotExist()
         compose.runOnIdle { assertEquals(true, disposed) }
+    }
+
+    @Test fun unknownSessionMetadataIsNotLabelledManualOrVerifiedVoice() {
+        val entry = RecordingWithSession(
+            RecordingEntity(UUID.randomUUID(), 1000, 1, "MIC"),
+            CallSessionEntity(id = 1)
+        )
+        compose.setContent { MaterialTheme { RecordingRow(entry) } }
+        compose.onNodeWithText(text(R.string.library_unknown_caller)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_unknown_type), substring = true).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.library_manual)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.library_voice), substring = true).assertDoesNotExist()
     }
 
     private fun text(resource: Int) = compose.activity.getString(resource)
