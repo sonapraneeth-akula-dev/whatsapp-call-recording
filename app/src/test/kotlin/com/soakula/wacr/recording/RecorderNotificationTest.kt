@@ -81,7 +81,10 @@ class RecorderNotificationTest {
         assertEquals(Notification.VISIBILITY_PRIVATE, notice.visibility)
         assertEquals(0, notice.flags and Notification.FLAG_ONGOING_EVENT)
         assertFalse(notice.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
-        assertNull(notice.actions)
+        assertEquals("Record call", notice.actions.single().title.toString())
+        assertTrue(notice.actions.single().actionIntent.isImmutable)
+        assertTrue(notice.actions.single().actionIntent.isActivity)
+        assertNull(notice.publicVersion.actions)
         assertEquals("Recorder status", notice.publicVersion.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
     }
 }

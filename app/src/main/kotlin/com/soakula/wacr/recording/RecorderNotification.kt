@@ -74,6 +74,9 @@ class RecorderNotification(private val context: Context) {
                 if (stop != null) addAction(Notification.Action.Builder(
                     null, context.getString(R.string.recording_stop), stop
                 ).build())
+                if (!ongoing) addAction(Notification.Action.Builder(
+                    null, context.getString(R.string.tile_record), RecordingEntry.pendingIntent(context)
+                ).build())
             }.build()
     }
 

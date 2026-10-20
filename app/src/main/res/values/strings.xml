@@ -1,4 +1,9 @@
 <resources>
+    <string name="tile_record">Record call</string>
+    <string name="tile_stop">Stop recording</string>
+    <string name="tile_recording">Recording</string>
+    <string name="tile_tap_start">Tap to open recording controls</string>
+    <string name="recording_entry_error">Could not open recording controls. Open WACR to start manually.</string>
     <string name="home_manual_recording">Manual recording</string>
     <string name="home_record">Record now</string>
     <string name="home_saved">Recording saved</string>

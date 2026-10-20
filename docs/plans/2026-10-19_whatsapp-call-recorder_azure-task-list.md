@@ -417,7 +417,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 4.2.1.1.1 | Task | Notification Start/Stop + `RecordTileService` QS tile bound to `RecorderState` — `app/…/recording/RecordTileService.kt` | 02:00 | 00:20 | Manual on both phones |  |
+| 4.2.1.1.1 | Task | Notification Start/Stop + `RecordTileService` QS tile bound to `RecorderState` — `app/…/recording/RecordTileService.kt` | 02:00 | 00:20 | Manual on both phones | **2026-10-20: implemented; local SDK 33/34 lifecycle/state/permission/intent tests.** Tile follows recorder state only while listening, stops preparing/active capture and disables actions while saving. Start opens a private activity alias after unlock; only a resumed activity with microphone/notification grants requests capture. Forged exported-activity actions, replay, duplicate starts and queued background starts are rejected. Status notifications offer the same immutable Start entry; ongoing notifications retain Stop. API 34+ uses PendingIntent; only API 33 uses the guarded legacy overload. Actual tile/notification interaction and audio remain owner phone UAT. |
 | 4.2.1.1.2 | Task | Manual start without detected session (`decision = MANUAL`) | 00:45 | 00:10 | Recording row with MANUAL decision |  |
 
 ##### User Story 4.2.1.2 (US-021): A "Record this call?" notification for non-allowlisted calls

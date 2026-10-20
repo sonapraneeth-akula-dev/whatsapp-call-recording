@@ -27,9 +27,11 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withResumed
 import com.soakula.wacr.health.HealthIssue
 import com.soakula.wacr.health.HealthProblem
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.recording.RecordingEntry
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.allowlist.AllowlistScreen
 import com.soakula.wacr.ui.allowlist.AllowlistViewModel
@@ -50,6 +52,7 @@ import com.soakula.wacr.playback.createRecordingPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -72,6 +75,7 @@ class MainActivity : ComponentActivity() {
     private var startWhenResumed = false
     private var manualConfirmation: UUID? = null
     private var stopConfirmation: UUID? = null
+    private var entryJob: Job? = null
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
             recordAfterPermission = false
@@ -89,6 +93,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (savedInstanceState == null) consumeRecordingEntry(intent)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 app.recorder.state.collect { state ->
@@ -181,7 +186,21 @@ class MainActivity : ComponentActivity() {
         if (startWhenResumed) startRecording()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeRecordingEntry(intent)
+    }
+
+    private fun consumeRecordingEntry(intent: Intent) {
+        if (!RecordingEntry.consume(this, intent)) return
+        entryJob?.cancel()
+        entryJob = lifecycleScope.launch { lifecycle.withResumed { requestRecording() } }
+    }
+
     override fun onStop() {
+        entryJob?.cancel()
+        entryJob = null
         recordAfterPermission = false
         startWhenResumed = false
         manualConfirmation = null
