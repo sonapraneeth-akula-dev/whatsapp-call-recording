@@ -113,6 +113,8 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.sqlcipher)
     kapt(libs.room.compiler)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.tooling.preview)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
 }

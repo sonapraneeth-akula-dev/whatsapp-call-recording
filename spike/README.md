@@ -94,6 +94,7 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
 - Production shell/backend: `app\src\main\kotlin\com\soakula\wacr\`; capture, encryption, metadata and recovery components exist, but no recording service/product UI is wired yet. Both apps reuse JSON/redaction helpers from `:logging` and unchanged RMS utilities from `:audio`; spike capture behavior, settings and saved runs are preserved.
 - Separate install identities: **WACR Spike** = `com.soakula.wacr.spike`, **WACR Debug** = `com.soakula.wacr.debug`, release **WACR** = `com.soakula.wacr`. Installing the app does not replace the spike.
+- Review-only UI proposals: open `app\src\debug\kotlin\com\soakula\wacr\ui\preview\MockupGallery.kt` in Android Studio's Compose preview with the debug variant. Sample data only; not connected to the launcher or recorder. Owner approval is still required before product UI implementation.
 - Source code: `spike/src/main/kotlin/com/soakula/wacr/spike/`
 - Logs on the phone: app-private `files/runs/<time>_<label>/` containing `events.jsonl`, `device.json`, `matrix.md`, `audio/*.wav`, `tree/*.json`, `shots/*.jpg` and `crash.txt`.
 - Build:

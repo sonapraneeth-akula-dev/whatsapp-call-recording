@@ -82,10 +82,12 @@ foreach ($case in @(
             }
         }
     }
-    $launcher = $manifest.manifest.application.activity | Where-Object {
-        $_.'intent-filter'.action.GetAttribute('name', $android) -eq 'android.intent.action.MAIN' -and
-        $_.'intent-filter'.category.GetAttribute('name', $android) -eq 'android.intent.category.LAUNCHER'
-    }
+    $namespaces = [System.Xml.XmlNamespaceManager]::new($manifest.NameTable)
+    $namespaces.AddNamespace('android', $android)
+    $launcher = $manifest.SelectNodes(
+        "/manifest/application/activity[intent-filter[action[@android:name='android.intent.action.MAIN'] and category[@android:name='android.intent.category.LAUNCHER']]]",
+        $namespaces
+    )
     if (@($launcher).Count -ne 1 -or $launcher.GetAttribute('exported', $android) -ne 'true') {
         throw "Expected one exported launcher in $apk"
     }
