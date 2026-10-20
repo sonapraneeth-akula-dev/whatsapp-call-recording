@@ -272,7 +272,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
 | 3.1.1.1.1 | Task | `CaptureEngine`: open source(s) from `CaptureProfile` (seeded from spike matrix), 16 kHz, stereo L=own/R=remote else mono — `app/…/recording/CaptureEngine.kt` | 03:00 | 00:20 | Instrumented test receives PCM frames from profile sources | Uses gate decision |
-| 3.1.1.1.2 | Task | `AacEncoder`: `MediaCodec` AAC-LC ADTS 32 kbps mono / 48 kbps stereo — `app/…/recording/AacEncoder.kt` | 02:00 | 00:15 | Config tests pass; 60 s file plays, ≤ 1 MB/min |  |
+| 3.1.1.1.2 | Task | `AacEncoder`: `MediaCodec` AAC-LC ADTS 32 kbps mono / 48 kbps stereo — `app/…/recording/AacEncoder.kt` | 02:00 | 00:15 | Config tests pass; 60 s file plays, ≤ 1 MB/min | **2026-10-20: implemented; local config/framing tests + debug build/lint pass.** Fixed 16 kHz LC, partial-buffer assembly, PCM sample-count timestamps, bounded drain/EOS and codec cleanup. Synchronous worker-thread codec API avoids callback races. Actual 60 s encode/playback/size check remains owner phone UAT after service wiring. |
 | 3.1.1.1.3 | Task | `RecorderService` FGS type `microphone`, started from accessibility service (or "Ready" FGS per spike result) — `app/…/recording/RecorderService.kt` | 02:00 | 00:10 | Recording starts ≤ 2 s after connect in 5/5 calls | AD-012 |
 
 ##### User Story 3.1.1.2 (US-012): A persistent indicator while recording

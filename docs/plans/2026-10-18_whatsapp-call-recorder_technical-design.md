@@ -124,7 +124,7 @@ graph TD
 | `RecordingPolicy` | Decides auto / ask / ignore from allowlist (contact or group), per-contact mode override, global mode | Pure Kotlin |
 | `RecorderService` | Foreground service; owns one active `RecordingJob`; notification with timer/Stop/"Capture other side (speaker)" | FGS type `microphone`; adds `mediaProjection` after video consent |
 | `CaptureEngine` | Opens the `AudioRecord` source(s) from the device's `CaptureProfile` (spike result) for the current route; stereo L=own, R=remote when two sources work, else mono; re-opens on route change ≤ 1 s; computes RMS for capability/silence | `AudioDeviceCallback`, `AudioRecord.Builder` |
-| `AacEncoder` | PCM → AAC-LC ADTS (16 kHz, 32 kbps mono / 48 kbps stereo ≈ 0.24–0.36 MB/min) | `MediaCodec` async mode |
+| `AacEncoder` | PCM → AAC-LC ADTS (16 kHz, 32 kbps mono / 48 kbps stereo ≈ 0.24–0.36 MB/min) | Bounded synchronous `MediaCodec` API on recording worker; avoids separate callback ownership (implementation decision 2026-10-20) |
 | `SegmentWriter` | Every 5 s closes an encrypted segment file `seg_NNNNN.enc` (complete Tink ciphertext) and records it in DB → crash loses ≤ 5 s | Tink `StreamingAead`, associated data = recordingId+index |
 | `Finalizer` / Recovery | On stop: concatenate segments' plaintext into one Tink stream `audio.aac.enc`, mux video if any, write metadata, delete segments. On app/boot start: finalize any `RECORDING` rows as `RECOVERED` | Idempotent |
 | `HealthMonitor` | Checks accessibility enabled, notification-listener enabled, battery unrestricted, notifications allowed, storage; on app start, boot, and every 15 min (WorkManager) | Raises banner + notification with deep link |
