@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.google.crypto.tink.Aead
 import com.soakula.wacr.crypto.DatabaseSecret
@@ -14,15 +16,30 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 @Database(
-    entities = [CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class],
-    version = 1, exportSchema = true
+    entities = [
+        CallSessionEntity::class, RecordingEntity::class, SegmentEntity::class, RouteEventEntity::class,
+        ContactRuleEntity::class
+    ],
+    version = 2, exportSchema = true
 )
 @TypeConverters(StorageConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recordings(): RecordingDao
+    abstract fun contactRules(): ContactRuleDao
 
     companion object {
         const val NAME = "wacr.db"
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS contact_rule (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, display_name TEXT NOT NULL,
+                        match_key TEXT NOT NULL, kind TEXT NOT NULL, mode_override TEXT, created_at INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_contact_rule_kind_match_key ON contact_rule (kind, match_key)")
+            }
+        }
 
         suspend fun open(context: Context, encryption: Aead): AppDatabase = withContext(Dispatchers.IO) {
             val application = context.applicationContext
@@ -33,6 +50,7 @@ abstract class AppDatabase : RoomDatabase() {
                 System.loadLibrary("sqlcipher")
                 database = Room.databaseBuilder(application, AppDatabase::class.java, NAME)
                     .openHelperFactory(SupportSQLiteOpenHelper.Factory { CipherOpenHelper(it, password) })
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 database.openHelper.writableDatabase
                 opened = true

@@ -535,6 +535,8 @@ whatsapp-call-recording/
 
 **Additional mockup proposal (2026-10-20, task 8.1.1.1.2)**: the same debug-only gallery includes allowlist, settings and a clearly future-v1.2 transcript with synthetic Hindi/Telugu/English snippets. Name collisions and manual-only groups are explicit; privacy text does not promise remote audio. No settings persistence, contact picking, app lock or transcription behavior is implemented by these proposals. All controls are inert sample views; rendering and owner sign-off remain pending.
 
+**Allowlist persistence (2026-10-20, task 4.1.1.1.1)**: Room v2 adds the approved `contact_rule` table with unique `(kind, match_key)` and nullable future mode override; contact operations reuse `NameExtractor`, reject unreadable names and never silently replace normalized duplicates. Remove returns the original rule for undo; conflicting undo fails without overwriting a new selection. An explicit 1→2 migration preserves all recording/session/segment/route rows. Local `MigrationTestHelper` validates the exported schema and retained metadata; its Windows-only basename mismatch is handled by resolving the test helper's reported path, not by modifying production storage. Public schema JSON is included only in debug assets for local migration tests; release excludes it. UI/contact picking, auto-record policy and group rules are separate tasks.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|

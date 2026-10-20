@@ -51,6 +51,8 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+    // Local MigrationTestHelper reads packaged assets; release excludes schemas.
+    sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
 }
 
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
@@ -117,4 +119,5 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling.preview)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.room.testing)
 }

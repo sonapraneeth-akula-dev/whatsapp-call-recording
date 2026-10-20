@@ -384,7 +384,7 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 
 | # | Type | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|------|-------------|---------|--------------|-------|
-| 4.1.1.1.1 | Task | `contact_rule` entity/DAO/repo + `match_key` normaliser — `app/…/data/ContactRule*.kt` | 01:30 | 00:15 | Tests: case, emoji, duplicates |  |
+| 4.1.1.1.1 | Task | `contact_rule` entity/DAO/repo + `match_key` normaliser — `app/…/data/ContactRule*.kt` | 01:30 | 00:15 | Tests: case, emoji, duplicates | **2026-10-20: implemented in the existing encrypted Room database (v2).** Reuses `NameExtractor`; unreadable names rejected, normalized duplicates fail without replacing earlier rules. Observe/add/lookup/remove/undo operations; undo collisions also fail explicitly. Schema v1 retained; explicit 1→2 migration and local `MigrationTestHelper` verify existing session/recording/segment/route metadata survives. Separate CONTACT/GROUP keys stored per design, but group auto-record remains future v1.1. No contact permission or product UI added. |
 | 4.1.1.1.2 | Task | Allowlist screen: list, add via `ACTION_PICK`, remove with undo — `app/…/ui/allowlist/` | 02:00 | 00:15 | Compose UI test add/remove | No `READ_CONTACTS` |
 
 #### Feature 4.1.2 (FEAT-004.1.2): Auto-record rule
