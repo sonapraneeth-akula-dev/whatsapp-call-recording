@@ -500,6 +500,8 @@ Goal: any test run on either phone reaches Copilot with one tap — **no USB cab
 - [ ] **Unit tests**: encrypt/decrypt round-trip and tamper-detection tests pass; ≥ 90% coverage (FEAT-005.2.1)
 - [ ] **Security**: file pulled via `adb` is not playable; no high/critical findings in dependency scan
 
+**2026-10-20 remediation update (5.2.1.2.2)**: compatible Robolectric 4.17 update selects Bouncy Castle 1.85, with no advisory matches for that selected version in a fresh OSV scan. All 95 app and 10 retained-spike unit tests pass. No runtime application dependencies changed; unresolved build-tool findings still prevent declaring the whole scan gate clean.
+
 ## Requirement 6 (REQ-006): Dashboard and library — Must Have
 - **Outcome**: Owner sees recorder status and can play any recording within 2 taps.
 - **Est. Manual**: 08:40 | **Est. AI**: 01:40
