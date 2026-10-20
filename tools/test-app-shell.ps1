@@ -41,6 +41,23 @@ foreach ($case in @(
             throw "INTERNET permission present in $apk"
         }
     }
+    if ($case.Id -ne 'com.soakula.wacr.spike') {
+        if (-not $manifest.manifest.application.GetAttribute('dataExtractionRules', $android)) {
+            throw "Backup/transfer exclusions missing in $apk"
+        }
+        $resource = & $analyzer resources value --type xml --name data_extraction_rules --config default $apk
+        if ($LASTEXITCODE -ne 0) { throw "Cannot resolve extraction rules: $apk" }
+        $output = & $analyzer resources xml --file $resource $apk
+        if ($LASTEXITCODE -ne 0) { throw "Cannot read extraction rules: $apk" }
+        [xml]$rules = $output -join "`n"
+        foreach ($transport in @('cloud-backup', 'device-transfer')) {
+            foreach ($domain in @('root', 'file', 'database', 'sharedpref', 'device_root', 'device_file', 'device_database', 'device_sharedpref', 'external')) {
+                if (-not $rules.SelectSingleNode("/data-extraction-rules/$transport/exclude[@domain='$domain' and @path='.']")) {
+                    throw "$transport does not exclude $domain in $apk"
+                }
+            }
+        }
+    }
     $launcher = $manifest.manifest.application.activity | Where-Object {
         $_.'intent-filter'.action.GetAttribute('name', $android) -eq 'android.intent.action.MAIN' -and
         $_.'intent-filter'.category.GetAttribute('name', $android) -eq 'android.intent.category.LAUNCHER'

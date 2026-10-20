@@ -106,11 +106,14 @@ Shared zips replace saved contact names and `+` phone numbers with stable hashes
 
   ```powershell
   $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
-  .\gradlew :app:assembleDebug :app:assembleRelease :app:lintDebug :spike:assembleDebug :spike:testDebugUnitTest
+  .\gradlew :app:verifyNoInternet :app:assembleDebug :app:assembleRelease :app:lintDebug :app:testDebugUnitTest :spike:assembleDebug :spike:testDebugUnitTest
+  .\tools\test-privacy-guard.ps1
   .\tools\test-app-shell.ps1 -SdkPath "$env:LOCALAPPDATA\Android\Sdk"
   ```
 
   Production debug APK: `app\build\outputs\apk\debug\app-debug.apk` (delivery copy: `dist\app-debug.apk`). Release APK is unsigned until personal signing is configured; do not install it as-is. The shell requests no recording permissions and cannot record calls.
+
+  Every production APK build runs the merged-manifest network guard automatically. The scripts also check backup/transfer exclusions in the packaged resources; CI is intentionally deferred.
 
 ### Deviations from the task list
 
