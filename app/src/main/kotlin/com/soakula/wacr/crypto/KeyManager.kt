@@ -19,7 +19,11 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.security.GeneralSecurityException
 
-class KeyManager(private val directory: File, private val masterKey: Aead) {
+class KeyManager(
+    private val directory: File,
+    private val masterKey: Aead,
+    private val protectedKeysets: Set<String> = emptySet()
+) {
     init {
         AeadConfig.register()
         StreamingAeadConfig.register()
@@ -42,6 +46,9 @@ class KeyManager(private val directory: File, private val masterKey: Aead) {
         if (file.exists()) {
             TinkProtoKeysetFormat.parseEncryptedKeyset(file.readBytes(), masterKey, associatedData)
         } else {
+            if (name in protectedKeysets) {
+                throw GeneralSecurityException("Keyset missing; existing encrypted data must not be reset")
+            }
             val handle = KeysetHandle.generateNew(parameters)
             val encrypted = TinkProtoKeysetFormat.serializeEncryptedKeyset(handle, masterKey, associatedData)
             val temporary = File.createTempFile("keyset-", ".tmp", directory)
@@ -65,13 +72,22 @@ class KeyManager(private val directory: File, private val masterKey: Aead) {
 
         fun open(context: Context): KeyManager = synchronized(lock) {
             val directory = File(context.noBackupFilesDir.canonicalFile, "keys")
+            val protected = buildSet {
+                if (File(context.filesDir, "rec").exists()) add("streaming")
+                val database = context.getDatabasePath("wacr.db")
+                if (listOf("", "-wal", "-shm", "-journal").any { File(database.path + it).exists() } ||
+                    File(File(context.filesDir, "datastore"), "secrets.preferences_pb").exists()) {
+                    add("metadata")
+                }
+            }
             if (!AndroidKeystore.hasKey(ALIAS)) {
-                if (File(directory, "streaming.keyset").exists() || File(directory, "metadata.keyset").exists()) {
+                if (protected.isNotEmpty() || File(directory, "streaming.keyset").exists() ||
+                    File(directory, "metadata.keyset").exists()) {
                     throw GeneralSecurityException("Keystore key missing; existing keysets must not be replaced")
                 }
                 AndroidKeystore.generateNewAes256GcmKey(ALIAS)
             }
-            KeyManager(directory, AndroidKeystore.getAead(ALIAS))
+            KeyManager(directory, AndroidKeystore.getAead(ALIAS), protected)
         }
     }
 }

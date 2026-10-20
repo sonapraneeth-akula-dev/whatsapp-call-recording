@@ -63,6 +63,14 @@ class KeyManagerTest {
         assertThrows(GeneralSecurityException::class.java) { KeyManager(directory, master).streamingAead }
     }
 
+    @Test fun missingKeysetsNeverReplaceKeysForExistingEncryptedArtifacts() {
+        val directory = temporary.newFolder()
+        val manager = KeyManager(directory, master(), setOf("streaming", "metadata"))
+        assertThrows(GeneralSecurityException::class.java) { manager.streamingAead }
+        assertThrows(GeneralSecurityException::class.java) { manager.aead }
+        assertTrue(directory.list()!!.isEmpty())
+    }
+
     @Test fun concurrentManagersShareOnePersistentKeyset() {
         val directory = temporary.newFolder()
         val master = master()
