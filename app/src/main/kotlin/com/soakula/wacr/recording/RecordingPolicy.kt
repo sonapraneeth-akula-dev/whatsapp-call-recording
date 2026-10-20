@@ -8,9 +8,9 @@ import com.soakula.wacr.detection.NameExtractor
 object RecordingPolicy {
     enum class Decision { AUTO, ASK }
 
-    fun decide(caller: CallerName, isGroup: Boolean, rule: ContactRuleEntity?): Decision {
+    fun decide(caller: CallerName, isGroup: Boolean?, rule: ContactRuleEntity?): Decision {
         val key = caller.matchKey
-        return if (!isGroup && key != null && rule?.kind == RuleKind.CONTACT &&
+        return if (isGroup == false && key != null && rule?.kind == RuleKind.CONTACT &&
             key == NameExtractor.matchKey(caller.displayName) && key == rule.matchKey &&
             key == NameExtractor.matchKey(rule.displayName)
         ) Decision.AUTO else Decision.ASK

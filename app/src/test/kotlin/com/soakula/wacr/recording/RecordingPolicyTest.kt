@@ -31,6 +31,7 @@ class RecordingPolicyTest {
         assertEquals(RecordingPolicy.Decision.ASK, RecordingPolicy.decide(caller, true, rule))
         assertEquals(RecordingPolicy.Decision.ASK, RecordingPolicy.decide(caller, true, rule.copy(kind = RuleKind.GROUP)))
         assertEquals(RecordingPolicy.Decision.ASK, RecordingPolicy.decide(caller, false, rule.copy(kind = RuleKind.GROUP)))
+        assertEquals(RecordingPolicy.Decision.ASK, RecordingPolicy.decide(caller, null, rule))
     }
 
     @Test fun inconsistentKeysCannotTriggerAutomaticRecording() {
