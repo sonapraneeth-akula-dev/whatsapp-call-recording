@@ -12,13 +12,13 @@
 
 ## v1.0 execution status (2026-10-21)
 
-**75 tasks: 65 Done (local), 8 Blocked, 1 Pending, 1 Deferred.** Every v1.0 task row now has an explicit **Status** column. Scope: REQ-002 through REQ-008, REQ-011 and REQ-012; the other 74 spike/later-release rows are not reclassified by this audit.
+**75 tasks: 66 Done (local), 6 Blocked, 2 Pending, 1 Deferred.** Every v1.0 task row has an explicit **Status** column. Scope: REQ-002 through REQ-008, REQ-011 and REQ-012; the other 74 spike/later-release rows are not reclassified by this audit.
 
-**Done (local)** means implementation or test-harness work and applicable local checks are complete. It does not assert that manual/device verification in the row has passed. **Blocked** means missing evidence or a decision prevents closing the remaining work. **Pending** is owner design review (`8.1.1.1.3`), not an implementation blocker. **Deferred** is owner-deferred CI (`5.1.1.1.4`).
+**Done (local)** means implementation or test-harness work and applicable local checks are complete. It does not assert that manual/device verification in the row has passed. **Blocked** means missing evidence or a decision prevents closing the remaining work. **Pending** covers the next implementation task and owner design review (`8.1.1.1.3`); the latter is not an implementation blocker. **Deferred** is owner-deferred CI (`5.1.1.1.4`).
 
 Completed tasks are marked individually below, including the resolved dependency-security gate (`5.2.1.2.2`). Milestone exit/UAT checkboxes remain separate: they must not be checked without their stated phone, coverage or sign-off evidence. Original IDs, estimates and verification requirements are preserved.
 
-See [Blocker review](2026-10-21_whatsapp-call-recorder_blockers.md) for all eight blocked tasks, owner actions, phone commands and the recorded stop-playback preference. Stop-versus-continue is resolved; immediate phone-lock stopping versus the existing 60-second background timer still needs clarification. Neither authentication task is marked complete.
+See [Blocker review](2026-10-21_whatsapp-call-recorder_blockers.md) for the six blocked tasks, owner actions and phone commands. Owner confirmed immediate playback stopping on phone lock, with the existing 60-second ordinary-background grace period retained. The authentication gate is locally complete; the Settings toggle is the next task.
 
 ## Debug Logging & Log Sharing (spike first, then app)
 Goal: any test run on either phone reaches Copilot with one tap — **no USB cable, no developer mode** — and the app never needs `INTERNET`.
@@ -856,8 +856,8 @@ Fresh OSV 2.7.0 coordinate-only scan covers all ten complete selected inventorie
 
 | # | Type | Status | Item | Est. Manual | Est. AI | Verification | Notes |
 |---|------|--------|------|-------------|---------|--------------|-------|
-| 11.3.1.1.1 | Task | Blocked | Biometric gate (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`), relock after 60 s, `FLAG_SECURE` | 02:00 | 00:20 | Manual on both phones | **Blocked (updated 2026-10-21): screen-lock timing clarification remains.** Owner chose stopping saved-recording playback, not active call capture. Stop-versus-continue is resolved. Existing background app relock is 60 seconds; immediate stopping on phone screen lock versus using that timer is a separate question, asked while owner was unavailable. No timing silently chosen. Gate must protect Home/Library/Player/Allowlist/Settings and service/notification/media playback controls; onboarding remains open and recording independent. Authentication is not yet implemented; existing FLAG_SECURE retained. See blocker review. |
-| 11.3.1.1.2 | Task | Blocked | Lock toggle in Settings | 00:30 | 00:10 | Persists | **Blocked by 11.3.1.1.1 (updated 2026-10-21).** Stop-playback preference recorded; screen-lock timing and gate implementation remain outstanding. A persistent toggle must not advertise protection before the gate and playback-service enforcement exist. |
+| 11.3.1.1.1 | Task | Done (local) | Biometric gate (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`), relock after 60 s, `FLAG_SECURE` | 02:00 | 00:20 | Manual on both phones | **2026-10-21: gate and playback enforcement implemented and locally verified.** Owner confirmed immediate screen-lock stopping; ordinary backgrounding keeps its 60-second grace period. Platform strong-biometric/device-credential prompt, challenge revocation, fail-closed preference errors, all protected destinations, open setup and unconditional FLAG_SECURE. Service/notification/source authorization and real player/session release prevent background bypass; active capture is unchanged. Native host coverage includes Android 13/16, exact timeout boundaries, cancellation/stale callbacks, service shutdown and large text. Samsung authentication/lockscreen behavior remains phone UAT; Settings toggle follows separately. |
+| 11.3.1.1.2 | Task | Pending | Lock toggle in Settings | 00:30 | 00:10 | Persists | **2026-10-21: unblocked by owner decision and implemented gate.** Next task: expose the default-off persistent setting with authentication-availability checks and explicit write errors; no Settings control is advertised yet. |
 
 **Milestone Exit Criteria / Verification Plan** (from the PRD):
 - [ ] **Manual / UAT**: lock verified on both phones (US-045)

@@ -62,6 +62,8 @@ android {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Android 16's shared-memory setup uses this JDK API in Robolectric.
+        unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
     }
     // Local MigrationTestHelper reads packaged assets; release excludes schemas.
     sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")

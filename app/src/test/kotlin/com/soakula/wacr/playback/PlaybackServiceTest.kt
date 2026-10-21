@@ -1,6 +1,7 @@
 package com.soakula.wacr.playback
 
 import android.app.Notification
+import android.app.Activity
 import android.app.NotificationManager
 import android.app.Service
 import android.content.ComponentName
@@ -23,6 +24,7 @@ import com.soakula.wacr.WacrApp
 import com.soakula.wacr.data.*
 import com.soakula.wacr.recording.RecoveryReport
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.security.AppLockState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
@@ -68,21 +70,20 @@ class PlaybackServiceTest {
             throw AssertionError("Unexpected uncaught test exception", error)
         })
         shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        runBlocking { app.preferences.setAppLock(false) }
+        await { app.appLock.state.value == AppLockState.Disabled }
         database = Room.inMemoryDatabaseBuilder(app, AppDatabase::class.java).build()
         ReflectionHelpers.setField(app, "openDatabase", database)
         ReflectionHelpers.setField(app, "recovered", RecoveryReport(0, 0, 0))
-        host = Robolectric.buildService(PlaybackService::class.java).create()
-        service = host.get()
-        session = ReflectionHelpers.getField(service, "session")
-        engine = ReflectionHelpers.getField(service, "engine")
-        service.addSession(session)
-        controller = connect()
+        startService()
     }
 
     @After fun close() {
         if (::controller.isInitialized) controller.release()
         if (::host.isInitialized) host.destroy()
         if (::database.isInitialized) database.close()
+        runBlocking { app.preferences.setAppLock(false) }
+        app.appLock.close()
         Thread.setDefaultUncaughtExceptionHandler(previousHandler)
     }
 
@@ -92,10 +93,28 @@ class PlaybackServiceTest {
             database.recordings().insertRecording(RecordingEntity(id, 1000, 1, "MIC", title = "Synthetic private contact",
                 status = RecordingStatus.FINALIZED, durationMs = 60_000, audioPath = "$id/audio.aac.enc"))
         }
+
         controller.setMediaItem(MediaItem.Builder().setMediaId(id.toString()).setUri("https://invalid.example/private")
             .setMediaMetadata(MediaMetadata.Builder().setTitle("Synthetic private contact").build()).build())
         await { engine.currentMediaItem?.mediaId == id.toString() }
         return id
+    }
+
+    @Test fun appRelockReleasesTheRealEngineAndStaleMediaCommandsCannotRestartIt() {
+        select()
+        prepareSyntheticTimeline()
+        controller.play()
+        await { engine.playWhenReady }
+        val connection = session.connectedControllers.first()
+        val capture = RecorderState.Recording(UUID.randomUUID(), 1000, false)
+        ReflectionHelpers.getField<MutableStateFlow<RecorderState>>(app.recorder, "mutableState").value = capture
+        runBlocking { app.preferences.setAppLock(true) }
+        await { engine.isReleased && app.appLock.state.value is AppLockState.Locked }
+        assertNull(app.playbackService)
+        assertEquals(capture, app.recorder.state.value)
+        assertNull(service.onGetSession(connection))
+        assertEquals(Service.START_NOT_STICKY, service.onStartCommand(Intent(Intent.ACTION_MEDIA_BUTTON), 0, 1))
+        assertTrue(engine.isReleased)
     }
 
     @Test fun validatesAndRebuildsSelectionThenNativeSessionControlsBackgroundPlayback() {
@@ -117,6 +136,50 @@ class PlaybackServiceTest {
         assertTrue(engine.playWhenReady)
         app.stopPlaybackForCapture()
         assertTrue(engine.isReleased)
+        assertNull(app.playbackService)
+    }
+
+    @Test fun screenOffAndBackgroundTimeoutReleaseAuthenticatedAudioWithoutStoppingCallCapture() {
+        runBlocking { app.preferences.setAppLock(true) }
+        await { app.appLock.state.value is AppLockState.Locked }
+        val owner = Robolectric.buildActivity(Activity::class.java).get()
+        for (screenOff in listOf(true, false)) {
+            controller.release()
+            host.destroy()
+            ReflectionHelpers.getField<MutableStateFlow<RecorderState>>(app.recorder, "mutableState").value = RecorderState.Idle
+            app.appLock.foreground(owner)
+            val locked = app.appLock.state.value as AppLockState.Locked
+            assertTrue(app.appLock.authenticated(locked.revision))
+            startService()
+            select()
+            prepareSyntheticTimeline()
+            controller.play()
+            await { engine.playWhenReady }
+            val capture = RecorderState.Recording(UUID.randomUUID(), 1000, false)
+            ReflectionHelpers.getField<MutableStateFlow<RecorderState>>(app.recorder, "mutableState").value = capture
+            app.appLock.background(owner)
+            if (screenOff) {
+                app.sendBroadcast(Intent(Intent.ACTION_SCREEN_OFF))
+            } else {
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(60))
+            }
+            await { engine.isReleased }
+            assertNull(app.playbackService)
+            assertFalse(app.appLock.canAccess())
+            assertEquals(capture, app.recorder.state.value)
+        }
+    }
+
+    @Test fun lockedServiceCannotCreateAPlayerOrAcceptANewConnection() {
+        val connection = session.connectedControllers.first()
+        runBlocking { app.preferences.setAppLock(true) }
+        await { app.appLock.state.value is AppLockState.Locked }
+        controller.release()
+        host.destroy()
+        host = Robolectric.buildService(PlaybackService::class.java).create()
+        service = host.get()
+        assertNull(ReflectionHelpers.getField<ExoPlayer?>(service, "engine"))
+        assertNull(service.onGetSession(connection))
         assertNull(app.playbackService)
     }
 
@@ -279,6 +342,15 @@ class PlaybackServiceTest {
             await { controller.playerError != null && engine.currentMediaItem == null }
             assertFalse(engine.playWhenReady)
         }
+    }
+
+    private fun startService() {
+        host = Robolectric.buildService(PlaybackService::class.java).create()
+        service = host.get()
+        session = ReflectionHelpers.getField(service, "session")
+        engine = ReflectionHelpers.getField(service, "engine")
+        service.addSession(session)
+        controller = connect()
     }
 
     private fun configureServiceBinding() {

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.unit.Density
 import androidx.test.filters.SdkSuppress
 import com.soakula.wacr.data.Appearance
+import com.soakula.wacr.security.AppLockState
 import com.soakula.wacr.data.ThemeChoice
 import com.soakula.wacr.data.RecordingEntity
 import com.soakula.wacr.data.RecordingStatus
@@ -59,6 +60,7 @@ class AccessibilityChecksTest {
             { AllowlistScreen(AllowlistUiState.Ready(emptyList()), AllowlistActionsState(), {}, {}, {}, {}, {}, {}) },
             { SetupChecklistScreen(ready, false, false, {}, {}, {}, {}, {}, {}) },
             { SettingsScreen(SettingsUiState.Ready(Appearance()), SettingsActionsState(), {}, {}, {}, {}) },
+            { AppLockScreen(AppLockState.Locked(1), false, null, {}, {}, {}, {}) },
             { DiagnosticsScreen(DiagnosticExportState.IDLE, {}, {}) },
             { PlayerScreen(clip, PlaybackUiState(ready = true, durationMs = 30_000), false, {}, {}, {}) },
             { CapabilityScreen(CapabilityUiState.Ready(emptyList(), null, emptyList()), CapabilityActions(),

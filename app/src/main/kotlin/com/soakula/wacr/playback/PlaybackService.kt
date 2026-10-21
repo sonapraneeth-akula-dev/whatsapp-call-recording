@@ -43,6 +43,11 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        if (!app.appLock.canAccess() || app.playbackReleaseFailed) {
+            app.log.log("playback", "locked_service_rejected")
+            stopSelf()
+            return
+        }
         val player = createRecordingPlayer(this, { app.crypto }, app.log)
         engine = player
         setMediaNotificationProvider(PrivatePlaybackNotification(this))
@@ -53,9 +58,15 @@ class PlaybackService : MediaSessionService() {
             }
         })
         val guarded = object : ForwardingPlayer(player) {
+            override fun getAvailableCommands(): Player.Commands =
+                if (app.appLock.canAccess()) super.getAvailableCommands() else Player.Commands.EMPTY
+
+            override fun isCommandAvailable(command: Int): Boolean =
+                app.appLock.canAccess() && super.isCommandAvailable(command)
+
             override fun play() = setPlayWhenReady(true)
             override fun setPlayWhenReady(playWhenReady: Boolean) {
-                if (playWhenReady && (captureBusy() || app.playbackReleaseFailed)) {
+                if (playWhenReady && (captureBusy() || app.playbackReleaseFailed || !app.appLock.canAccess())) {
                     app.log.log("playback", "play_rejected")
                     session?.setPlaybackException(PlaybackException(
                         "Private playback unavailable", null, PlaybackException.ERROR_CODE_UNSPECIFIED))
@@ -102,7 +113,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        if (!allowed(controllerInfo) || captureBusy() || app.playbackReleaseFailed) {
+        if (!allowed(controllerInfo) || captureBusy() || app.playbackReleaseFailed || !app.appLock.canAccess()) {
             app.log.log("playback", "connection_rejected")
             return null
         }
@@ -131,7 +142,7 @@ class PlaybackService : MediaSessionService() {
     internal fun closeRecording(id: UUID) { if (selected.value == id) closePlayback() }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (selected.value == null || captureBusy() || app.playbackReleaseFailed) {
+        if (selected.value == null || captureBusy() || app.playbackReleaseFailed || !app.appLock.canAccess()) {
             app.log.log("playback", "stale_command_rejected")
             closePlayback()
             return START_NOT_STICKY
@@ -157,7 +168,7 @@ class PlaybackService : MediaSessionService() {
 
     private inner class Callbacks : MediaSession.Callback {
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
-            if (!allowed(controller) || captureBusy() || app.playbackReleaseFailed) {
+            if (!allowed(controller) || captureBusy() || app.playbackReleaseFailed || !app.appLock.canAccess()) {
                 app.log.log("playback", "controller_rejected")
                 return MediaSession.ConnectionResult.reject()
             }
@@ -173,7 +184,7 @@ class PlaybackService : MediaSessionService() {
         override fun onAddMediaItems(
             mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>
         ): ListenableFuture<MutableList<MediaItem>> {
-            if (controller.uid != Process.myUid() || captureBusy()) {
+            if (controller.uid != Process.myUid() || captureBusy() || !app.appLock.canAccess()) {
                 app.log.log("playback", "selection_rejected")
                 return Futures.immediateFailedFuture(IllegalStateException("Playback selection unavailable"))
             }
@@ -211,7 +222,7 @@ class PlaybackService : MediaSessionService() {
                         }
                     }
                     ensureActive()
-                    check(!captureBusy() && session === mediaSession && selectionRevision == revision) {
+                    check(!captureBusy() && app.appLock.canAccess() && session === mediaSession && selectionRevision == revision) {
                         "Playback authorization expired"
                     }
                     selected.value = id

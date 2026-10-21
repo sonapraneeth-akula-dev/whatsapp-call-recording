@@ -15,6 +15,7 @@ import com.soakula.wacr.ui.settings.DiagnosticsViewModel
 import com.soakula.wacr.ui.settings.DiagnosticExportState
 import com.soakula.wacr.recording.RecorderService
 import com.soakula.wacr.recording.RecorderState
+import com.soakula.wacr.security.AppLockState
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -45,9 +46,21 @@ class MainActivityTest {
             throw AssertionError("Unexpected uncaught test exception", error)
         })
         shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+        runBlocking {
+            app.preferences.setAppLock(false)
+            withTimeout(10_000) {
+                while (app.appLock.state.value != AppLockState.Disabled) {
+                    ShadowLooper.idleMainLooper()
+                    delay(10)
+                }
+            }
+        }
     }
 
-    @After fun restoreCrashHandler() { Thread.setDefaultUncaughtExceptionHandler(previousHandler) }
+    @After fun restoreCrashHandler() {
+        app.appLock.close()
+        Thread.setDefaultUncaughtExceptionHandler(previousHandler)
+    }
 
     @Test fun launchIsPrivateAndNeverStartsRecordingWithoutAnExplicitAction() {
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup()

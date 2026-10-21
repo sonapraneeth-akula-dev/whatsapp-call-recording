@@ -6,7 +6,10 @@ import android.content.Intent
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
+import android.os.CancellationSignal
 import android.provider.Settings
 import android.net.Uri
 import android.view.HapticFeedbackConstants
@@ -41,6 +44,8 @@ import com.soakula.wacr.recording.RecordingEntry
 import com.soakula.wacr.recording.CallRecordingResult
 import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.ui.AppScaffold
+import com.soakula.wacr.ui.AppLockScreen
+import com.soakula.wacr.security.AppLockState
 import com.soakula.wacr.ui.allowlist.AllowlistScreen
 import com.soakula.wacr.ui.allowlist.AllowlistViewModel
 import com.soakula.wacr.ui.home.HomeViewModel
@@ -67,6 +72,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -81,10 +87,17 @@ class MainActivity : ComponentActivity() {
     private val diagnostics: DiagnosticsViewModel by viewModels()
     private val capability: CapabilityViewModel by viewModels()
     private val diagnosticDocument = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        if (uri == null) diagnostics.cancelSelection() else diagnostics.export(uri)
+        if (uri == null) diagnostics.cancelSelection()
+        else if (!app.appLock.canAccess()) {
+            app.log.log("app_lock", "diagnostic_result_rejected")
+            diagnostics.cancelSelection()
+        } else diagnostics.export(uri)
     }
     private val contactPicker = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
-        if (uri != null) allowlist.addPickedContact(uri)
+        if (uri != null) {
+            if (app.appLock.canAccess()) allowlist.addPickedContact(uri)
+            else app.log.log("app_lock", "contact_result_rejected")
+        }
     }
     private var recordAfterPermission = false
     private var startWhenResumed = false
@@ -97,6 +110,10 @@ class MainActivity : ComponentActivity() {
     private var setupRequest by mutableStateOf(0)
     private var capabilityRequest by mutableStateOf(0)
     private var playbackRequest by mutableStateOf<Pair<UUID, Int>?>(null)
+    private var authSignal: CancellationSignal? = null
+    private var authRevision: Long? = null
+    private var authBusy by mutableStateOf(false)
+    private var authError by mutableStateOf<Int?>(null)
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (recordAfterPermission) {
             recordAfterPermission = false
@@ -150,11 +167,17 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
             }
             WacrTheme(appearance) {
+                val lockState by app.appLock.state.collectAsStateWithLifecycle()
+                LaunchedEffect(lockState) {
+                    if (authSignal != null && (lockState as? AppLockState.Locked)?.revision != authRevision) {
+                        cancelAuthentication()
+                    }
+                }
                 val state by home.state.collectAsStateWithLifecycle()
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
                 val startupReady = appearanceState is SettingsUiState.Ready && state.loaded && state.error == null &&
-                    recordings is LibraryUiState.Ready
+                    recordings is LibraryUiState.Ready && lockState != AppLockState.Loading && lockState != AppLockState.Failed
                 ReportDrawnWhen { startupReady }
                 val actions by library.actions.collectAsStateWithLifecycle()
                 val contactRules by allowlist.state.collectAsStateWithLifecycle()
@@ -210,6 +233,11 @@ class MainActivity : ComponentActivity() {
                             { if (firstRun) settings.completeOnboarding() else closeSetup() })
                     }, setupRequest = setupRequest, settingsRequest = capabilityRequest, playbackRequest = playbackRequest,
                     forceSetup = firstRun, startupLoading = appearanceState is SettingsUiState.Loading,
+                    locked = lockState != AppLockState.Disabled && lockState !is AppLockState.Unlocked,
+                    lockContent = { openSetup ->
+                        AppLockScreen(lockState, authBusy, authError, ::authenticate, app.appLock::retry,
+                            { openSettings(Intent(Settings.ACTION_SECURITY_SETTINGS)) }, openSetup)
+                    },
                     appearanceError = appearanceState is SettingsUiState.Failed,
                     onRetryAppearance = settings::retry, onRetryHome = home::refresh) { entry, back ->
                     PlayerRoute(entry,
@@ -242,8 +270,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        app.appLock.foreground(this)
+    }
+
     override fun onResume() {
         super.onResume()
+        app.appLock.canAccess()
         home.refresh()
         library.restoreUndo()
         allowlist.expireUndo()
@@ -285,7 +319,9 @@ class MainActivity : ComponentActivity() {
         if (sessionId == null && !RecordingEntry.consume(this, intent)) return
         entryJob?.cancel()
         entryJob = lifecycleScope.launch {
+            app.appLock.state.first { it == AppLockState.Disabled || it is AppLockState.Unlocked }
             lifecycle.withResumed {
+                if (!app.appLock.canAccess()) return@withResumed
                 if (sessionId == null) requestRecording() else {
                     requestedSession = sessionId
                     requestedDecision = RecordingDecision.ASKED
@@ -296,6 +332,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        app.appLock.background(this)
         entryJob?.cancel()
         entryJob = null
         startJob?.cancel()
@@ -309,10 +346,83 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
+    override fun onDestroy() {
+        cancelAuthentication()
+        super.onDestroy()
+    }
+
+    private fun cancelAuthentication() {
+        val previous = authSignal
+        authSignal = null
+        authRevision = null
+        authBusy = false
+        authError = null
+        previous?.cancel()
+    }
+
+    private fun authenticate() {
+        val locked = app.appLock.state.value as? AppLockState.Locked ?: return
+        if (authBusy || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val availability = getSystemService(BiometricManager::class.java).canAuthenticate(authenticators)
+        if (availability != BiometricManager.BIOMETRIC_SUCCESS) {
+            app.log.log("app_lock", "authentication_unavailable", mapOf("code" to availability))
+            authError = R.string.app_lock_auth_unavailable
+            return
+        }
+        val signal = CancellationSignal()
+        authSignal = signal
+        authRevision = locked.revision
+        authBusy = true
+        authError = null
+        try {
+            BiometricPrompt.Builder(this).setTitle(getString(R.string.app_lock_prompt_title))
+                .setSubtitle(getString(R.string.app_lock_prompt_subtitle))
+                .setAllowedAuthenticators(authenticators).build()
+                .authenticate(signal, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        if (authSignal !== signal) return
+                        authSignal = null
+                        authBusy = false
+                        lifecycleScope.launch {
+                            lifecycle.withResumed {
+                                if (!app.appLock.authenticated(locked.revision)) authError = R.string.app_lock_auth_error
+                            }
+                        }
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        if (authSignal !== signal) return
+                        authSignal = null
+                        authBusy = false
+                        authError = R.string.app_lock_auth_error
+                        app.log.log("app_lock", "authentication_failed", mapOf("code" to errorCode))
+                    }
+                })
+        } catch (error: SecurityException) {
+            authenticationFailed(error)
+        } catch (error: IllegalArgumentException) {
+            authenticationFailed(error)
+        } catch (error: IllegalStateException) {
+            authenticationFailed(error)
+        }
+    }
+
+    private fun authenticationFailed(error: Exception) {
+        cancelAuthentication()
+        authError = R.string.app_lock_auth_unavailable
+        app.log.log("app_lock", "prompt_failed", mapOf("error_type" to error.javaClass.simpleName))
+    }
+
     private fun missingPermissions() = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
 
     private fun requestRecording() {
+        if (!app.appLock.canAccess()) {
+            app.log.log("app_lock", "recording_ui_rejected")
+            return
+        }
         val detected = app.detection.state.value
         requestedSession = detected.sessionId.takeIf { detected.ready && detected.suspension == null }
         requestedDecision = RecordingDecision.MANUAL
@@ -331,7 +441,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startRecording() {
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !app.appLock.canAccess()) return
         startWhenResumed = false
         val sessionId = requestedSession
         if (sessionId == null) {
@@ -342,7 +452,7 @@ class MainActivity : ComponentActivity() {
         startJob?.cancel()
         startJob = lifecycleScope.launch {
             when (val result = app.detection.recordCall(sessionId, decision) {
-                lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+                lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && app.appLock.canAccess()
             }) {
                 is CallRecordingResult.Started -> {
                     manualConfirmation = result.id
@@ -399,6 +509,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun chooseDiagnosticDocument() {
+        if (!app.appLock.canAccess()) {
+            app.log.log("app_lock", "diagnostic_export_rejected")
+            return
+        }
         if (!diagnostics.chooseDestination()) return
         try {
             diagnosticDocument.launch("wacr-diagnostics.zip")
@@ -410,6 +524,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun pickContact() {
+        if (!app.appLock.canAccess()) {
+            app.log.log("app_lock", "contact_picker_rejected")
+            return
+        }
         try {
             contactPicker.launch(null)
         } catch (error: ActivityNotFoundException) {

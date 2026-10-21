@@ -19,6 +19,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.soakula.wacr.R
+import com.soakula.wacr.security.AppLockState
 import com.soakula.wacr.capability.CapabilityDevice
 import com.soakula.wacr.capability.CapabilityMeter
 import com.soakula.wacr.data.*
@@ -146,6 +147,24 @@ class UiStateRenderingTest(private val dark: Boolean, private val fontScale: Flo
         }
     )
 
+    @Test fun lockStates() = render("lock",
+        Frame("loading", R.string.settings_loading, true) {
+            AppLockScreen(AppLockState.Loading, false, null, {}, {}, {}, {})
+        },
+        Frame("failed", R.string.app_lock_failed) {
+            AppLockScreen(AppLockState.Failed, false, null, {}, {}, {}, {})
+        },
+        Frame("locked", R.string.app_lock_unlock) {
+            AppLockScreen(AppLockState.Locked(1), false, null, {}, {}, {}, {})
+        },
+        Frame("authenticating", R.string.app_lock_unlock) {
+            AppLockScreen(AppLockState.Locked(1), true, null, {}, {}, {}, {})
+        },
+        Frame("authentication-error", R.string.app_lock_auth_error) {
+            AppLockScreen(AppLockState.Locked(1), false, R.string.app_lock_auth_error, {}, {}, {}, {})
+        }
+    )
+
     @Test fun playerStates() = render("player",
         Frame("loading", R.string.player_title, true) { PlayerScreen(clip, PlaybackUiState(), false, {}, {}, {}) },
         Frame("error", R.string.player_error) {
@@ -240,7 +259,7 @@ class UiStateRenderingTest(private val dark: Boolean, private val fontScale: Flo
         File(configurationRoot, "index.html").writeText("""
             <!doctype html><html lang="en"><meta charset="utf-8"><title>WACR production UI states</title>
             <h1>Production UI state review</h1><p>Synthetic host renderings, not owner approval or phone acceptance.</p>
-            ${listOf("app", "home", "library", "allowlist", "setup", "settings", "player", "diagnostics", "capability")
+            ${listOf("app", "home", "library", "allowlist", "setup", "settings", "lock", "player", "diagnostics", "capability")
                 .joinToString("\n") { """<p><a href="$it/index.html">$it</a></p>""" }}
             </html>
         """.trimIndent())

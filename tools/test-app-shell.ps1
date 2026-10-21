@@ -65,11 +65,11 @@ foreach ($case in $cases) {
             $recorder.GetAttribute('foregroundServiceType', $android) -ne '0x80') {
             throw "Private microphone foreground service missing or incorrectly typed in $apk"
         }
-        foreach ($permission in @('RECORD_AUDIO', 'POST_NOTIFICATIONS', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_MICROPHONE')) {
+        foreach ($permission in @('RECORD_AUDIO', 'POST_NOTIFICATIONS', 'USE_BIOMETRIC', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_MICROPHONE')) {
             if (-not (@($manifest.manifest.'uses-permission') | Where-Object {
                 $_.GetAttribute('name', $android) -eq "android.permission.$permission"
             })) {
-                throw "Recorder permission $permission missing in $apk"
+                throw "Required app permission $permission missing in $apk"
             }
         }
         foreach ($jobClass in @('RecoveryJobService', 'DeletionJobService')) {

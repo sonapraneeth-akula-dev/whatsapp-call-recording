@@ -2,7 +2,7 @@
 
 **Updated**: 2026-10-21. Scope: the 75 v1.0 tasks in the Azure task list, not all 149 spike/application/later-release tasks.
 
-**Snapshot**: 65 locally complete, 8 blocked, 1 pending owner design review, 1 owner-deferred CI task. Local completion is not phone acceptance or release sign-off. The original spike remains available alongside the actual app.
+**Snapshot**: 66 locally complete, 6 blocked, 2 pending (Settings lock toggle and owner design review), 1 owner-deferred CI task. Local completion is not phone acceptance or release sign-off. The original spike remains available alongside the actual app.
 
 Reference documents: `2026-10-19_whatsapp-call-recorder_azure-task-list.md` and `2026-10-18_whatsapp-call-recorder_technical-design.md`, both in this directory.
 
@@ -10,14 +10,15 @@ Reference documents: `2026-10-19_whatsapp-call-recorder_azure-task-list.md` and 
 
 | Blocker | Task IDs | Missing input |
 |---------|----------|---------------|
-| Optional app lock and persistent toggle | `11.3.1.1.1`, `11.3.1.1.2` | Screen-lock timing clarification; stop-versus-continue preference is now resolved |
 | Positive group detection and captured golden test | `2.2.1.2.1`, `2.2.1.2.2` | Redacted real group-call structural evidence |
 | Group participant volume verification | `3.2.2.1.2` | Controlled physical three-party audibility/level measurements |
 | Baseline Profile integration | `8.2.2.1.2` | Actual generated profiles, subsequent packaging checks and F42 frame results |
 | Device performance and accessibility execution | `8.2.2.2.2` | Actual F42 startup/frame results and A73 automated/manual accessibility results |
 | Library filter latency | `11.1.1.2.2` | Actual F42 benchmark report |
 
-These six underlying blockers account for eight task rows. Harness preparation does not close a task that explicitly requires real device evidence. No such result is fabricated from host tests.
+These five underlying blockers account for six task rows. Harness preparation does not close a task that explicitly requires real device evidence. No such result is fabricated from host tests.
+
+## Detailed review, including resolved decisions
 
 ### 1. App lock: stop playback, not call capture
 
@@ -27,9 +28,9 @@ The original design separately specifies optional app authentication, disabled b
 
 **Resolved**: stop-versus-continue playback. A locked app must not leave saved-recording playback usable through its service, notification or media controls.
 
-**Still needs clarification**: does locking the phone stop playback immediately, while ordinary backgrounding retains the 60-second grace period, or does phone locking also use that timer? Device screen locking and timed app relocking are different events. A focused clarification was attempted; the owner was unavailable. Neither timing has been silently chosen.
+**Timing resolved on 2026-10-21**: owner confirmed immediate stopping on phone lock. With optional app lock enabled, screen off immediately revokes authentication and stops playback; ordinary backgrounding retains the 60-second grace period. Active call capture is not stopped.
 
-**Next engineering action**: once timing is confirmed, implement and locally test the authentication gate and playback-service enforcement as one task/commit; implement the persistent Settings toggle as the next task/commit. Neither task is complete merely because the preference is recorded. Real authentication/lockscreen behavior still requires both phones.
+**Engineering status**: task `11.3.1.1.1` is locally implemented and verified: native strong-biometric/device-credential gate, fail-closed preference/error states, protected navigation and real playback service/session shutdown. Authentication is process-local and stale callbacks cannot unlock after relock. The default-off persistent preference exists; the Settings toggle (`11.3.1.1.2`) follows as the next separate task/commit. Real authentication/lockscreen behavior still requires both phones; no phone pass is claimed.
 
 ### 2. Captured group-call detection
 
@@ -117,6 +118,7 @@ Select **Run benchmark**. Return the displayed model/SDK, all 30 samples and med
 
 | Item | Task | State and action |
 |------|------|------------------|
+| App-lock Settings toggle | `11.3.1.1.2` | **Pending implementation, no owner decision needed.** The locally verified authentication/playback gate is ready; wire the persistent control next. |
 | Owner design sign-off | `8.1.1.1.3` | **Pending, not an implementation blocker.** Review the generated local proposal gallery at `dist\mockups\light\index.html` and real-state gallery at `dist\ui-states\index.html`; record acceptance or requested revisions. Local rendering does not mean owner approval. |
 | GitHub Actions / CI | `5.1.1.1.4` | **Deferred by owner.** Local builds and unit tests are the current workflow; no CI work or owner action needed now. |
 | Dependency-security gate | `5.2.1.2.2` | **Locally complete; no longer a blocker.** Strict verification and the latest recorded scan cover ten exact selected graphs with zero high/critical findings. Two moderate build-tool versions remain documented below. |

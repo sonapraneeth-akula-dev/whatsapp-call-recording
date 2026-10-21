@@ -20,6 +20,7 @@ import com.soakula.wacr.health.HealthJobService
 import com.soakula.wacr.detection.CallDetection
 import com.soakula.wacr.playback.PlaybackService
 import com.soakula.wacr.playback.PlaybackReleaseException
+import com.soakula.wacr.security.AppLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -43,6 +44,7 @@ class WacrApp : Application() {
     private val healthNotification by lazy { HealthNotification(this, log) }
     private val healthLock = Mutex()
     val preferences by lazy { AppPreferences.open(this) }
+    val appLock by lazy { AppLock(this, preferences, log) { playbackService?.closePlayback() } }
     internal var playbackService: PlaybackService? = null
     internal var playbackReleaseFailed = false
 

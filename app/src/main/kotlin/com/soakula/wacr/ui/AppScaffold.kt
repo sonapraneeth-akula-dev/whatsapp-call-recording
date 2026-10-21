@@ -62,6 +62,8 @@ fun AppScaffold(
     forceSetup: Boolean = false,
     startupLoading: Boolean = false,
     appearanceError: Boolean = false,
+    locked: Boolean = false,
+    lockContent: @Composable (() -> Unit) -> Unit = {},
     onRetryAppearance: () -> Unit = {},
     onRetryHome: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -104,9 +106,11 @@ fun AppScaffold(
         }
     }
     LaunchedEffect(selectedId, library) {
-        if (selectedId != null && library is LibraryUiState.Ready && selected == null) selectedId = null
+        val requested = selectedId
+        if (requested != null && library is LibraryUiState.Ready &&
+            library.entries.none { it.recording.id.toString() == requested }) selectedId = null
     }
-    BackHandler(!forceSetup && (showSetup || selectedId != null || destination != Destination.HOME)) {
+    BackHandler(!forceSetup && (showSetup || !locked && (selectedId != null || destination != Destination.HOME))) {
         if (showSetup) showSetup = false
         else if (selectedId != null) selectedId = null
         else if (destination == Destination.LIBRARY && contactRoute != LibraryRoute()) libraryRoute = LibraryRoute().encode()
@@ -115,9 +119,9 @@ fun AppScaffold(
     Scaffold(
         modifier = modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0),
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { if (!locked) SnackbarHost(snackbar) },
         topBar = {
-            if (appearanceError || actions.error != null) {
+            if (!locked && (appearanceError || actions.error != null)) {
                 Surface(color = MaterialTheme.colorScheme.errorContainer) {
                     Column(Modifier.statusBarsPadding().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
                         if (appearanceError) {
@@ -133,7 +137,7 @@ fun AppScaffold(
             }
         },
         bottomBar = {
-            if (!forceSetup && !startupLoading) Column {
+            if (!forceSetup && !startupLoading && !locked) Column {
                 val largeCompact = LocalDensity.current.fontScale >= 1.5f && LocalConfiguration.current.screenWidthDp < 600
                 val rows = Destination.entries.chunked(if (largeCompact) 2 else 4)
                 rows.forEachIndexed { index, row ->
@@ -171,6 +175,7 @@ fun AppScaffold(
                     Text(stringResource(R.string.settings_loading))
                 }
                 forceSetup || showSetup -> setupContent { showSetup = false }
+                locked -> lockContent { showSetup = true }
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
                 destination == Destination.ALLOWLIST -> allowlistContent()
                 destination == Destination.SETTINGS -> settingsContent { showSetup = true }

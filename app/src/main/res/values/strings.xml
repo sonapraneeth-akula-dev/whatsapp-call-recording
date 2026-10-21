@@ -1,4 +1,13 @@
 <resources>
+    <string name="app_lock_title">Recordings locked</string>
+    <string name="app_lock_detail">Unlock to use the app. Active call recording continues independently. When app lock is enabled, screen off stops playback immediately; leaving the app relocks it after 60 seconds.</string>
+    <string name="app_lock_unlock">Unlock</string>
+    <string name="app_lock_prompt_title">Unlock recordings</string>
+    <string name="app_lock_prompt_subtitle">Use strong biometrics or your device PIN, pattern or password.</string>
+    <string name="app_lock_security_settings">Device security settings</string>
+    <string name="app_lock_auth_error">Authentication did not complete. Tap Unlock to try again.</string>
+    <string name="app_lock_auth_unavailable">Authentication unavailable. Check your device screen lock and biometric settings, then try again.</string>
+    <string name="app_lock_failed">App lock unavailable. Protected screens stay locked. Retry; if playback could not be stopped, force stop and reopen the app.</string>
     <string name="library_manual_calls">Manual recordings</string>
     <string name="library_unknown_calls">Unidentified calls</string>
     <string name="library_group_calls">Group calls</string>
