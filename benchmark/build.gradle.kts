@@ -38,4 +38,7 @@ dependencies {
     implementation(libs.androidx.uiautomator)
     implementation(libs.androidx.test.runner)
     implementation(libs.androidx.test.junit)
+    constraints {
+        implementation(libs.wire.runtime) { because("CVE-2026-63126 in Macrobenchmark trace decoding") }
+    }
 }

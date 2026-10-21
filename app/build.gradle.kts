@@ -142,4 +142,8 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.compose.ui.test.accessibility)
+    constraints {
+        androidTestImplementation(libs.jsoup) { because("CVE-2026-75140 in accessibility test dependencies") }
+        androidTestImplementation(libs.protobuf.javalite) { because("CVE-2024-7254 in accessibility test dependencies") }
+    }
 }

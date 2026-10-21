@@ -775,6 +775,30 @@ Generate real profiles separately on a connected API 33+ device:
 
 The generator collects startup with includeInStartupProfile=true and navigation/scroll separately, keeping navigation-only paths out of startup layout guidance. It prepares synthetic data before collection, so fixture insertion is not a profiled user journey. Use only the fresh selected device/run's two generated `*-baseline-prof.txt` files and the startup `*-startup-prof.txt` file, not old results or files from another device. Merge/de-duplicate the two actual baseline files into `app\src\main\baseline-prof.txt`; copy the actual startup file to `app\src\main\startup-prof.txt` (UTF-8). This is Android's supported manual profile integration, avoiding another Gradle plugin and any generator that could install over the normal production application ID. Rebuild release/benchmark; inspect merged ART inputs, compiled APK profile assets and actual app-rule inclusion before committing the generated files. Re-measure separately with a required installed Baseline Profile to establish benefit; the initial None/JIT measurements do not establish that. Until actual generated artifacts are returned, no profile or packaging result is claimed. Actual F42 performance, ATF/Scanner/TalkBack and owner design review remain external acceptance gates, not blockers to unrelated local work.
 
+**Selected dependency security gate (2026-10-20, task 5.2.1.2.2)**: current AGP 8.13.2 is the newest published 8.13 maintenance release checked against Google's Maven metadata; upgrading that patch line alone does not fix its stale transitive libraries. Root buildscript dependency constraints now select Netty's aligned 4.1.137.Final BOM, Bouncy Castle prov/pkix/util 1.85, JDOM 2.0.6.1 and jose4j 0.9.6. These are explicit minimum versions in the existing artifact/version families, not resolutionStrategy.force, advisory exclusions or an unapproved AGP 9/Kotlin migration. Catalog versions retain a single source of truth. Actual root/child build-plugin resolution was rescanned, not inferred from requested versions.
+
+New device-test dependencies also brought outdated transitive libraries: Wire 6.4.0 in Macrobenchmark and jsoup 1.15.1/protobuf-javalite 3.19.1 in ATF. Narrow benchmark implementation / androidTestImplementation constraints select their published fixes 6.4.5, 1.23.2 and 3.25.5; they cannot change the normal release/debug app, isolated benchmark target or spike runtime graphs. Exact before/after selected-coordinate sets confirmed those runtime graphs unchanged. Strict SHA-256 metadata was extended for actual selected artifacts; existing historical/candidate hashes were not deleted to conceal findings.
+
+The committed optional init script exports exact selected public Maven module IDs and per-graph CycloneDX documents to ignored build/dependency-inventory. It rejects unresolved dependencies rather than silently producing an incomplete inventory. It exports no source, recording metadata, paths, credentials or arbitrary project properties. Reproduce locally:
+
+```powershell
+.\gradlew.bat exportDependencyInventory --init-script '.\tools\dependency-inventory.init.gradle'
+if ($LASTEXITCODE -ne 0) { throw 'Dependency inventory failed; do not scan stale artifacts' }
+$inventory = Get-Content 'build\dependency-inventory\inventory.json' -Raw | ConvertFrom-Json
+$arguments = @('scan', 'source', '--all-packages', '--format', 'json', '--output-file', 'build\dependency-scan.json')
+foreach ($property in $inventory.PSObject.Properties) {
+    if ($property.Name -ne 'generatedAtUtc') {
+        $arguments += @('--sbom', "build\dependency-inventory\$($property.Name).cdx.json")
+    }
+}
+# Existing separately downloaded official OSV scanner 2.7.0; no source-tree scan.
+& '<path-to-osv-scanner.exe>' @arguments
+```
+
+The pinned scanner still accepts --sbom (deprecated in favor of -L); it scans only these explicit coordinate-only files. Use --all-packages to compare every scanned package name/version set and source count with inventory.json, including graphs with zero matches. An OSV exit other than 0/1, missing source, missing package, unknown severity or query error is not a passing gate. Preserve the raw JSON; exit 1 means advisory matches and must never be rewritten as an all-clear.
+
+Fresh complete selected inventories have zero HIGH/CRITICAL matches. Selected release/debug/benchmark-target/spike runtimes and unit/instrumentation/benchmark-test graphs have no advisory matches. The build-plugin graph retains two moderate affected versions: commons-compress 1.21 (GHSA-4265-ccf5-phj5 / GHSA-4g9r-vxhx-9pgx, CVSS 6.7/5.9) and Kotlin Gradle plugin 2.2.20 (GHSA-r937-wjx7-w2jp, CVSS 6.7). The latter currently advertises a prerelease 2.4.20-Beta1 fix; no prerelease compiler/toolchain migration is undertaken merely to claim zero-all-severities. The task's actual threshold is no high/critical findings, not no findings at all; moderate findings remain visible follow-up debt, not an owner-approved exploitability/risk exemption. Strict local regression/build/lint and APK boundary/signature evidence accompany the constraint change; physical app acceptance remains the owner’s work.
+
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |
 |----|----------|--------|--------------|-----|
