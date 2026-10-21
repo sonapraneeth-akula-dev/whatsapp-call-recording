@@ -33,7 +33,12 @@ class AppPreferences internal constructor(private val store: DataStore<Preferenc
     suspend fun setTheme(theme: ThemeChoice) { store.edit { it[THEME] = theme.name } }
     suspend fun setDynamicColor(enabled: Boolean) { store.edit { it[DYNAMIC_COLOR] = enabled } }
     suspend fun completeOnboarding() { store.edit { it[ONBOARDING_DONE] = true } }
-    internal suspend fun setAppLock(enabled: Boolean) { store.edit { it[APP_LOCK] = enabled } }
+    internal suspend fun setAppLock(enabled: Boolean, authorized: () -> Boolean) {
+        store.edit {
+            check(authorized()) { "App-lock authorization expired" }
+            it[APP_LOCK] = enabled
+        }
+    }
     internal suspend fun cacheCaptureProfile(value: String) {
         require(value.length <= 16_384) { "Capture profile cache is too large" }
         store.edit { it[CAPTURE_PROFILE] = value }

@@ -144,6 +144,13 @@ class UiStateRenderingTest(private val dark: Boolean, private val fontScale: Flo
         },
         Frame("ready", R.string.settings_appearance) {
             SettingsScreen(SettingsUiState.Ready(Appearance()), SettingsActionsState(), {}, {}, {}, {})
+        },
+        Frame("lock-enabled", R.string.settings_app_lock) {
+            SettingsScreen(SettingsUiState.Ready(Appearance(), appLock = true), SettingsActionsState(), {}, {}, {}, {})
+        },
+        Frame("authentication-unavailable", R.string.app_lock_auth_unavailable) {
+            SettingsScreen(SettingsUiState.Ready(Appearance()),
+                SettingsActionsState(failed = true, error = R.string.app_lock_auth_unavailable), {}, {}, {}, {})
         }
     )
 

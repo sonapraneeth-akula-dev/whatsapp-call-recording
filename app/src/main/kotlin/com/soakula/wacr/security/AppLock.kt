@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.biometrics.BiometricManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -113,6 +114,16 @@ class AppLock internal constructor(
         return true
     }
 
+    internal fun settingAuthorization(): Long? = if (canAccess()) revision else null
+
+    internal fun canChangeSetting(expectedRevision: Long, enable: Boolean): Boolean {
+        val current = mutableState.value
+        val allowed = current is AppLockState.Unlocked || enable && current == AppLockState.Disabled
+        return allowed && !deviceLocked() &&
+            deadline?.let { SystemClock.elapsedRealtime() < it } != false &&
+            revision == expectedRevision && mutableState.value == current
+    }
+
     fun retry() { refresh.update { it + 1 } }
 
     private fun deviceLocked() = context.getSystemService(KeyguardManager::class.java).isDeviceLocked ||
@@ -150,5 +161,7 @@ class AppLock internal constructor(
 
     companion object {
         const val BACKGROUND_TIMEOUT_MS = 60_000L
+        const val AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
     }
 }

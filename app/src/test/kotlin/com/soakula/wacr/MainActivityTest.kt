@@ -47,7 +47,7 @@ class MainActivityTest {
         })
         shadowOf(app).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         runBlocking {
-            app.preferences.setAppLock(false)
+            app.preferences.setAppLock(false) { true }
             withTimeout(10_000) {
                 while (app.appLock.state.value != AppLockState.Disabled) {
                     ShadowLooper.idleMainLooper()

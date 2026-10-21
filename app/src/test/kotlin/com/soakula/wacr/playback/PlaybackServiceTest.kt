@@ -70,7 +70,7 @@ class PlaybackServiceTest {
             throw AssertionError("Unexpected uncaught test exception", error)
         })
         shadowOf(app).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
-        runBlocking { app.preferences.setAppLock(false) }
+        runBlocking { app.preferences.setAppLock(false) { true } }
         await { app.appLock.state.value == AppLockState.Disabled }
         database = Room.inMemoryDatabaseBuilder(app, AppDatabase::class.java).build()
         ReflectionHelpers.setField(app, "openDatabase", database)
@@ -82,7 +82,7 @@ class PlaybackServiceTest {
         if (::controller.isInitialized) controller.release()
         if (::host.isInitialized) host.destroy()
         if (::database.isInitialized) database.close()
-        runBlocking { app.preferences.setAppLock(false) }
+        runBlocking { app.preferences.setAppLock(false) { true } }
         app.appLock.close()
         Thread.setDefaultUncaughtExceptionHandler(previousHandler)
     }
@@ -108,7 +108,7 @@ class PlaybackServiceTest {
         val connection = session.connectedControllers.first()
         val capture = RecorderState.Recording(UUID.randomUUID(), 1000, false)
         ReflectionHelpers.getField<MutableStateFlow<RecorderState>>(app.recorder, "mutableState").value = capture
-        runBlocking { app.preferences.setAppLock(true) }
+        runBlocking { app.preferences.setAppLock(true) { true } }
         await { engine.isReleased && app.appLock.state.value is AppLockState.Locked }
         assertNull(app.playbackService)
         assertEquals(capture, app.recorder.state.value)
@@ -140,7 +140,7 @@ class PlaybackServiceTest {
     }
 
     @Test fun screenOffAndBackgroundTimeoutReleaseAuthenticatedAudioWithoutStoppingCallCapture() {
-        runBlocking { app.preferences.setAppLock(true) }
+        runBlocking { app.preferences.setAppLock(true) { true } }
         await { app.appLock.state.value is AppLockState.Locked }
         val owner = Robolectric.buildActivity(Activity::class.java).get()
         for (screenOff in listOf(true, false)) {
@@ -172,7 +172,7 @@ class PlaybackServiceTest {
 
     @Test fun lockedServiceCannotCreateAPlayerOrAcceptANewConnection() {
         val connection = session.connectedControllers.first()
-        runBlocking { app.preferences.setAppLock(true) }
+        runBlocking { app.preferences.setAppLock(true) { true } }
         await { app.appLock.state.value is AppLockState.Locked }
         controller.release()
         host.destroy()

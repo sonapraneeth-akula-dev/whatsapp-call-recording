@@ -46,6 +46,7 @@ import com.soakula.wacr.data.RecordingDecision
 import com.soakula.wacr.ui.AppScaffold
 import com.soakula.wacr.ui.AppLockScreen
 import com.soakula.wacr.security.AppLockState
+import com.soakula.wacr.security.AppLock
 import com.soakula.wacr.ui.allowlist.AllowlistScreen
 import com.soakula.wacr.ui.allowlist.AllowlistViewModel
 import com.soakula.wacr.ui.home.HomeViewModel
@@ -222,7 +223,9 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(appearanceState, appearanceActions, settings::setTheme, settings::setDynamicColor,
                                 settings::retry, settings::dismissError, onSetup = openSetup,
                                 onDiagnostics = { settingsPanel = "diagnostics" },
-                                onCapability = { settingsPanel = "capability" })
+                                onCapability = { settingsPanel = "capability" },
+                                onAppLock = settings::setAppLock,
+                                onSecuritySettings = { openSettings(Intent(Settings.ACTION_SECURITY_SETTINGS)) })
                         }
                     }, setupContent = { closeSetup ->
                         SetupChecklistScreen(state, appearanceActions.busy, appearanceActions.failed,
@@ -363,8 +366,7 @@ class MainActivity : ComponentActivity() {
     private fun authenticate() {
         val locked = app.appLock.state.value as? AppLockState.Locked ?: return
         if (authBusy || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
-        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
-            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val authenticators = AppLock.AUTHENTICATORS
         val availability = getSystemService(BiometricManager::class.java).canAuthenticate(authenticators)
         if (availability != BiometricManager.BIOMETRIC_SUCCESS) {
             app.log.log("app_lock", "authentication_unavailable", mapOf("code" to availability))

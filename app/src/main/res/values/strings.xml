@@ -1,5 +1,7 @@
 <resources>
     <string name="app_lock_title">Recordings locked</string>
+    <string name="settings_app_lock">App lock</string>
+    <string name="settings_app_lock_detail">Off by default. Require strong biometrics or your device PIN, pattern or password. Screen off immediately stops playback and relocks the app; ordinary backgrounding relocks after 60 seconds. Active call recording continues.</string>
     <string name="app_lock_detail">Unlock to use the app. Active call recording continues independently. When app lock is enabled, screen off stops playback immediately; leaving the app relocks it after 60 seconds.</string>
     <string name="app_lock_unlock">Unlock</string>
     <string name="app_lock_prompt_title">Unlock recordings</string>

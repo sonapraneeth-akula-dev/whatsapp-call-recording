@@ -2,7 +2,7 @@
 
 **Updated**: 2026-10-21. Scope: the 75 v1.0 tasks in the Azure task list, not all 149 spike/application/later-release tasks.
 
-**Snapshot**: 66 locally complete, 6 blocked, 2 pending (Settings lock toggle and owner design review), 1 owner-deferred CI task. Local completion is not phone acceptance or release sign-off. The original spike remains available alongside the actual app.
+**Snapshot**: 67 locally complete, 6 blocked, 1 pending (owner design review), 1 owner-deferred CI task. Local completion is not phone acceptance or release sign-off. The original spike remains available alongside the actual app.
 
 Reference documents: `2026-10-19_whatsapp-call-recorder_azure-task-list.md` and `2026-10-18_whatsapp-call-recorder_technical-design.md`, both in this directory.
 
@@ -30,7 +30,9 @@ The original design separately specifies optional app authentication, disabled b
 
 **Timing resolved on 2026-10-21**: owner confirmed immediate stopping on phone lock. With optional app lock enabled, screen off immediately revokes authentication and stops playback; ordinary backgrounding retains the 60-second grace period. Active call capture is not stopped.
 
-**Engineering status**: task `11.3.1.1.1` is locally implemented and verified: native strong-biometric/device-credential gate, fail-closed preference/error states, protected navigation and real playback service/session shutdown. Authentication is process-local and stale callbacks cannot unlock after relock. The default-off persistent preference exists; the Settings toggle (`11.3.1.1.2`) follows as the next separate task/commit. Real authentication/lockscreen behavior still requires both phones; no phone pass is claimed.
+**Engineering status**: tasks `11.3.1.1.1` and `11.3.1.1.2` are locally implemented and verified in separate changes: native strong-biometric/device-credential gate, fail-closed preference/error states, protected navigation, real playback service/session shutdown and the persistent Settings control. Authentication is process-local and stale callbacks cannot unlock after relock. Missing authentication enrollment leaves the toggle off with a device-security remedy; failed or revoked writes retain the previous setting. No implementation or timing decision remains open here.
+
+**Phone acceptance**: install the refreshed `dist\app-debug.apk`, then enable **Settings > App lock** (off by default). Authenticate, play a saved clip and turn the screen off: playback must stop immediately, including notification/media controls. Reopen and authenticate again. Separately verify ordinary backgrounding for less than 60 seconds versus at least 60 seconds, process recreation and cancellation, and confirm an active call capture continues through UI relock. Repeat on both phones, including device-credential fallback. Real authentication/lockscreen behavior still requires these checks; no phone pass is claimed.
 
 ### 2. Captured group-call detection
 
@@ -71,7 +73,7 @@ Return that run's two generated `*-baseline-prof.txt` files and `*-startup-prof.
 
 ### 5. Actual startup, frame and accessibility checks
 
-**Already implemented**: local native rendering/accessibility checks, a 42-state light/dark/font-scale matrix, physical-device benchmark tests and a fail-closed raw-result checker. Compilation and host results do not establish phone performance.
+**Already implemented**: local native rendering/accessibility checks, a 49-state light/dark/font-scale matrix, physical-device benchmark tests and a fail-closed raw-result checker. Compilation and host results do not establish phone performance.
 
 **Owner action**: with only the intended phone connected, run the matching command:
 
@@ -118,7 +120,7 @@ Select **Run benchmark**. Return the displayed model/SDK, all 30 samples and med
 
 | Item | Task | State and action |
 |------|------|------------------|
-| App-lock Settings toggle | `11.3.1.1.2` | **Pending implementation, no owner decision needed.** The locally verified authentication/playback gate is ready; wire the persistent control next. |
+| App-lock Settings toggle | `11.3.1.1.2` | **Locally complete.** Enable Settings > App lock to use the default-off protection; native availability, persistent state and edit-time authentication checks are wired. Both-phone authentication/lockscreen UAT remains separate. |
 | Owner design sign-off | `8.1.1.1.3` | **Pending, not an implementation blocker.** Review the generated local proposal gallery at `dist\mockups\light\index.html` and real-state gallery at `dist\ui-states\index.html`; record acceptance or requested revisions. Local rendering does not mean owner approval. |
 | GitHub Actions / CI | `5.1.1.1.4` | **Deferred by owner.** Local builds and unit tests are the current workflow; no CI work or owner action needed now. |
 | Dependency-security gate | `5.2.1.2.2` | **Locally complete; no longer a blocker.** Strict verification and the latest recorded scan cover ten exact selected graphs with zero high/critical findings. Two moderate build-tool versions remain documented below. |

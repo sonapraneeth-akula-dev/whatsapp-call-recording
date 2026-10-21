@@ -155,7 +155,7 @@ class AppLockTest {
 
     private fun unlock() {
         await { lock.state.value == AppLockState.Disabled }
-        runBlocking { preferences.setAppLock(true) }
+        runBlocking { preferences.setAppLock(true) { true } }
         await { lock.state.value is AppLockState.Locked }
         val locked = lock.state.value as AppLockState.Locked
         assertFalse(lock.authenticated(locked.revision))

@@ -53,7 +53,7 @@ class AppAuthenticationTest {
         shadowOf(app.getSystemService(KeyguardManager::class.java)).setIsDeviceLocked(false)
         runBlocking {
             app.preferences.completeOnboarding()
-            app.preferences.setAppLock(true)
+            app.preferences.setAppLock(true) { true }
         }
         await { app.appLock.state.value is AppLockState.Locked }
         activity = Robolectric.buildActivity(MainActivity::class.java).setup()
@@ -61,7 +61,7 @@ class AppAuthenticationTest {
 
     @After fun close() {
         if (::activity.isInitialized) activity.pause().stop().destroy()
-        runBlocking { app.preferences.setAppLock(false) }
+        runBlocking { app.preferences.setAppLock(false) { true } }
         app.appLock.close()
         Thread.setDefaultUncaughtExceptionHandler(previousHandler)
     }

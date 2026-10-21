@@ -15,10 +15,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.unit.dp
 import com.soakula.wacr.R
 import com.soakula.wacr.data.Appearance
@@ -114,6 +119,42 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.library_empty)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.nav_home)).performClick()
         compose.onNodeWithText(text(R.string.home_record)).assertIsDisplayed()
+    }
+
+    @Test fun appLockSwitchIsLabeledReflectsSavedStateAndIsDisabledWhileSaving() {
+        val enabled = mutableStateOf(false)
+        val busy = mutableStateOf(false)
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(1f, 2f)) {
+                WacrTheme(Appearance(dynamicColor = false)) {
+                    SettingsScreen(SettingsUiState.Ready(Appearance(), appLock = enabled.value),
+                        SettingsActionsState(busy = busy.value), {}, {}, {}, {},
+                        onAppLock = { enabled.value = it })
+                }
+            }
+        }
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(text(R.string.settings_app_lock)))
+        compose.onNodeWithText(text(R.string.settings_app_lock)).assertIsOff().performClick()
+        compose.onNodeWithText(text(R.string.settings_app_lock)).assertIsOn()
+        compose.runOnIdle { busy.value = true }
+        compose.onNodeWithText(text(R.string.settings_app_lock)).assertIsNotEnabled()
+    }
+
+    @Test fun unavailableAppLockOffersDeviceSettingsAndDismissesTheError() {
+        var security = false
+        var dismissed = false
+        compose.setContent {
+            WacrTheme(Appearance(dynamicColor = false)) {
+                SettingsScreen(SettingsUiState.Ready(Appearance()),
+                    SettingsActionsState(failed = true, error = R.string.app_lock_auth_unavailable),
+                    {}, {}, {}, { dismissed = true }, onSecuritySettings = { security = true })
+            }
+        }
+        compose.onNodeWithText(text(R.string.app_lock_auth_unavailable)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.app_lock_security_settings)).performClick()
+        assertTrue(security)
+        compose.onNodeWithText(text(R.string.library_dismiss)).performClick()
+        assertTrue(dismissed)
     }
 
     @Test fun systemModeTracksSystemAndExplicitModesOverrideIt() {

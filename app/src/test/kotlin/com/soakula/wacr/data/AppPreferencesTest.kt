@@ -21,7 +21,7 @@ class AppPreferencesTest {
         val first = AppPreferences(PreferenceDataStoreFactory.create(scope = scope) { file })
         assertEquals(Appearance(), first.appearance.first())
         assertFalse(first.values.first().appLock)
-        first.setAppLock(true)
+        first.setAppLock(true) { true }
         first.setTheme(ThemeChoice.DARK)
         first.setDynamicColor(false)
         first.completeOnboarding()
@@ -38,10 +38,20 @@ class AppPreferencesTest {
         reopened.setDynamicColor(true)
         assertEquals(Appearance(), reopened.appearance.first())
         assertTrue(reopened.values.first().onboardingDone)
-        reopened.setAppLock(false)
+        reopened.setAppLock(false) { true }
         assertFalse(reopened.values.first().appLock)
         assertEquals(Appearance(), reopened.appearance.first())
         assertTrue(reopened.values.first().onboardingDone)
+    }
+
+    @Test fun revokedAuthorizationCannotPersistAnUnlockedSetting() = runBlocking {
+        val file = temporary.newFile("lock.preferences_pb")
+        val preferences = AppPreferences(PreferenceDataStoreFactory.create(scope = scope) { file })
+        preferences.setAppLock(true) { true }
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { preferences.setAppLock(false) { false } }
+        }
+        assertTrue(preferences.values.first().appLock)
     }
 
     @Test fun unknownStoredChoiceFailsExplicitlyWithoutResettingOriginalValue() = runBlocking {

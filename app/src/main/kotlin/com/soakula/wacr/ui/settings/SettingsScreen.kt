@@ -28,7 +28,9 @@ fun SettingsScreen(
     onDismissError: () -> Unit,
     onSetup: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
-    onCapability: () -> Unit = {}
+    onCapability: () -> Unit = {},
+    onAppLock: (Boolean) -> Unit = {},
+    onSecuritySettings: () -> Unit = {}
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp),
@@ -47,7 +49,10 @@ fun SettingsScreen(
             }
             if (actions.failed) item {
                 Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                    Text(stringResource(R.string.settings_save_error), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(actions.error ?: R.string.settings_save_error), color = MaterialTheme.colorScheme.error)
+                    if (actions.error == R.string.app_lock_auth_unavailable) {
+                        TextButton(onClick = onSecuritySettings) { Text(stringResource(R.string.app_lock_security_settings)) }
+                    }
                     TextButton(onClick = onDismissError) { Text(stringResource(R.string.library_dismiss)) }
                 }
             }
@@ -86,6 +91,15 @@ fun SettingsScreen(
                         }
                     }
                     item { Text(stringResource(R.string.settings_theme_detail), style = MaterialTheme.typography.bodySmall) }
+                    item {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(
+                            state.appLock, enabled = !actions.busy, role = Role.Switch, onValueChange = onAppLock
+                        ).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(stringResource(R.string.settings_app_lock), Modifier.weight(1f))
+                            Switch(state.appLock, onCheckedChange = null, enabled = !actions.busy)
+                        }
+                    }
+                    item { Text(stringResource(R.string.settings_app_lock_detail), style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }
