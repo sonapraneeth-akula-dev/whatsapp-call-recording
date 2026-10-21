@@ -5,11 +5,17 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.soakula.wacr.R
@@ -28,16 +34,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import org.robolectric.ParameterizedRobolectricTestRunner.Parameters
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.util.UUID
 
-@RunWith(RobolectricTestRunner::class)
+@RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [33], application = Application::class, qualifiers = "w393dp-h852dp-notnight-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class UiStateRenderingTest {
+class UiStateRenderingTest(private val dark: Boolean, private val fontScale: Float) {
+    companion object {
+        @JvmStatic @Parameters(name = "dark={0}, font={1}")
+        fun configurations(): List<Array<Any>> = listOf(
+            arrayOf(false, 1f), arrayOf(true, 1f), arrayOf(false, 2f), arrayOf(true, 2f)
+        )
+    }
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val id = UUID.fromString("11111111-1111-1111-1111-111111111111")
     private val ready = HomeUiState(loaded = true, availableBytes = 2_000_000_000)
@@ -45,6 +58,20 @@ class UiStateRenderingTest {
         status = RecordingStatus.FINALIZED, durationMs = 30_000, audioPath = "$id/audio.aac.enc"), null)
     private data class Frame(
         val name: String, val message: Int, val progress: Boolean = false, val draw: @Composable () -> Unit
+    )
+
+    @Test fun appStates() = render("app",
+        Frame("startup", R.string.settings_loading, true) {
+            AppScaffold(ready, RecorderState.Idle, LibraryUiState.Loading, {}, {}, {}, {},
+                startupLoading = true) { _, _ -> }
+        },
+        Frame("preference-error", R.string.settings_read_error) {
+            AppScaffold(ready, RecorderState.Idle, LibraryUiState.Ready(emptyList()), {}, {}, {}, {},
+                appearanceError = true) { _, _ -> }
+        },
+        Frame("navigation", R.string.nav_settings) {
+            AppScaffold(ready, RecorderState.Idle, LibraryUiState.Ready(emptyList()), {}, {}, {}, {}) { _, _ -> }
+        }
     )
 
     @Test fun homeStates() = render("home",
@@ -176,13 +203,20 @@ class UiStateRenderingTest {
 
     private fun render(screen: String, vararg frames: Frame) {
         val current = mutableStateOf(frames.first())
-        compose.setContent { WacrTheme(Appearance(dynamicColor = false), systemDark = false) {
-            key(current.value.name) { current.value.draw() }
-        } }
-        val output = File("build\\ui-states\\$screen").apply { mkdirs() }
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
+                WacrTheme(Appearance(dynamicColor = false), systemDark = dark) {
+                    key(current.value.name) { current.value.draw() }
+                }
+            }
+        }
+        val configuration = "${if (dark) "dark" else "light"}-${if (fontScale == 2f) "2x" else "1x"}"
+        val output = File("build\\ui-states\\$configuration\\$screen").apply { mkdirs() }
+        val configurationRoot = checkNotNull(output.parentFile)
         for (frame in frames) {
             compose.runOnIdle { current.value = frame }
             capture(File(output, "${frame.name}.png"))
+            auditVisibleControls()
             visible(hasText(compose.activity.getString(frame.message)))
             if (frame.progress) visible(SemanticsMatcher.expectValue(
                 SemanticsProperties.ProgressBarRangeInfo, ProgressBarRangeInfo.Indeterminate))
@@ -190,25 +224,69 @@ class UiStateRenderingTest {
                 compose.onNode(hasScrollAction()).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
             }
             capture(File(output, "${frame.name}-end.png"))
+            auditVisibleControls()
         }
         File(output, "index.html").writeText("""
             <!doctype html><html lang="en"><meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1"><title>WACR $screen states</title>
             <style>body{font:16px system-ui;margin:24px}img{max-width:100%;height:auto}figure{display:inline-block;margin:8px}</style>
-            <h1>Production $screen states</h1><p>Synthetic data; native host renderings, not approved pixel baselines or phone evidence.
+            <h1>Production $screen states: $configuration</h1><p>Synthetic data; native host renderings, not approved pixel baselines or phone evidence.
             Top and scrolled-end viewports, not full-page captures.</p>
             ${frames.joinToString("\n") { frame -> """<h2>${frame.name}</h2>
             <figure><img src="${frame.name}.png" alt="${frame.name}, top"></figure>
             <figure><img src="${frame.name}-end.png" alt="${frame.name}, end"></figure>""" }}
             </html>
         """.trimIndent())
-        File(output.parentFile, "index.html").writeText("""
+        File(configurationRoot, "index.html").writeText("""
             <!doctype html><html lang="en"><meta charset="utf-8"><title>WACR production UI states</title>
             <h1>Production UI state review</h1><p>Synthetic host renderings, not owner approval or phone acceptance.</p>
-            ${listOf("home", "library", "allowlist", "setup", "settings", "player", "diagnostics", "capability")
+            ${listOf("app", "home", "library", "allowlist", "setup", "settings", "player", "diagnostics", "capability")
                 .joinToString("\n") { """<p><a href="$it/index.html">$it</a></p>""" }}
             </html>
         """.trimIndent())
+        File(checkNotNull(configurationRoot.parentFile), "index.html").writeText("""
+            <!doctype html><html lang="en"><meta charset="utf-8"><title>WACR production UI review matrix</title>
+            <h1>Production UI review matrix</h1><p>Synthetic native host renderings and semantics checks,
+            not approved pixel baselines, Accessibility Scanner, TalkBack or phone performance evidence.</p>
+            ${listOf("light-1x", "dark-1x", "light-2x", "dark-2x")
+                .joinToString("\n") { """<p><a href="$it/index.html">$it</a></p>""" }}
+            </html>
+        """.trimIndent())
+    }
+
+    private fun auditVisibleControls() {
+        val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        val density = compose.activity.resources.displayMetrics.density
+        val controls = hasClickAction() or SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress)
+        for (node in compose.onAllNodes(controls).fetchSemanticsNodes()) {
+            val bounds = node.touchBoundsInRoot
+            if (bounds.width + 1 < node.size.width || bounds.height + 1 < node.size.height) continue
+            if (bounds.top <= viewport.top || bounds.bottom >= viewport.bottom ||
+                bounds.left < viewport.left || bounds.right > viewport.right) continue
+            val label = node.config.getOrNull(SemanticsProperties.ContentDescription)?.any(String::isNotBlank) == true ||
+                node.config.getOrNull(SemanticsProperties.Text)?.any { it.text.isNotBlank() } == true
+            assertTrue("Clickable control ${node.id} requires a readable label: ${node.config}", label)
+            if (node.config.contains(SemanticsProperties.Disabled)) continue
+            assertTrue("Control ${node.id} touch target must be >=48dp, was $bounds: ${node.config}",
+                bounds.width >= 48 * density - 1 && bounds.height >= 48 * density - 1)
+        }
+        for (node in compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult)).fetchSemanticsNodes()) {
+            if (node.config.contains(SemanticsProperties.EditableText)) continue
+            val layouts = mutableListOf<TextLayoutResult>()
+            node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            if (node.config.getOrNull(SemanticsProperties.Role) == Role.Tab) {
+                assertTrue("Navigation label must remain a single complete line: ${node.config}",
+                    layouts.all { it.lineCount == 1 })
+            }
+            // Paragraph constraint width can exceed wrapped text's actual layout width.
+            val clipped = layouts.any { layout ->
+                layout.multiParagraph.didExceedMaxLines || (0 until layout.lineCount).any { line ->
+                    layout.getLineLeft(line) < -1 || layout.getLineRight(line) > layout.size.width + 1 ||
+                        layout.getLineBottom(line) > layout.size.height + 1
+                }
+            }
+            assertTrue("Rendered text lines must fit their layout: ${node.config}", !clipped)
+        }
     }
 
     private fun visible(matcher: SemanticsMatcher) {

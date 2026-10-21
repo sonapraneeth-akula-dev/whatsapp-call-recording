@@ -7,6 +7,10 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.assertIsDisplayed
@@ -90,6 +94,26 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.settings_read_error)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.library_retry)).performClick()
         assertTrue(retried)
+    }
+
+    @Test fun largeTextNavigationKeepsAllFourLabelsAndWorkingDestinations() {
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(1f, 2f)) {
+                WacrTheme(Appearance(dynamicColor = false)) {
+                    AppScaffold(HomeUiState(loaded = true), RecorderState.Idle, LibraryUiState.Ready(emptyList()),
+                        {}, {}, {}, {}, allowlistContent = { Text("Sample allowed contacts") },
+                        settingsContent = { Text("Sample settings") }) { _, _ -> }
+                }
+            }
+        }
+        compose.onNodeWithText(text(R.string.nav_allowlist)).performClick()
+        compose.onNodeWithText("Sample allowed contacts").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.nav_settings)).performClick()
+        compose.onNodeWithText("Sample settings").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.nav_library)).performClick()
+        compose.onNodeWithText(text(R.string.library_empty)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.nav_home)).performClick()
+        compose.onNodeWithText(text(R.string.home_record)).assertIsDisplayed()
     }
 
     @Test fun systemModeTracksSystemAndExplicitModesOverrideIt() {

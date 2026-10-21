@@ -178,6 +178,7 @@
     <string name="allowlist_picker_unavailable">Could not open the system contact picker. Check that a Contacts app is enabled, then retry.</string>
     <string name="nav_settings">Settings</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_loading">Loading settings...</string>
     <string name="settings_privacy">Recordings and contact rules stay encrypted on this device. This app has no internet permission.</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme_system">Follow system</string>

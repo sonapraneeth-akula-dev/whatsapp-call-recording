@@ -2,6 +2,7 @@ package com.soakula.wacr.ui.player
 
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -47,6 +48,8 @@ fun PlayerScreen(
 ) {
     val playable = entry.recording.hasPlayableAudio()
     val duration = state.durationMs.coerceAtLeast(0)
+    val canSeek = playable && state.ready && !state.failed && !blocked && duration > 0
+    val seekInteraction = remember { MutableInteractionSource() }
     var scrub by remember(entry.recording.id) { mutableStateOf<Float?>(null) }
     val seekLabel = stringResource(R.string.player_seek)
     Scaffold(topBar = {
@@ -75,7 +78,12 @@ fun PlayerScreen(
                     scrub = null
                 },
                 valueRange = 0f..duration.coerceAtLeast(1).toFloat(),
-                enabled = playable && state.ready && !state.failed && !blocked && duration > 0,
+                enabled = canSeek,
+                interactionSource = seekInteraction,
+                thumb = {
+                    // Native thumb size determines Slider's semantic target height.
+                    SliderDefaults.Thumb(seekInteraction, Modifier.heightIn(min = 48.dp), enabled = canSeek)
+                },
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = seekLabel }
             )
             Text(stringResource(R.string.player_times,

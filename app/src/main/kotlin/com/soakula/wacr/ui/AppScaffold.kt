@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -126,35 +129,42 @@ fun AppScaffold(
             }
         },
         bottomBar = {
-            if (!forceSetup && !startupLoading) NavigationBar {
-                NavigationBarItem(
-                    selected = destination == Destination.HOME, onClick = { showSetup = false; selectedId = null; destination = Destination.HOME },
-                    icon = { Icon(painterResource(R.drawable.ic_home), null) },
-                    label = { Text(stringResource(R.string.nav_home)) }
-                )
-                NavigationBarItem(
-                    selected = destination == Destination.LIBRARY, onClick = { showSetup = false; selectedId = null; destination = Destination.LIBRARY },
-                    icon = { Icon(painterResource(R.drawable.ic_library), null) },
-                    label = { Text(stringResource(R.string.nav_library)) }
-                )
-                NavigationBarItem(
-                    selected = destination == Destination.ALLOWLIST,
-                    onClick = { showSetup = false; selectedId = null; destination = Destination.ALLOWLIST },
-                    icon = { Icon(painterResource(R.drawable.ic_allowlist), null) },
-                    label = { Text(stringResource(R.string.nav_allowlist)) }
-                )
-                NavigationBarItem(
-                    selected = destination == Destination.SETTINGS,
-                    onClick = { showSetup = false; selectedId = null; destination = Destination.SETTINGS },
-                    icon = { Icon(painterResource(R.drawable.ic_settings), null) },
-                    label = { Text(stringResource(R.string.nav_settings)) }
-                )
+            if (!forceSetup && !startupLoading) Column {
+                val largeCompact = LocalDensity.current.fontScale >= 1.5f && LocalConfiguration.current.screenWidthDp < 600
+                val rows = Destination.entries.chunked(if (largeCompact) 2 else 4)
+                rows.forEachIndexed { index, row ->
+                    NavigationBar(windowInsets = if (index == rows.lastIndex) NavigationBarDefaults.windowInsets else WindowInsets(0)) {
+                        row.forEach { item ->
+                            NavigationBarItem(
+                                selected = destination == item,
+                                onClick = { showSetup = false; selectedId = null; destination = item },
+                                icon = { Icon(painterResource(when (item) {
+                                    Destination.HOME -> R.drawable.ic_home
+                                    Destination.LIBRARY -> R.drawable.ic_library
+                                    Destination.ALLOWLIST -> R.drawable.ic_allowlist
+                                    Destination.SETTINGS -> R.drawable.ic_settings
+                                }), null) },
+                                label = { Text(stringResource(when (item) {
+                                    Destination.HOME -> R.string.nav_home
+                                    Destination.LIBRARY -> R.string.nav_library
+                                    Destination.ALLOWLIST -> R.string.nav_allowlist
+                                    Destination.SETTINGS -> R.string.nav_settings
+                                })) }
+                            )
+                        }
+                    }
+                }
             }
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             when {
-                startupLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                startupLoading -> Column(Modifier.align(Alignment.Center).padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CircularProgressIndicator()
+                    Text(stringResource(R.string.settings_loading))
+                }
                 forceSetup || showSetup -> setupContent { showSetup = false }
                 selected != null -> key(selected.recording.id) { playerContent(selected) { selectedId = null } }
                 destination == Destination.ALLOWLIST -> allowlistContent()
