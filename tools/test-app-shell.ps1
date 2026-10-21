@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$SdkPath
+    [string]$SdkPath,
+    [switch]$IncludeBenchmark
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,11 +12,15 @@ if (-not (Test-Path $aapt)) { throw "Android build-tools 36.0.0 not found: $aapt
 $root = Split-Path $PSScriptRoot -Parent
 $android = 'http://schemas.android.com/apk/res/android'
 
-foreach ($case in @(
+$cases = @(
     @{ Apk = 'app\build\outputs\apk\debug\app-debug.apk'; Id = 'com.soakula.wacr.debug'; Label = 'WACR Debug' },
     @{ Apk = 'app\build\outputs\apk\release\app-release-unsigned.apk'; Id = 'com.soakula.wacr'; Label = 'WACR' },
     @{ Apk = 'spike\build\outputs\apk\debug\spike-debug.apk'; Id = 'com.soakula.wacr.spike'; Label = 'WACR Spike' }
-)) {
+)
+if ($IncludeBenchmark) {
+    $cases += @{ Apk = 'app\build\outputs\apk\benchmark\app-benchmark.apk'; Id = 'com.soakula.wacr.benchmark'; Label = 'WACR Benchmark' }
+}
+foreach ($case in $cases) {
     $apk = Join-Path $root $case.Apk
     if (-not (Test-Path $apk)) { throw "Build the APK first: $apk" }
     $output = & $analyzer manifest print $apk
@@ -42,6 +47,17 @@ foreach ($case in @(
         }
     }
     if ($case.Id -ne 'com.soakula.wacr.spike') {
+        $fixture = @($manifest.manifest.application.activity) | Where-Object {
+            $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.ui.benchmark.PerformanceFixtureActivity'
+        }
+        if ($case.Id -eq 'com.soakula.wacr.benchmark') {
+            if ($manifest.manifest.application.GetAttribute('debuggable', $android) -eq 'true' -or
+                $manifest.manifest.application.profileable.GetAttribute('shell', $android) -ne 'true' -or -not $fixture) {
+                throw "Expected isolated non-debuggable/profileable benchmark target with fixture activity"
+            }
+        } elseif ($fixture) {
+            throw "Benchmark fixture leaked into $apk"
+        }
         $recorder = @($manifest.manifest.application.service) | Where-Object {
             $_.GetAttribute('name', $android) -eq 'com.soakula.wacr.recording.RecorderService'
         }
@@ -108,4 +124,22 @@ foreach ($case in @(
         throw "Expected one exported launcher in $apk"
     }
     Write-Output "PASS $($case.Id): identity, label, SDK levels, launcher, no backup or INTERNET"
+}
+
+if ($IncludeBenchmark) {
+    $apk = Join-Path $root 'benchmark\build\outputs\apk\benchmark\benchmark-benchmark.apk'
+    $output = & $analyzer manifest print $apk
+    if ($LASTEXITCODE -ne 0) { throw "Cannot read benchmark runner manifest: $apk" }
+    [xml]$manifest = $output -join "`n"
+    $id = 'com.soakula.wacr.benchmark.tests'
+    if ($manifest.manifest.package -ne $id -or
+        $manifest.manifest.instrumentation.GetAttribute('targetPackage', $android) -ne $id) {
+        throw "Benchmark runner must be isolated and self-instrumenting"
+    }
+    foreach ($permission in $manifest.manifest.SelectNodes('uses-permission | uses-permission-sdk-23')) {
+        if ($permission.GetAttribute('name', $android) -eq 'android.permission.INTERNET') {
+            throw "INTERNET permission present in benchmark runner"
+        }
+    }
+    Write-Output "PASS $id`: isolated self-instrumenting runner, no INTERNET"
 }

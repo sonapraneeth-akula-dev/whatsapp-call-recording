@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -150,6 +153,9 @@ class MainActivity : ComponentActivity() {
                 val state by home.state.collectAsStateWithLifecycle()
                 val recorder by app.recorder.state.collectAsStateWithLifecycle()
                 val recordings by library.state.collectAsStateWithLifecycle()
+                val startupReady = appearanceState is SettingsUiState.Ready && state.loaded && state.error == null &&
+                    recordings is LibraryUiState.Ready
+                ReportDrawnWhen { startupReady }
                 val actions by library.actions.collectAsStateWithLifecycle()
                 val contactRules by allowlist.state.collectAsStateWithLifecycle()
                 val contactActions by allowlist.actions.collectAsStateWithLifecycle()
@@ -159,6 +165,7 @@ class MainActivity : ComponentActivity() {
                     if (capabilityRequest != 0) settingsPanel = "capability"
                 }
                 AppScaffold(state, recorder, recordings, ::requestRecording, ::stopRecording, ::openFix, library::retry,
+                    modifier = Modifier.testTag(if (startupReady) "startup_ready" else "startup_loading"),
                     actions = actions, onUndo = library::undo, onDismissUndo = library::dismissUndo,
                     onDismissError = library::dismissError,
                     allowlistContent = {

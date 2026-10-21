@@ -16,11 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.soakula.wacr.R
 import com.soakula.wacr.health.HealthIssue
@@ -62,6 +64,7 @@ fun AppScaffold(
     appearanceError: Boolean = false,
     onRetryAppearance: () -> Unit = {},
     onRetryHome: () -> Unit = {},
+    modifier: Modifier = Modifier,
     playerContent: @Composable (RecordingWithSession, () -> Unit) -> Unit
 ) {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
@@ -110,6 +113,7 @@ fun AppScaffold(
         else destination = Destination.HOME
     }
     Scaffold(
+        modifier = modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -136,6 +140,7 @@ fun AppScaffold(
                     NavigationBar(windowInsets = if (index == rows.lastIndex) NavigationBarDefaults.windowInsets else WindowInsets(0)) {
                         row.forEach { item ->
                             NavigationBarItem(
+                                modifier = Modifier.testTag("nav_${item.name.lowercase(java.util.Locale.ROOT)}"),
                                 selected = destination == item,
                                 onClick = { showSetup = false; selectedId = null; destination = item },
                                 icon = { Icon(painterResource(when (item) {

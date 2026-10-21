@@ -485,7 +485,7 @@ No servers. "Environments" = build variants.
 | Crypto + segments | Tink round-trip, truncated-segment recovery, seek tests | JVM | all failure paths |
 | Room / migrations | [Room testing](https://developer.android.com/training/data-storage/room/migrating-db-versions#test) `MigrationTestHelper`, in-memory DB | Instrumented (device) | every migration |
 | UI | [Compose UI test](https://developer.android.com/develop/ui/compose/testing) with accessibility checks; [Paparazzi](https://github.com/cashapp/paparazzi) screenshots (light/dark, font 1.0/2.0) | JVM / device | every screen + state |
-| Performance | [Macrobenchmark](https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview) cold start, library scroll jank; Baseline Profile | F42 (device) | cold start ≤ 1.5 s, jank < 5% |
+| Performance | [Macrobenchmark](https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview) cold start, library scroll jank; Baseline Profile | F42 (device) | cold start ≤ 1 s, jank ≤ 5% (NFR-014; supersedes the earlier 1.5 s design typo) |
 | Audio capture | `:spike` app + manual call matrix (routes × call types × phones) | Real devices + 2nd phone | all PRD capture ACs |
 | Transcription accuracy | Bake-off harness: WER/CER on 30 min owner-provided Hi/Te/En clips | Device (A73, F42) | pick model per NFR-017 |
 | End-to-end | Manual checklist per release (detection → record → finalize → play → transcribe → reboot recovery) | Both phones | 100% checklist |
@@ -738,6 +738,42 @@ No measurements is an explicit no_results/empty list, not a fabricated failure o
 **Large-text and accessible controls (2026-10-20, task 8.2.2.2.1)**: production-state tests now run all 42 app/screen states in both fallback themes with Compose font environments 1.0 and 2.0: 36 parameterized test methods, 168 states and 336 native top/end PNGs. App startup, preference error and real bottom navigation join the eight screens. Each visible full control must have a readable merged label/content description; enabled click/range controls must expose a >=48dp target, allowing at most one pixel for integer rasterization. Bounds clipped by scroll containers and disabled noninteractive targets are excluded from size claims; text-bearing nodes are checked against actual rendered line extents and max-line truncation, not paragraph constraint width. This catches native layouts without replacing native semantics or adding a test/release dependency.
 
 The check exposed Material3 1.3.2 Slider's inner 44dp semantic bounds: an outer heightIn cannot override its internal requiredSizeIn. The native public thumb slot now supplies a >=48dp thumb using the shared interaction source and exact seek eligibility, retaining original colors, drag, focus, progress and disabled behavior. Startup additionally says Loading settings rather than exposing only a potentially blank initial spinner. Visual review exposed mid-word bottom-tab wrapping at large text: compact widths below 600dp with font scale >=1.5 now use two native two-item navigation rows; normal/wide layouts retain the four-item row. All four labels remain full single lines without reducing system text size, all destinations remain usable, and bottom system insets apply only on the final row. Native navigation/action tests and text geometry cover the responsive layout. Main viewports remain readable at Compose 200%; native platform scanner/TalkBack order, dynamic wallpaper schemes and AndroidView EditText/IME at actual system font scale remain owner phone acceptance. These checks are not Android Accessibility Scanner or official on-device ATF results, and rendered images are not owner-approved golden pixels. Review the four configurations through dist/ui-states/index.html.
+
+**Isolated device verification (2026-10-20, tasks 8.2.2.2.2 / 8.2.2.1.2 remain device-blocked)**: `:benchmark` is a separate self-instrumenting test APK targeting only the non-debuggable, debug-signed, profileable `com.soakula.wacr.benchmark` app variant. It inherits release behavior; the normal release/debug app and spike retain their application IDs, data, privacy manifest guards and behavior. The benchmark-only fixed fixture activity checks the exact package before touching storage, transactionally inserts 1,000 synthetic metadata-only rows across 100 synthetic contacts, and completes only this isolated package's onboarding. Stable IDs make repeated preparation idempotent; conflicts fail and roll back instead of overwriting data. No audio/video files, contacts, actual calls, microphone actions or owner recording paths are used. Host tests verify shape, repeatability, absent media and transactional conflict rollback. The two original debug-gallery benchmark tests now correctly live in testDebug, since their fixtures are excluded from non-debug variants.
+
+Production startup reports fully drawn only after preferences, Home health/storage and encrypted Library loads succeed; the resource-ID-exposed startup_ready node follows the same readiness condition. Initial navigation/spinner visibility alone cannot satisfy the timing measurement. Stable navigation/list tags expose no user values. Ten cold launches use CompilationMode.None; the ten navigation/list-scroll runs use three JIT warmups with BaselineProfileMode.Disable, so this initial measurement can run before a profile exists and does not pretend to measure its benefit. The real Library queries/groups and list render 1,000 rows from isolated encrypted storage, not an unrelated in-memory performance screen. No benchmark errors are suppressed.
+
+`AccessibilityChecksTest` compiles native official Compose Accessibility Test Framework checks for all nine app/screen surfaces in light/dark at Compose font 1.0/2.0. It uses synthetic screen inputs and never invokes recording, export or contact actions. The API 34+ restriction is the Compose ATF requirement, so run it on the A73; the F42 still needs manual Accessibility Scanner/TalkBack. These are 36 first-viewport automated checks, not full-screen/manual, IME/system-font or 42-state ATF coverage. The existing 168-state/336-image native host matrix is retained instead of adding Paparazzi merely to duplicate working rendering. No on-device ATF pass is claimed from compilation.
+
+Build locally without a phone:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+.\gradlew.bat :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest :app:assembleBenchmark :benchmark:assembleBenchmark
+.\gradlew.bat :app:testBenchmarkUnitTest --tests '*PerformanceFixtureTest'
+python -B -m unittest discover -s tools -p test_performance_report.py
+.\tools\test-app-shell.ps1 -SdkPath 'C:\Users\soakula\AppData\Local\Android\Sdk' -IncludeBenchmark
+```
+
+Owner phone runs, with only the intended unlocked phone connected. Do not enable the benchmark app's detection/capture permissions or use it for real calls; it is synthetic test storage only. APKs are also copied to ignored `dist\app-benchmark.apk` and `dist\performance-tests.apk`. These commands install only the isolated performance packages; they neither clear nor reinstall the normal app/spike:
+
+```powershell
+# F42: actual cold startup and scroll/navigation frame samples.
+.\gradlew.bat :benchmark:connectedBenchmarkAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.soakula.wacr.benchmark.PerformanceBenchmark'
+
+# A73 (API 34+): only the new synthetic-screen accessibility test, not other instrumentation.
+.\gradlew.bat :app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.soakula.wacr.ui.AccessibilityChecksTest'
+```
+
+Keep the unedited BenchmarkData JSON and Perfetto traces under `benchmark\build\outputs\connected_android_test_additional_output\benchmark` with the device model/build and APK versions. Run `python -B .\tools\check_performance.py '<path-to-BenchmarkData.json>' --expected-model '<actual F42 Build.MODEL>'`. The checker requires the exact model, API 33+, one complete ten-iteration result per journey, both initial/full display samples and the raw per-frame overrun arrays. Every fully-drawn cold start must be <=1,000 ms; every run's positive-deadline-overrun frame percentage must be <=5%. It prints aggregate/worst-run jank and maximum cold start; exit 0 passes, 1 is a real measured threshold failure, 2 is missing/invalid evidence. Missing full-display data, percentiles alone, zero frames, wrong-device reports, duplicates, non-finite values and incomplete iterations cannot pass. A host fixture testing this parser is not an F42 result.
+
+Generate real profiles separately on a connected API 33+ device:
+
+```powershell
+.\gradlew.bat :benchmark:connectedBenchmarkAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.soakula.wacr.benchmark.BaselineProfileGenerator'
+```
+
+The generator collects startup with includeInStartupProfile=true and navigation/scroll separately, keeping navigation-only paths out of startup layout guidance. It prepares synthetic data before collection, so fixture insertion is not a profiled user journey. Use only the fresh selected device/run's two generated `*-baseline-prof.txt` files and the startup `*-startup-prof.txt` file, not old results or files from another device. Merge/de-duplicate the two actual baseline files into `app\src\main\baseline-prof.txt`; copy the actual startup file to `app\src\main\startup-prof.txt` (UTF-8). This is Android's supported manual profile integration, avoiding another Gradle plugin and any generator that could install over the normal production application ID. Rebuild release/benchmark; inspect merged ART inputs, compiled APK profile assets and actual app-rule inclusion before committing the generated files. Re-measure separately with a required installed Baseline Profile to establish benefit; the initial None/JIT measurements do not establish that. Until actual generated artifacts are returned, no profile or packaging result is claimed. Actual F42 performance, ATF/Scanner/TalkBack and owner design review remain external acceptance gates, not blockers to unrelated local work.
 
 ## 12. Decisions & Trade-offs
 | ID | Decision | Chosen | Alternatives | Why |

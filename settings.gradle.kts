@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "wacr"
-include(":app", ":audio", ":logging", ":spike")
+include(":app", ":audio", ":logging", ":spike", ":benchmark")
