@@ -10,6 +10,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.activity.ComponentActivity
 import com.soakula.wacr.R
 import com.soakula.wacr.health.HealthIssue
@@ -47,6 +51,8 @@ class HomeScreenTest {
         compose.onNodeWithText(text(R.string.recording_stop)).performClick()
         assertEquals(1, stops)
         compose.runOnIdle { state.value = RecorderState.Recording(id, System.currentTimeMillis(), true) }
+        compose.onNodeWithText(text(R.string.recording_active)).assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
         compose.onNodeWithText(text(R.string.recording_storage_warning)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.recording_stop)).performClick()
         assertEquals(2, stops)

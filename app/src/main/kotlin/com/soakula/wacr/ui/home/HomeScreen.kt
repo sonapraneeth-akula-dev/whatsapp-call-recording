@@ -2,7 +2,9 @@ package com.soakula.wacr.ui.home
 
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import androidx.compose.animation.animateContentSize
 import androidx.annotation.StringRes
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.soakula.wacr.R
 import com.soakula.wacr.health.HealthIssue
@@ -46,14 +51,22 @@ fun HomeScreen(
         ) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(when (recorder) {
-                        is RecorderState.Preparing -> R.string.recording_preparing
-                        is RecorderState.Recording -> R.string.recording_active
-                        is RecorderState.Saving -> R.string.recording_saving
-                        is RecorderState.Finished -> R.string.home_saved
-                        is RecorderState.Failed -> R.string.recording_notice_title
-                        RecorderState.Idle -> R.string.home_manual_recording
-                    }), style = MaterialTheme.typography.headlineSmall)
+                    Surface(shape = CircleShape, modifier = Modifier.animateContentSize(),
+                        color = if (recorder is RecorderState.Failed) MaterialTheme.colorScheme.errorContainer
+                            else MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = if (recorder is RecorderState.Failed) MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onPrimaryContainer) {
+                        Text(stringResource(when (recorder) {
+                            is RecorderState.Preparing -> R.string.recording_preparing
+                            is RecorderState.Recording -> R.string.recording_active
+                            is RecorderState.Saving -> R.string.recording_saving
+                            is RecorderState.Finished -> R.string.home_saved
+                            is RecorderState.Failed -> R.string.recording_notice_title
+                            RecorderState.Idle -> R.string.home_manual_recording
+                        }), Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        }, style = MaterialTheme.typography.titleMedium)
+                    }
                     when (recorder) {
                         is RecorderState.Recording -> {
                             var seconds by remember(recorder.id) { mutableLongStateOf(0) }

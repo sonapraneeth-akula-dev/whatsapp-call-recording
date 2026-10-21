@@ -78,7 +78,7 @@ fun AllowlistScreen(
                     if (state.rules.isEmpty()) item { Text(stringResource(R.string.allowlist_empty)) }
                     items(state.rules, key = { it.id }) { rule ->
                         val removeLabel = stringResource(R.string.allowlist_remove_name, rule.displayName)
-                        OutlinedCard(Modifier.fillMaxWidth()) {
+                        OutlinedCard(Modifier.animateItem().fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(rule.displayName, style = MaterialTheme.typography.titleMedium)
                                 if (rule.kind == RuleKind.GROUP) Text(stringResource(R.string.allowlist_group_manual))

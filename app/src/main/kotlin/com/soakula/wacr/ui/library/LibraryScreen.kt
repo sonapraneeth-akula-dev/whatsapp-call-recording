@@ -63,7 +63,7 @@ fun LibraryScreen(
                         item(key = "contact:${group.key}") {
                             ContactHeader(group, if (route.contact == null) { { onRoute(route.copy(contact = group.key)) } } else null)
                         }
-                        items(group.entries, key = { it.recording.id }) { RecordingRow(it, onOpen) }
+                        items(group.entries, key = { it.recording.id }) { RecordingRow(it, onOpen, Modifier.animateItem()) }
                     }
                 }
             }
@@ -126,9 +126,9 @@ fun LibraryFailure(onRetry: () -> Unit) {
 }
 
 @Composable
-fun RecordingRow(entry: RecordingWithSession, onOpen: ((UUID) -> Unit)? = null) {
+fun RecordingRow(entry: RecordingWithSession, onOpen: ((UUID) -> Unit)? = null, modifier: Modifier = Modifier) {
     val recording = entry.recording
-    OutlinedCard(Modifier.fillMaxWidth()) {
+    OutlinedCard(modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(recording.title ?: entry.session?.waDisplayName ?: stringResource(
                 if (entry.session == null) R.string.library_manual else R.string.library_unknown_caller
